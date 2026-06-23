@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  index.html v0.9.99 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v0.9.98 → v0.9.99):
+  - 시간 제한 면제 계정(UNLIMITED_EMAILS) 추가: 목록에 든 이메일은 5분 세션 제한 +
+    5시간 무료 쿼터를 모두 적용받지 않음(완전 무제한). 현재 dororok@gmail.com 등록.
+    구현: isUnlimitedUser()로 getQuotaLeft()=Infinity, 차감/5분 타이머/시작차단 모두 우회.
+    남은시간 뱃지는 "무제한"으로 표시. 다른 사용자는 기존 5분+5시간 제한 그대로 유지.
   index.html v0.9.98 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v0.9.97 → v0.9.98):
   - (overlay.html) 컨트롤 패널 접기/펼치기 버튼 기호 ☰ → « / » 로 변경.
@@ -722,7 +728,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v0.9.98</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v0.9.99</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -924,12 +930,20 @@ function stopElapsed() { if (elapsedTimer) { clearInterval(elapsedTimer); elapse
 const FREE_QUOTA_SECONDS = 5 * 3600;   // 5시간 = 18000초
 let quotaTimer = null;
 
+/* 시간 제한 완전 면제(무제한) 계정 — 5분 세션 제한 + 5시간 쿼터 모두 적용 안 함 */
+const UNLIMITED_EMAILS = ['dororok@gmail.com'];
+function isUnlimitedUser() {
+  const u = window.__boothmateUser;
+  return !!(u && u.email && UNLIMITED_EMAILS.indexOf(u.email) !== -1);
+}
+
 function quotaKey() {
   const u = window.__boothmateUser;
   const email = (u && u.email) ? u.email : 'anon';
   return 'boothmate_quota_' + email;
 }
 function getQuotaLeft() {
+  if (isUnlimitedUser()) return Infinity;   // 무제한 계정: 시작 차단/차감 없음
   try {
     const v = localStorage.getItem(quotaKey());
     if (v === null) {
@@ -953,6 +967,11 @@ function fmtHMS(sec) {
 function renderQuota() {
   const badge = document.getElementById('authQuotaBadge');
   if (!badge) return;
+  if (isUnlimitedUser()) {
+    badge.textContent = '무제한';
+    badge.style.background = '#1e2f3a'; badge.style.color = '#7abaff';
+    return;
+  }
   const left = getQuotaLeft();
   badge.textContent = '남은 시간 ' + fmtHMS(left);
   // 시간이 얼마 안 남으면 색상 경고
@@ -967,6 +986,7 @@ function renderQuota() {
 }
 // 통역 중 1초마다 차감. 0 되면 자동 정지.
 function startQuotaCountdown() {
+  if (isUnlimitedUser()) { renderQuota(); return; }   // 무제한 계정: 차감 안 함
   if (quotaTimer) clearInterval(quotaTimer);
   quotaTimer = setInterval(() => {
     let left = getQuotaLeft();
@@ -1558,14 +1578,16 @@ async function start() {
   userStopped = false;
   reconnectAttempt = 0;
   setRunningUI(true);
-  // 한 세션 최대 5분 제한 — 5분 지나면 자동 정지 (비용 누수 방지)
+  // 한 세션 최대 5분 제한 — 5분 지나면 자동 정지 (비용 누수 방지). 무제한 계정은 면제.
   if (sessionLimitTimer) clearTimeout(sessionLimitTimer);
-  sessionLimitTimer = setTimeout(() => {
-    if (running) {
-      stop();
-      showErr('한 세션은 최대 5분까지입니다. 계속하려면 "시작"을 다시 눌러주세요.');
-    }
-  }, SESSION_LIMIT_MS);
+  if (!isUnlimitedUser()) {
+    sessionLimitTimer = setTimeout(() => {
+      if (running) {
+        stop();
+        showErr('한 세션은 최대 5분까지입니다. 계속하려면 "시작"을 다시 눌러주세요.');
+      }
+    }, SESSION_LIMIT_MS);
+  }
   showErr('');
   setStatus('연결 중...', false);
   startAutoScroll();

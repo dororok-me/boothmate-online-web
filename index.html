@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.3.3 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.3.2 → v1.3.3):
+  - [용어집 변이형 대응] 같은 단어도 AI가 문맥에 따라 다르게 번역(dog→개/강아지)해서
+    별칭 1개만 학습하면 놓치던 문제. 각 칸을 '쉼표 구분 별칭 목록'으로 파싱(첫 항목=표준표기,
+    BoothmateG normalize 방식). 예: "dog ⇄ 댕댕이, 개, 강아지" → 개·강아지 모두 댕댕이로 강제.
+    자동 학습(평소 번역어 1개)은 이 목록에 추가로 보태짐. relay는 /translate(단일 번역)만
+    지원해 동의어 자동 생성은 불가 → 변이형은 쉼표로 직접 등록하는 방식으로 해결.
   index.html v1.3.2 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.3.1 → v1.3.2):
   - [반영 로그 여전히 빈 문제 진짜 수정] 수집 지점을 finishSegment → shownTrans(치환이
@@ -784,7 +791,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.3.2</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.3.3</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1494,19 +1501,29 @@ async function aiTranslateTerm(term, targetCode) {
   return clean1((data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0].text) || '');
 }
 /* 용어쌍의 자연 번역어를 양쪽 언어로 학습해 entry.nat에 채움 (현재 언어쌍 기준) */
+function splitAliases(s) {
+  return String(s || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+}
 async function learnEntry(entry) {
   const { a: la, b: lb } = getPair();
-  const aLang = detectLang(entry.a, la, lb) || la;
-  const bLang = detectLang(entry.b, la, lb) || lb;
-  const ka = gKey(entry.a), kb = gKey(entry.b);
+  // 각 칸을 쉼표 구분 별칭 목록으로 (첫 항목 = 표준표기). 사용자가 변이형을 직접 넣을 수 있음.
+  const aList = splitAliases(entry.a);
+  const bList = splitAliases(entry.b);
+  const aHead = aList[0] || entry.a;
+  const bHead = bList[0] || entry.b;
+  const ka = gKey(aHead), kb = gKey(bHead);
+  // 칸별 실제 언어 코드 (학습 번역 타겟용)
+  const koLang = (langPrefix(la) === 'ko') ? la : (langPrefix(lb) === 'ko' ? lb : la);
+  const xLang = (langPrefix(la) === 'ko') ? lb : la;
+  const keyLang = function (k) { return k === 'ko' ? koLang : xLang; };
   const nat = {};
-  nat[ka] = [entry.a];
+  nat[ka] = aList.slice();
   if (!nat[kb]) nat[kb] = [];
-  if (nat[kb].indexOf(entry.b) === -1) nat[kb].unshift(entry.b);
-  // a를 b의 언어로 → b쪽 별칭(예: cat→한국어=고양이)
-  try { const t = await aiTranslateTerm(entry.a, bLang); if (t && !eqTerm(t, entry.b) && nat[kb].indexOf(t) === -1) nat[kb].push(t); } catch (e) {}
-  // b를 a의 언어로 → a쪽 별칭
-  try { const t2 = await aiTranslateTerm(entry.b, aLang); if (t2 && !eqTerm(t2, entry.a) && nat[ka].indexOf(t2) === -1) nat[ka].push(t2); } catch (e) {}
+  for (const w of bList) if (nat[kb].indexOf(w) === -1) nat[kb].push(w);
+  const pushAlias = function (key, w) { if (w && nat[key].indexOf(w) === -1 && !eqTerm(w, nat[key][0])) nat[key].push(w); };
+  // 자동 학습: 대표어의 평소 번역어를 반대 칸 별칭으로 보강 (쉼표로 직접 넣은 변이형에 더해짐)
+  try { const t = await aiTranslateTerm(aHead, keyLang(kb)); pushAlias(kb, t); } catch (e) {}
+  try { const t2 = await aiTranslateTerm(bHead, keyLang(ka)); pushAlias(ka, t2); } catch (e) {}
   entry.nat = nat;
   return entry;
 }
@@ -2402,9 +2419,9 @@ window.addEventListener('pagehide', () => {
   panel.innerHTML =
     '<div class="g-ttl">📖 용어집 (양방향 — 영어 ⇄ 한국어)</div>' +
     '<div class="g-add">' +
-      '<input type="text" id="gInA" placeholder="용어 1 (예: 인지과학)">' +
+      '<input type="text" id="gInA" placeholder="용어 1 (예: dog)">' +
       '<span class="g-arrow">⇄</span>' +
-      '<input type="text" id="gInB" placeholder="용어 2 (예: recognition science)">' +
+      '<input type="text" id="gInB" placeholder="용어 2 (예: 댕댕이, 개, 강아지)">' +
       '<button id="gAddBtn">추가</button>' +
     '</div>' +
     '<div class="g-tools">' +
@@ -2417,7 +2434,7 @@ window.addEventListener('pagehide', () => {
       '<span id="gCount" class="g-count"></span>' +
     '</div>' +
     '<div class="g-list" id="gList"></div>' +
-    '<div class="g-hint">두 표현을 등록하면 양방향으로 적용됩니다. 어느 칸에 영어/한국어를 넣든 상관없어요. <b>등록 시 AI가 그 단어의 평소 번역어(예: cat→"고양이")를 1회 자동 학습</b>해, 통역 중에는 <b>AI 번역에 개입하지 않고 후처리로 "고양이 → 냥냥이"처럼 표준표기로 강제 치환</b>합니다(반영 내역은 아래 "반영 로그"에 표시). 학습 상태는 목록 오른쪽에 표시됩니다. 파일 형식: 한 줄에 "용어1, artificial intelligence"처럼 쉼표로 구분. 내보내기는 위 형식 선택 후 저장, 불러오기는 txt·csv·Excel 지원(기존 목록에 병합·중복 제거, 학습값 유지). 통역 중 추가/학습은 다음 문장부터 반영.</div>';
+    '<div class="g-hint">두 표현을 등록하면 양방향으로 적용됩니다. 어느 칸에 영어/한국어를 넣든 상관없어요. <b>등록 시 AI가 그 단어의 평소 번역어(예: cat→"고양이")를 1회 자동 학습</b>해, 통역 중에는 <b>AI 번역에 개입하지 않고 후처리로 "고양이 → 냥냥이"처럼 표준표기로 강제 치환</b>합니다(반영 내역은 아래 "반영 로그"에 표시). <b>한 칸에 쉼표로 변이형을 여러 개 넣으면 모두 표준표기(첫 항목)로 바뀝니다</b> — 예: "댕댕이, 개, 강아지" → 개·강아지도 댕댕이로. (AI가 문맥따라 다르게 번역하는 단어는 이렇게 변이형을 직접 넣어주세요.) 학습 상태는 목록 오른쪽에 표시됩니다. 파일은 한 줄에 "용어1, 표준표기, 별칭, 별칭..." (1번째=반대언어 용어, 2번째=표준표기, 3번째부터 별칭). 내보내기는 위 형식 선택 후 저장, 불러오기는 txt·csv·Excel 지원(기존 목록에 병합·중복 제거, 학습값 유지). 통역 중 추가/학습은 다음 문장부터 반영.</div>';
 
   const listEl = $('gList');
   function render() {
@@ -2548,7 +2565,8 @@ window.addEventListener('pagehide', () => {
       }
       cells.push(cur);
       const a = (cells[0] || '').trim();
-      const b = (cells[1] || '').trim();
+      // 2번째 칸부터 끝까지 = b쪽(표준+별칭). 쉼표 구분으로 합쳐 별칭 목록 보존.
+      const b = cells.slice(1).map(function (c) { return c.trim(); }).filter(Boolean).join(', ');
       if (!a || !b) continue;
       // 첫 줄이 헤더로 보이면 건너뜀
       if (i === 0 && /^(용어|단어|영어|한국어|term|word|english|korean|source|target|a|b)$/i.test(a)) continue;

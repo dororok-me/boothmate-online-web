@@ -44,7 +44,7 @@
     padding: 16px 20px 72px;   /* 아래쪽 컨트롤 영역 여백 */
     overflow-y: auto;
     display: flex; flex-direction: column; justify-content: flex-end;
-    gap: 10px;
+    gap: var(--pair-gap, 10px);
     scroll-behavior: smooth;
   }
 
@@ -164,6 +164,13 @@
     <button class="ctrl-btn" id="traMinus" title="번역 작게">A−</button>
     <button class="ctrl-btn" id="traPlus"  title="번역 크게">A+</button>
     <input type="color" class="ctrl-color" id="traColor" value="#ffffff" title="번역 색상">
+
+    <div class="ctrl-sep"></div>
+
+    <!-- 줄간격 -->
+    <span class="ctrl-label">줄간격</span>
+    <button class="ctrl-btn" id="gapMinus" title="줄간격 좁게">−</button>
+    <button class="ctrl-btn" id="gapPlus"  title="줄간격 넓게">+</button>
   </div>
 </div>
 
@@ -183,12 +190,14 @@ let traSize  = parseInt(localStorage.getItem('ov_tra_size')  || '22');
 let srcColor = localStorage.getItem('ov_src_color') || '#b4c8e6';
 let traColor = localStorage.getItem('ov_tra_color') || '#ffffff';
 let opacity  = Math.min(50, parseInt(localStorage.getItem('ov_opacity') || '50'));
+let lineGap  = parseInt(localStorage.getItem('ov_line_gap') || '10');
 
 function applyStyles() {
   document.documentElement.style.setProperty('--src-size',   srcSize  + 'px');
   document.documentElement.style.setProperty('--trans-size', traSize  + 'px');
   document.documentElement.style.setProperty('--src-color',   srcColor);
   document.documentElement.style.setProperty('--trans-color', traColor);
+  document.documentElement.style.setProperty('--pair-gap',    lineGap  + 'px');
 
   const alpha = opacity / 100;
   bg.style.background = 'rgba(10,14,26,' + alpha + ')';
@@ -213,6 +222,7 @@ function save() {
   localStorage.setItem('ov_src_color',  srcColor);
   localStorage.setItem('ov_tra_color',  traColor);
   localStorage.setItem('ov_opacity',    opacity);
+  localStorage.setItem('ov_line_gap',   lineGap);
 }
 
 /* ── 컨트롤 바인딩 ── */
@@ -224,6 +234,9 @@ document.getElementById('srcMinus').onclick = () => { if (srcSize > 10) { srcSiz
 document.getElementById('srcPlus' ).onclick = () => { if (srcSize < 60) { srcSize += 2; applyStyles(); save(); } };
 document.getElementById('traMinus').onclick = () => { if (traSize > 10) { traSize -= 2; applyStyles(); save(); } };
 document.getElementById('traPlus' ).onclick = () => { if (traSize < 80) { traSize += 2; applyStyles(); save(); } };
+
+document.getElementById('gapMinus').onclick = () => { lineGap = Math.max(0,  lineGap - 4); applyStyles(); save(); };
+document.getElementById('gapPlus' ).onclick = () => { lineGap = Math.min(80, lineGap + 4); applyStyles(); save(); };
 
 const srcColorPicker = document.getElementById('srcColor');
 const traColorPicker = document.getElementById('traColor');

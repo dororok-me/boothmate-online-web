@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.4.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.3.3 → v1.4.0):
+  - [용어집 일관성] 순수 후처리는 AI의 변이 번역(운영의 우수성/운영우위성/운영 탁월성)을
+    별칭 1개론 다 못 잡음 → 'AI 프롬프트 주입 + 후처리 + 수동 변이형' 3중으로 전환.
+    glossaryInstruction(): 현재 출력방향의 (트리거어→표준표기) 매핑을 systemInstruction에
+    실어 AI가 처음부터 표준표기로 번역하게 유도("괄호 원문 병기 금지"도 지시 → "(dog)" 군더더기 감소).
+    후처리(applyGlossaryReplace)는 빠져나온 변이형 보강, 변이형은 쉼표로 직접 추가 가능.
+    주의: 프롬프트 주입은 (재)연결/방향전환 시 갱신, 후처리는 즉시.
   index.html v1.3.3 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.3.2 → v1.3.3):
   - [용어집 변이형 대응] 같은 단어도 AI가 문맥에 따라 다르게 번역(dog→개/강아지)해서
@@ -791,7 +799,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.3.3</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.4.0</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1429,7 +1437,32 @@ function flexRegex(term) {
   return new RegExp('(?<![A-Za-z0-9])' + esc + '(?![A-Za-z0-9])', 'gi');
 }
 /* 프롬프트용 글로서리 지시문 — 괄호 주석 방식으로 전환하여 프롬프트 주입 사용 안 함 */
-function glossaryInstruction(targetLang) { return null; }
+/* 용어집 프롬프트 주입 — 현재 출력 언어 방향의 (트리거어 → 표준표기) 매핑을 systemInstruction에 실어
+   AI가 처음부터 표준표기로 번역하도록 유도. 후처리는 빠져나온 변이형을 보강한다. */
+function glossaryInstruction(targetCode) {
+  const outP = (/ko/.test(String(targetCode))) ? 'ko' : 'x';
+  const otherP = (outP === 'ko') ? 'x' : 'ko';
+  const pairs = [];
+  for (const it of loadGlossary()) {
+    if (!it) continue;
+    let tgt, src;
+    if (it.nat) {
+      tgt = it.nat[outP] && it.nat[outP][0];
+      src = it.nat[otherP] && it.nat[otherP][0];
+    } else {
+      const aHead = splitAliases(it.a)[0] || it.a;
+      const bHead = splitAliases(it.b)[0] || it.b;
+      const aKo = (gKey(aHead) === 'ko');
+      const koSide = aKo ? aHead : bHead;
+      const xSide = aKo ? bHead : aHead;
+      tgt = (outP === 'ko') ? koSide : xSide;
+      src = (outP === 'ko') ? xSide : koSide;
+    }
+    if (tgt && src && !eqTerm(tgt, src)) pairs.push('"' + src + '" → "' + tgt + '"');
+  }
+  if (!pairs.length) return null;
+  return 'Glossary (MANDATORY): when the input contains the left term, translate it EXACTLY as the right term, verbatim — do not paraphrase, do not use synonyms, and do not append the original in parentheses: ' + pairs.join('; ') + '.';
+}
 /* 쌍에서 해당 언어처럼 보이는 항목 고르기 (한글 포함 여부로 판단) */
 function pickByLang(pair, lang) {
   const hasKo = function(s){ return /[가-힣]/.test(s); };
@@ -2434,7 +2467,7 @@ window.addEventListener('pagehide', () => {
       '<span id="gCount" class="g-count"></span>' +
     '</div>' +
     '<div class="g-list" id="gList"></div>' +
-    '<div class="g-hint">두 표현을 등록하면 양방향으로 적용됩니다. 어느 칸에 영어/한국어를 넣든 상관없어요. <b>등록 시 AI가 그 단어의 평소 번역어(예: cat→"고양이")를 1회 자동 학습</b>해, 통역 중에는 <b>AI 번역에 개입하지 않고 후처리로 "고양이 → 냥냥이"처럼 표준표기로 강제 치환</b>합니다(반영 내역은 아래 "반영 로그"에 표시). <b>한 칸에 쉼표로 변이형을 여러 개 넣으면 모두 표준표기(첫 항목)로 바뀝니다</b> — 예: "댕댕이, 개, 강아지" → 개·강아지도 댕댕이로. (AI가 문맥따라 다르게 번역하는 단어는 이렇게 변이형을 직접 넣어주세요.) 학습 상태는 목록 오른쪽에 표시됩니다. 파일은 한 줄에 "용어1, 표준표기, 별칭, 별칭..." (1번째=반대언어 용어, 2번째=표준표기, 3번째부터 별칭). 내보내기는 위 형식 선택 후 저장, 불러오기는 txt·csv·Excel 지원(기존 목록에 병합·중복 제거, 학습값 유지). 통역 중 추가/학습은 다음 문장부터 반영.</div>';
+    '<div class="g-hint">두 표현을 등록하면 양방향으로 적용됩니다. 어느 칸에 영어/한국어를 넣든 상관없어요. <b>등록 시 AI가 그 단어의 평소 번역어(예: cat→"고양이")를 1회 자동 학습</b>해, 통역 중에는 <b>AI 번역에 개입하지 않고 후처리로 "고양이 → 냥냥이"처럼 표준표기로 강제 치환</b>합니다(반영 내역은 아래 "반영 로그"에 표시). <b>한 칸에 쉼표로 변이형을 여러 개 넣으면 모두 표준표기(첫 항목)로 바뀝니다</b> — 예: "댕댕이, 개, 강아지" → 개·강아지도 댕댕이로. (AI가 문맥따라 다르게 번역하는 단어는 이렇게 변이형을 직접 넣어주세요.) 학습 상태는 목록 오른쪽에 표시됩니다. 파일은 한 줄에 "용어1, 표준표기, 별칭, 별칭..." (1번째=반대언어 용어, 2번째=표준표기, 3번째부터 별칭). 내보내기는 위 형식 선택 후 저장, 불러오기는 txt·csv·Excel 지원(기존 목록에 병합·중복 제거, 학습값 유지). 통역 중 추가 시 <b>후처리 치환은 다음 문장부터</b>, <b>AI 프롬프트 반영은 다음 (재)연결/방향전환부터</b> 적용됩니다.</div>';
 
   const listEl = $('gList');
   function render() {

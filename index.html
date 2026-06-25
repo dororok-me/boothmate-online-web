@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.4.1 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.4.0 → v1.4.1):
+  - [용어집 양방향 병기 일관화] 표준표기 뒤에 반대언어 용어를 괄호로 병기(annotateGlossary):
+    출력 한국어 → "댕댕이(dog)", 출력 영어 → "dog(댕댕이)". 양방향 동일 규칙.
+    이미 "표준표기(" 형태면 중복 병기 안 함(AI가 붙인 괄호 포함). 반영 로그도 양방향 기록.
+    파이프라인: 프롬프트 주입(표준표기 유도) → 후처리 치환(변이형 보강) → 병기(반대언어 괄호).
   index.html v1.4.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.3.3 → v1.4.0):
   - [용어집 일관성] 순수 후처리는 AI의 변이 번역(운영의 우수성/운영우위성/운영 탁월성)을
@@ -799,7 +805,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.4.0</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.4.1</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1582,6 +1588,44 @@ function applyGlossaryReplace(text, outCode) {
   }
   return { text: out, corrections: corrections };
 }
+/* 표준표기 뒤에 반대언어 용어를 괄호로 병기 (양방향 일관): 출력 한국어면 "댕댕이(dog)",
+   출력 영어면 "dog(댕댕이)". 이미 "표준표기(" 형태면 중복 병기 안 함. 반영 로그에도 기록. */
+function annotateGlossary(text, outCode) {
+  const outP = (/ko/.test(String(outCode))) ? 'ko' : 'x';
+  const otherP = (outP === 'ko') ? 'x' : 'ko';
+  let out = text;
+  for (const it of loadGlossary()) {
+    if (!it) continue;
+    let canon, other;
+    if (it.nat) {
+      canon = it.nat[outP] && it.nat[outP][0];
+      other = it.nat[otherP] && it.nat[otherP][0];
+    } else {
+      const aHead = splitAliases(it.a)[0] || it.a;
+      const bHead = splitAliases(it.b)[0] || it.b;
+      const aKo = (gKey(aHead) === 'ko');
+      canon = (outP === 'ko') ? (aKo ? aHead : bHead) : (aKo ? bHead : aHead);
+      other = (outP === 'ko') ? (aKo ? bHead : aHead) : (aKo ? aHead : bHead);
+    }
+    if (!canon || !other || eqTerm(canon, other)) continue;
+    let re;
+    try { re = flexRegex(canon); } catch (e) { continue; }
+    // 이미 "표준표기(" 형태면 중복 병기 방지
+    const doneRe = new RegExp(re.source + '\\s*\\(', 'gi');
+    if (doneRe.test(out)) continue;
+    re.lastIndex = 0;
+    let annotated = false;
+    out = replaceSafe(out, re, function (m) { annotated = true; return m + '(' + other + ')'; });
+    if (annotated) {
+      const k = 'ann:' + canon + '(' + other + ')';
+      if (typeof turnLogged !== 'undefined' && !turnLogged.has(k)) {
+        turnLogged.add(k);
+        if (typeof reflogAdd === 'function') reflogAdd('glossary', other + ' → ' + canon);
+      }
+    }
+  }
+  return out;
+}
 /* 괄호 밖에 있는 매치만 치환 */
 function replaceSafe(text, re, fn) {
   let result = '';
@@ -1632,6 +1676,8 @@ function shownTrans(raw) {
   if (ccToggle && ccToggle.checked && window.BoothmateCurrency) {
     result = window.BoothmateCurrency.applyConversion(result);
   }
+  // 용어집 병기 (양방향 일관): 표준표기 뒤에 반대언어 용어를 괄호로 — "댕댕이(dog)" / "dog(댕댕이)"
+  result = annotateGlossary(result, curTarget || targetLang);
   return result;
 }
 

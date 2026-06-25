@@ -192,6 +192,20 @@ let traColor = localStorage.getItem('ov_tra_color') || '#ffffff';
 let opacity  = Math.min(50, parseInt(localStorage.getItem('ov_opacity') || '50'));
 let lineGap  = parseInt(localStorage.getItem('ov_line_gap') || '10');
 
+/* OBS/스트리밍 모드: ?obs → 배경 완전 투명 + 컨트롤 숨김(캡처 깔끔).
+   크기·색은 URL로도 지정: ?src=18&tra=28&srccolor=b4c8e6&tracolor=ffffff&gap=12 */
+const _q = new URLSearchParams(location.search);
+if (_q.get('src'))      srcSize  = parseInt(_q.get('src'))  || srcSize;
+if (_q.get('tra'))      traSize  = parseInt(_q.get('tra'))  || traSize;
+if (_q.get('gap'))      lineGap  = parseInt(_q.get('gap'))  || lineGap;
+if (_q.get('srccolor')) srcColor = '#' + _q.get('srccolor').replace(/^#/, '');
+if (_q.get('tracolor')) traColor = '#' + _q.get('tracolor').replace(/^#/, '');
+const obsMode = _q.has('obs') || _q.has('clean') || _q.has('transparent');
+if (obsMode) {
+  opacity = 0;                  // 배경 완전 투명 (OBS 브라우저 소스에 글자만 합성)
+  ctrl.style.display = 'none';  // 컨트롤 패널 숨김
+}
+
 function applyStyles() {
   document.documentElement.style.setProperty('--src-size',   srcSize  + 'px');
   document.documentElement.style.setProperty('--trans-size', traSize  + 'px');

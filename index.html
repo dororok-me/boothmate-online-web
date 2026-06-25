@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.4.2 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.4.1 → v1.4.2):
+  - [한영 복수형 병기] 영어 표준표기가 단어경계 정규식이라 "cat"이 "cats"에 안 걸려
+    한영에서 복수형(cats/dogs)이 병기 안 되던 문제. 병기용 flexRegexP() 추가 —
+    영어 표준표기에 복수형(s/es) 허용(BoothmateG replaceEnglish 방식). 이제 "cats(냥냥이)",
+    "dogs(댕댕이)"로 병기. 한국어는 단·복수 구분 없어 기존대로(영한은 이미 복수 잡힘).
   index.html v1.4.1 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.4.0 → v1.4.1):
   - [용어집 양방향 병기 일관화] 표준표기 뒤에 반대언어 용어를 괄호로 병기(annotateGlossary):
@@ -805,7 +811,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.4.1</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.4.2</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1442,6 +1448,17 @@ function flexRegex(term) {
   const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp('(?<![A-Za-z0-9])' + esc + '(?![A-Za-z0-9])', 'gi');
 }
+/* 병기용 정규식 — 영어 표준표기의 복수형(s/es)까지 매칭 (예: cat→cats, dog→dogs).
+   한국어는 단·복수 구분이 없어 flexRegex와 동일. */
+function flexRegexP(term) {
+  const hasKo = /[가-힣]/.test(term);
+  if (hasKo) {
+    const escaped = term.split('').map(function (c) { return c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+    return new RegExp(escaped.join('\\s*'), 'g');
+  }
+  const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp('(?<![A-Za-z0-9])' + esc + '(?:es|s)?(?![A-Za-z0-9])', 'gi');
+}
 /* 프롬프트용 글로서리 지시문 — 괄호 주석 방식으로 전환하여 프롬프트 주입 사용 안 함 */
 /* 용어집 프롬프트 주입 — 현재 출력 언어 방향의 (트리거어 → 표준표기) 매핑을 systemInstruction에 실어
    AI가 처음부터 표준표기로 번역하도록 유도. 후처리는 빠져나온 변이형을 보강한다. */
@@ -1609,7 +1626,7 @@ function annotateGlossary(text, outCode) {
     }
     if (!canon || !other || eqTerm(canon, other)) continue;
     let re;
-    try { re = flexRegex(canon); } catch (e) { continue; }
+    try { re = flexRegexP(canon); } catch (e) { continue; }   // 영어 표준표기 복수형(cats/dogs)도 병기
     // 이미 "표준표기(" 형태면 중복 병기 방지
     const doneRe = new RegExp(re.source + '\\s*\\(', 'gi');
     if (doneRe.test(out)) continue;

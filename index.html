@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.2.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.1.0 → v1.2.0):
+  - 언어쌍 가운데 동그란 화살표(🔄)를 클릭 불가(표시 전용)로 변경. 좌우 언어 교체 기능 제거
+    (양방향 고정이라 교체가 번역 방향에 혼란만 줌). button → span.
+  - 하단 '텍스트 번역' 박스 제거 → 그 자리에 'BoothmateG 반영 로그' 패널 추가:
+    통역 중 문장 확정(finishSegment) 시 원문+번역에서 등록 용어집 쌍이 매칭되면
+    "A ↔ B" 형태로 누적 표시(최신이 위, 직전 동일 항목 생략, 최대 200개, 지우기 버튼).
+    웹앱은 용어집 중심이라 BoothmateG의 용어집 반영에 해당하는 부분만 이식.
   index.html v1.1.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.0.0 → v1.1.0):
   - 번역 언어를 '단일 고정' → '양방향 언어쌍(A ⇄ B)'으로 변경:
@@ -705,7 +713,7 @@
   <label>통역 언어:
     <select id="langA"></select>
   </label>
-  <button id="pairSwapBtn" type="button" title="두 언어를 양방향으로 자동 번역합니다. 클릭하면 좌우를 바꿉니다." style="background:#2a3a55; color:#cfe0ff; border:none; border-radius:50%; width:30px; height:30px; font-size:15px; line-height:1; cursor:pointer; padding:0;">🔄</button>
+  <span id="pairSwapBtn" title="두 언어는 양방향으로 자동 번역됩니다" style="display:inline-flex; align-items:center; justify-content:center; background:#2a3a55; color:#cfe0ff; border-radius:50%; width:30px; height:30px; font-size:15px; line-height:1;">🔄</span>
   <label>
     <select id="langB"></select>
   </label>
@@ -740,20 +748,20 @@
 </div>
 
 <!-- 하단 텍스트 번역 박스 -->
-<div id="textTransBox" style="margin-top:10px; padding:14px; border:1px solid var(--t-border); border-radius:12px; background:var(--t-input-bg); flex-shrink:0;">
-  <div style="font-size:13px; font-weight:700; color:var(--t-accent); margin-bottom:8px;">⌨️ 텍스트 번역 <span style="font-weight:400; color:var(--t-muted); font-size:11px;">— 입력한 글을 위에서 설정한 번역 언어로 옮깁니다</span></div>
-  <textarea id="textTransInput" placeholder="번역할 텍스트를 입력하고 '번역' 버튼 또는 Ctrl+Enter를 누르세요" spellcheck="false" style="width:100%; box-sizing:border-box; min-height:56px; padding:10px 12px; border-radius:8px; border:1px solid var(--t-border); background:var(--t-bg); color:var(--t-text); font-size:14px; resize:vertical;"></textarea>
-  <div style="display:flex; gap:8px; align-items:center; margin-top:8px;">
-    <button id="textTransBtn" style="padding:8px 18px; border-radius:8px; border:none; background:var(--t-accent); color:#fff; font-weight:600; font-size:13px; cursor:pointer;">번역</button>
-    <button id="textTransClearBtn" style="padding:8px 14px; border-radius:8px; border:1px solid var(--t-border); background:transparent; color:var(--t-muted); font-size:13px; cursor:pointer;">지우기</button>
-    <span id="textTransStatus" style="font-size:12px; color:var(--t-muted);"></span>
+<!-- 반영 로그: 통역 중 적용된 용어집 항목을 누적 표시 (BoothmateG 반영 로그 포팅) -->
+<div id="reflogBox" style="margin-top:10px; padding:14px; border:1px solid var(--t-border); border-radius:12px; background:var(--t-input-bg); flex-shrink:0;">
+  <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+    <span style="font-size:13px; font-weight:700; color:var(--t-accent);">📌 반영 로그</span>
+    <span style="font-weight:400; color:var(--t-muted); font-size:11px;">— 통역 중 적용된 용어집 항목이 표시됩니다</span>
+    <button id="reflogClearBtn" style="margin-left:auto; padding:6px 12px; border-radius:8px; border:1px solid var(--t-border); background:transparent; color:var(--t-muted); font-size:12px; cursor:pointer;">지우기</button>
   </div>
-  <div id="textTransResult" style="margin-top:10px; padding:10px 12px; border-radius:8px; background:var(--t-bg); border:1px solid var(--t-border); font-size:15px; line-height:1.6; color:var(--t-text); white-space:pre-wrap; display:none;"></div>
+  <div id="reflogList" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto;"></div>
+  <div id="reflogEmpty" style="color:var(--t-muted); font-size:12px; padding:8px 2px;">반영된 용어가 여기 표시됩니다.</div>
 </div>
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.1.0</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.2.0</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -979,10 +987,6 @@ function onPairChange() {
 }
 $('langA').addEventListener('change', onPairChange);
 $('langB').addEventListener('change', onPairChange);
-$('pairSwapBtn').addEventListener('click', () => {
-  const t = $('langA').value; $('langA').value = $('langB').value; $('langB').value = t;
-  onPairChange();
-});
 // 초기 동기화 (이벤트 발생 없이)
 { const { b } = getPair(); if ($('targetLang')) $('targetLang').value = b; }
 updateTargetLangHint();
@@ -1148,65 +1152,60 @@ $('openOverlayBtn').onclick = () => {
     'width=900,height=220,resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no');
 };
 
-/* ── 하단 텍스트 번역 (일반 Gemini API 사용) ── */
-async function runTextTranslate() {
-  const inputEl = $('textTransInput'), resultEl = $('textTransResult'), statusEl2 = $('textTransStatus');
-  const text = inputEl.value.trim();
-  if (!text) { inputEl.focus(); return; }
-  // 양방향: 입력 텍스트 언어를 감지해 쌍의 반대 언어로 번역 (감지 실패 시 langB)
-  const { a: _ta, b: _tb } = getPair();
-  const _det = detectLang(text, _ta, _tb);
-  const target = _det ? ((langPrefix(_det) === langPrefix(_ta)) ? _tb : _ta) : _tb;
-  const mode = (localStorage.getItem('conn_mode') || 'relay');
-  statusEl2.textContent = '번역 중...';
-  $('textTransBtn').disabled = true;
-  try {
-    let out = '';
-    if (mode === 'relay' && RELAY_SERVER_URL && RELAY_PASS_KEY) {
-      // 중계 모드: 서버의 /translate 경유 (API 키 노출 없음)
-      const baseHttp = RELAY_SERVER_URL.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
-      const res = await fetch(baseHttp + '/translate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
-        body: JSON.stringify({ text: text, targetLang: langName(target) })
-      });
-      if (!res.ok) { const e = await res.json().catch(()=>({error:res.status})); throw new Error(e.error || res.status); }
-      const data = await res.json();
-      out = data.result || '(번역 결과 없음)';
-    } else {
-      // 직접 모드: 브라우저에서 Gemini 직접 호출 (개인 API 키 필요)
-      const apiKey = ($('apiKey') && $('apiKey').value.trim()) || localStorage.getItem('gemini_api_key') || '';
-      if (!apiKey) { statusEl2.textContent = '텍스트 번역은 API 키가 필요합니다 (설정 → 직접 연결 키 입력).'; $('textTransBtn').disabled = false; return; }
-      const prompt = 'Translate the following text into ' + langName(target) + '. Output only the translation, no explanations, no quotes.\n\n' + text;
-      const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=' + apiKey;
-      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-      if (!res.ok) { const errTxt = await res.text(); throw new Error('HTTP ' + res.status + ' ' + errTxt.slice(0, 120)); }
-      const data = await res.json();
-      out = (data.candidates?.[0]?.content?.parts?.[0]?.text) || '(번역 결과 없음)';
-    }
-    let shownOut = out.trim();
-    const ccT = $('currencyToggle');
-    if (ccT && ccT.checked && window.BoothmateCurrency) shownOut = window.BoothmateCurrency.applyConversion(shownOut);
-    resultEl.textContent = shownOut;
-    resultEl.style.display = 'block';
-    statusEl2.textContent = '';
-  } catch (e) {
-    statusEl2.textContent = '번역 실패: ' + e.message;
-  } finally {
-    $('textTransBtn').disabled = false;
+/* ════════════════════════════════════════════
+   반영 로그 — 통역 중 적용된 용어집 항목을 문장 확정 시 수집·표시
+   (BoothmateG ReflectionLog 포팅. 웹앱은 용어집 중심)
+   ════════════════════════════════════════════ */
+const REFLOG_MAX = 200;
+let reflogEntries = [];   // { kind, text }
+const REFLOG_STYLE = {
+  glossary: { bg: '#16304a', bd: '#2a5278', fg: '#9fd2ff', tag: '용어' },
+};
+function renderReflog() {
+  const list = $('reflogList'), empty = $('reflogEmpty');
+  if (!list) return;
+  list.innerHTML = '';
+  if (!reflogEntries.length) { if (empty) empty.style.display = 'block'; return; }
+  if (empty) empty.style.display = 'none';
+  for (let i = reflogEntries.length - 1; i >= 0; i--) {   // 최신이 위로
+    const e = reflogEntries[i];
+    const s = REFLOG_STYLE[e.kind] || REFLOG_STYLE.glossary;
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; background:' + s.bg + '; border:1px solid ' + s.bd + ';';
+    const tag = document.createElement('span');
+    tag.textContent = s.tag;
+    tag.style.cssText = 'font-size:10px; font-weight:700; color:' + s.fg + '; background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:5px; flex-shrink:0;';
+    const txt = document.createElement('span');
+    txt.textContent = e.text;
+    txt.style.cssText = 'font-size:13px; color:' + s.fg + ';';
+    row.appendChild(tag); row.appendChild(txt);
+    list.appendChild(row);
   }
 }
-$('textTransBtn').onclick = runTextTranslate;
-$('textTransClearBtn').onclick = () => {
-  $('textTransInput').value = '';
-  $('textTransResult').style.display = 'none';
-  $('textTransResult').textContent = '';
-  $('textTransStatus').textContent = '';
-  $('textTransInput').focus();
-};
-$('textTransInput').addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); runTextTranslate(); }
-});
+function reflogAdd(kind, text) {
+  reflogEntries.push({ kind: kind, text: text });
+  if (reflogEntries.length > REFLOG_MAX) reflogEntries = reflogEntries.slice(-REFLOG_MAX);
+  renderReflog();
+}
+function reflogClear() { reflogEntries = []; renderReflog(); }
+/* 문장 확정 시 호출: 원문+번역에서 매칭된 용어집 쌍을 기록 (직전과 동일 항목은 생략) */
+function collectReflections(source, target) {
+  const haystack = (source || '') + ' ' + (target || '');
+  if (!haystack.trim()) return;
+  for (const [A, B] of glossaryList()) {
+    if (!A || !B || A === B) continue;
+    let hit = false;
+    try { const reA = flexRegex(A); reA.lastIndex = 0; if (reA.test(haystack)) hit = true; } catch (e) {}
+    if (!hit) { try { const reB = flexRegex(B); reB.lastIndex = 0; if (reB.test(haystack)) hit = true; } catch (e) {} }
+    if (hit) {
+      const entryText = A + ' ↔ ' + B;
+      const last = reflogEntries[reflogEntries.length - 1];
+      if (!last || last.text !== entryText) reflogAdd('glossary', entryText);
+    }
+  }
+}
+if ($('reflogClearBtn')) $('reflogClearBtn').onclick = reflogClear;
+renderReflog();
 
 /* ════════════════════════════════════════════
    텔레프롬프터: 원문+번역을 "묶음(pair)"으로 항상 함께 표시
@@ -1573,6 +1572,9 @@ function recoverRaw(shownRest) { return shownRest; }
 /* 턴 종료(turnComplete) / 정지 시: 미완성 버퍼를 확정하고 현재 묶음 닫음 */
 function finishSegment() {
   const p = curPair;
+  // 반영 로그 수집용: 확정 직전의 최종 원문/번역 캡처 (버퍼가 곧 비워지므로 먼저 저장)
+  const _refSrc = srcBuf.trim();
+  const _refTrans = transBuf.trim() ? shownTrans(transBuf).trim() : '';
   if (p && srcBuf.trim()) {
     if (!p.srcLine) {
       p.srcLine = document.createElement('div'); p.srcLine.className = 'srcline';
@@ -1596,6 +1598,7 @@ function finishSegment() {
   if (curPair && (curPair.srcLine || curPair.transLine)) curPair = null;
   trimLines(combinedEl, 'srcline');
   pushMirror();
+  collectReflections(_refSrc, _refTrans);   // 반영 로그(용어집 매칭) 수집
 }
 
 /* ════════════════════════════════════════════

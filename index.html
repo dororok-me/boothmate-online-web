@@ -1,5 +1,15 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.3.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.2.0 → v1.3.0):
+  - 용어집을 '괄호 주석' → 'BoothmateG식 후처리 강제 치환'으로 변경(GlossaryPairEngine 포팅):
+    AI가 명확한 단어를 용어집대로 안 따르는 문제(예: cat을 "냥냥이" 대신 "고양이"로) 해결.
+    ① 용어 등록 시 AI(relay /translate 또는 Gemini)로 평소 번역어를 1회 학습(learnEntry):
+       cat→"고양이"를 entry.nat에 별칭으로 저장. 기존/불러온 용어는 패널 열 때 백그라운드 학습.
+    ② 통역 중에는 AI에 개입하지 않고 후처리(applyGlossaryReplace)로 출력 언어의 별칭을
+       표준표기로 강제 치환("고양이"→"냥냥이"). shownTrans에서 적용.
+    반영 로그를 실제 치환 내역("고양이 → 냥냥이")으로 표시. 용어 목록에 학습 상태 표시.
+    nat = { ko:[표준,별칭...], x:[표준,별칭...] }. 불러오기 시 학습값(nat) 보존.
   index.html v1.2.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.1.0 → v1.2.0):
   - 언어쌍 가운데 동그란 화살표(🔄)를 클릭 불가(표시 전용)로 변경. 좌우 언어 교체 기능 제거
@@ -761,7 +771,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.2.0</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.3.0</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1188,20 +1198,14 @@ function reflogAdd(kind, text) {
   renderReflog();
 }
 function reflogClear() { reflogEntries = []; renderReflog(); }
-/* 문장 확정 시 호출: 원문+번역에서 매칭된 용어집 쌍을 기록 (직전과 동일 항목은 생략) */
-function collectReflections(source, target) {
-  const haystack = (source || '') + ' ' + (target || '');
-  if (!haystack.trim()) return;
-  for (const [A, B] of glossaryList()) {
-    if (!A || !B || A === B) continue;
-    let hit = false;
-    try { const reA = flexRegex(A); reA.lastIndex = 0; if (reA.test(haystack)) hit = true; } catch (e) {}
-    if (!hit) { try { const reB = flexRegex(B); reB.lastIndex = 0; if (reB.test(haystack)) hit = true; } catch (e) {} }
-    if (hit) {
-      const entryText = A + ' ↔ ' + B;
-      const last = reflogEntries[reflogEntries.length - 1];
-      if (!last || last.text !== entryText) reflogAdd('glossary', entryText);
-    }
+/* 문장 확정 시 호출: AI 원본 번역에 용어집 강제 치환을 적용해 실제 교체 내역(별칭 → 표준)을 기록 */
+function collectReflections(source, rawTrans) {
+  if (!rawTrans || !rawTrans.trim()) return;
+  const gr = applyGlossaryReplace(rawTrans, curTarget || ($('targetLang') && $('targetLang').value) || '');
+  for (const c of gr.corrections) {
+    const entryText = c.from + ' → ' + c.to;
+    const last = reflogEntries[reflogEntries.length - 1];
+    if (!last || last.text !== entryText) reflogAdd('glossary', entryText);
   }
 }
 if ($('reflogClearBtn')) $('reflogClearBtn').onclick = reflogClear;
@@ -1437,6 +1441,82 @@ function applyGlossary(text) {
   }
   return out;
 }
+
+/* ════════════════════════════════════════════
+   용어집 후처리 강제 치환 (BoothmateG GlossaryPairEngine 포팅)
+   - 등록 시 AI로 '자연 번역어'를 1회 학습(learnEntry) → entry.nat에 별칭 저장
+   - 통역 중엔 AI에 개입하지 않고, 출력 언어의 별칭(예: 고양이)을 표준표기(냥냥이)로 치환
+   entry.nat = { ko:[표준,별칭...], x:[표준,별칭...] }  (ko=한국어, x=비한국어)
+   ════════════════════════════════════════════ */
+function gKey(term) { return /[가-힣]/.test(term) ? 'ko' : 'x'; }
+function eqTerm(a, b) {
+  const n = function(s){ return String(s||'').toLowerCase().replace(/\s+/g, ''); };
+  return n(a) === n(b);
+}
+/* 단일 용어를 AI로 번역(등록 시 1회). relay 모드는 /translate, 직접 모드는 Gemini */
+async function aiTranslateTerm(term, targetCode) {
+  const clean1 = function(s){ return String(s || '').split('\n')[0].replace(/^["'\s]+|["'\s.]+$/g, '').trim(); };
+  const mode = (localStorage.getItem('conn_mode') || 'relay');
+  if (mode === 'relay' && RELAY_SERVER_URL && RELAY_PASS_KEY) {
+    const baseHttp = RELAY_SERVER_URL.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
+    const res = await fetch(baseHttp + '/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
+      body: JSON.stringify({ text: term, targetLang: langName(targetCode) })
+    });
+    if (!res.ok) throw new Error('relay ' + res.status);
+    const data = await res.json();
+    return clean1(data.result || '');
+  }
+  const apiKey = ($('apiKey') && $('apiKey').value.trim()) || localStorage.getItem('gemini_api_key') || '';
+  if (!apiKey) throw new Error('no-key');
+  const prompt = 'Translate the single term "' + term + '" into ' + langName(targetCode) +
+                 '. Output ONLY the translated term itself, no explanation, no quotes, no punctuation.';
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=' + apiKey;
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+  if (!res.ok) throw new Error('gemini ' + res.status);
+  const data = await res.json();
+  return clean1((data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0].text) || '');
+}
+/* 용어쌍의 자연 번역어를 양쪽 언어로 학습해 entry.nat에 채움 (현재 언어쌍 기준) */
+async function learnEntry(entry) {
+  const { a: la, b: lb } = getPair();
+  const aLang = detectLang(entry.a, la, lb) || la;
+  const bLang = detectLang(entry.b, la, lb) || lb;
+  const ka = gKey(entry.a), kb = gKey(entry.b);
+  const nat = {};
+  nat[ka] = [entry.a];
+  if (!nat[kb]) nat[kb] = [];
+  if (nat[kb].indexOf(entry.b) === -1) nat[kb].unshift(entry.b);
+  // a를 b의 언어로 → b쪽 별칭(예: cat→한국어=고양이)
+  try { const t = await aiTranslateTerm(entry.a, bLang); if (t && !eqTerm(t, entry.b) && nat[kb].indexOf(t) === -1) nat[kb].push(t); } catch (e) {}
+  // b를 a의 언어로 → a쪽 별칭
+  try { const t2 = await aiTranslateTerm(entry.b, aLang); if (t2 && !eqTerm(t2, entry.a) && nat[ka].indexOf(t2) === -1) nat[ka].push(t2); } catch (e) {}
+  entry.nat = nat;
+  return entry;
+}
+/* 출력 언어(outCode)에 맞춰 별칭→표준표기 강제 치환. {text, corrections} 반환 */
+function applyGlossaryReplace(text, outCode) {
+  const outP = (/ko/.test(String(outCode))) ? 'ko' : 'x';
+  let out = text;
+  const corrections = [];
+  for (const it of loadGlossary()) {
+    if (!it) continue;
+    const col = it.nat && it.nat[outP];
+    if (!col || !col.length) continue;
+    const canonical = col[0];
+    for (let i = 1; i < col.length; i++) {
+      const alias = col[i];
+      if (!alias || eqTerm(alias, canonical)) continue;
+      let re;
+      try { re = flexRegex(alias); } catch (e) { continue; }
+      let hit = false;
+      out = out.replace(re, function (m) { hit = true; return canonical; });
+      if (hit) corrections.push({ from: alias, to: canonical });
+    }
+  }
+  return { text: out, corrections: corrections };
+}
 /* 괄호 밖에 있는 매치만 치환 */
 function replaceSafe(text, re, fn) {
   let result = '';
@@ -1471,8 +1551,8 @@ function shownTrans(raw) {
   const clean = raw.replace(/\n+/g, ' ').trim();
   const targetLang = $('targetLang').value;
   const usePP = $('ppToggle').checked;
-  // 글로서리 괄호 주석 (방향 무관)
-  let result = applyGlossary(clean);
+  // 용어집 후처리 강제 치환 (출력 언어 = 현재 방향). AI에 개입하지 않고 별칭→표준표기 교체.
+  let result = applyGlossaryReplace(clean, curTarget || targetLang).text;
   if (usePP && targetLang === "ko" && typeof koreanPostProcess === "function") {
     result = koreanPostProcess(result, $('speechLevel').value, null);
   }
@@ -1572,9 +1652,9 @@ function recoverRaw(shownRest) { return shownRest; }
 /* 턴 종료(turnComplete) / 정지 시: 미완성 버퍼를 확정하고 현재 묶음 닫음 */
 function finishSegment() {
   const p = curPair;
-  // 반영 로그 수집용: 확정 직전의 최종 원문/번역 캡처 (버퍼가 곧 비워지므로 먼저 저장)
+  // 반영 로그 수집용: 확정 직전의 원문/AI원본번역(치환 전) 캡처 (버퍼가 곧 비워지므로 먼저 저장)
   const _refSrc = srcBuf.trim();
-  const _refTrans = transBuf.trim() ? shownTrans(transBuf).trim() : '';
+  const _refRawTrans = transBuf;
   if (p && srcBuf.trim()) {
     if (!p.srcLine) {
       p.srcLine = document.createElement('div'); p.srcLine.className = 'srcline';
@@ -1598,7 +1678,7 @@ function finishSegment() {
   if (curPair && (curPair.srcLine || curPair.transLine)) curPair = null;
   trimLines(combinedEl, 'srcline');
   pushMirror();
-  collectReflections(_refSrc, _refTrans);   // 반영 로그(용어집 매칭) 수집
+  collectReflections(_refSrc, _refRawTrans);   // 반영 로그(용어집 강제 치환 내역) 수집
 }
 
 /* ════════════════════════════════════════════
@@ -2316,7 +2396,7 @@ window.addEventListener('pagehide', () => {
       '<span id="gCount" class="g-count"></span>' +
     '</div>' +
     '<div class="g-list" id="gList"></div>' +
-    '<div class="g-hint">두 표현을 등록하면 양방향으로 적용됩니다. 어느 칸에 영어/한국어를 넣든 상관없어요. 예) "인지과학 ⇄ recognition science" → 한국어 연사가 "인지과학"(띄어쓰기 무관 "인지 과학")이라 말하면 "recognition science"로, 영어 연사가 "recognition science"라 말하면 "인지과학"으로 나옵니다. 파일 형식: 한 줄에 "용어1, artificial intelligence"처럼 쉼표로 구분. 내보내기는 위 형식 선택 후 저장, 불러오기는 txt·csv·Excel 지원(기존 목록에 병합·중복 제거). 통역 중 추가는 다음 문장부터 후처리 반영, 프롬프트 반영은 정지 후 재시작 시 적용.</div>';
+    '<div class="g-hint">두 표현을 등록하면 양방향으로 적용됩니다. 어느 칸에 영어/한국어를 넣든 상관없어요. <b>등록 시 AI가 그 단어의 평소 번역어(예: cat→"고양이")를 1회 자동 학습</b>해, 통역 중에는 <b>AI 번역에 개입하지 않고 후처리로 "고양이 → 냥냥이"처럼 표준표기로 강제 치환</b>합니다(반영 내역은 아래 "반영 로그"에 표시). 학습 상태는 목록 오른쪽에 표시됩니다. 파일 형식: 한 줄에 "용어1, artificial intelligence"처럼 쉼표로 구분. 내보내기는 위 형식 선택 후 저장, 불러오기는 txt·csv·Excel 지원(기존 목록에 병합·중복 제거, 학습값 유지). 통역 중 추가/학습은 다음 문장부터 반영.</div>';
 
   const listEl = $('gList');
   function render() {
@@ -2329,9 +2409,18 @@ window.addEventListener('pagehide', () => {
       row.className = 'g-item';
       row.innerHTML =
         '<span class="g-a"></span><span class="g-mid">⇄</span><span class="g-b"></span>' +
+        '<span class="g-learn" style="font-size:11px; color:#7a8ba8; flex-shrink:0;"></span>' +
         '<button class="g-del">삭제</button>';
       row.querySelector('.g-a').textContent = it.a;
       row.querySelector('.g-b').textContent = it.b;
+      // 학습 상태 표시: 학습 전 "학습 중…", 학습 후 별칭(치환 대상) 표시
+      const learnEl = row.querySelector('.g-learn');
+      if (!it.nat) { learnEl.textContent = '학습 중…'; }
+      else {
+        const aliases = [];
+        for (const k of ['ko', 'x']) { const col = it.nat[k]; if (col) for (let i = 1; i < col.length; i++) if (col[i]) aliases.push(col[i]); }
+        learnEl.textContent = aliases.length ? ('치환: ' + aliases.join(', ')) : '';
+      }
       row.querySelector('.g-del').onclick = () => {
         const cur = loadGlossary();
         cur.splice(idx, 1);
@@ -2341,16 +2430,27 @@ window.addEventListener('pagehide', () => {
       listEl.appendChild(row);
     });
   }
-  function add() {
+  async function add() {
     const a = $('gInA').value.trim();
     const b = $('gInB').value.trim();
     if (!a || !b) { alert('두 칸을 모두 입력하세요.'); return; }
+    const entry = { a: a, b: b };
     const cur = loadGlossary();
-    cur.push({ a: a, b: b });
+    cur.push(entry);
     saveGlossary(cur);
     $('gInA').value = ''; $('gInB').value = '';
     $('gInA').focus();
-    render();
+    render();   // 먼저 "학습 중…" 표시
+    // 자연 번역어 학습 (AI 1회). 실패해도 기본 치환은 동작.
+    try {
+      await learnEntry(entry);
+      const list = loadGlossary();
+      for (let i = list.length - 1; i >= 0; i--) {
+        if (!list[i].nat && eqTerm(list[i].a, entry.a) && eqTerm(list[i].b, entry.b)) { list[i].nat = entry.nat; break; }
+      }
+      saveGlossary(list);
+      render();
+    } catch (e) { /* 학습 실패 — 기본 동작 유지 */ }
   }
   $('gAddBtn').onclick = add;
   $('gInB').addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
@@ -2401,10 +2501,11 @@ window.addEventListener('pagehide', () => {
       const key = a + '|' + b;
       if (seen[key]) continue;
       seen[key] = true;
-      merged.push({ a: a, b: b });
+      merged.push(it.nat ? { a: a, b: b, nat: it.nat } : { a: a, b: b });   // 학습값(nat) 보존
     }
     saveGlossary(merged);
     render();
+    if (window.__glossaryLearnMissing) window.__glossaryLearnMissing();   // 새로 불러온 용어 학습
     alert('불러오기 완료: 총 ' + merged.length + '개 용어');
   }
   // CSV/TSV 텍스트 → 쌍 배열 (구분자 자동: 콤마/탭, 따옴표 처리, 헤더 자동 건너뜀)
@@ -2495,8 +2596,32 @@ window.addEventListener('pagehide', () => {
     }
   };
 
-  $('glossaryBtn').onclick = () => { panel.classList.toggle('open'); if (panel.classList.contains('open')) render(); };
+  // 학습 안 된(nat 없는) 기존/불러온 용어를 백그라운드에서 1회씩 학습
+  let _learning = false;
+  async function learnMissing() {
+    if (_learning) return;
+    _learning = true;
+    try {
+      const list = loadGlossary();
+      for (let i = 0; i < list.length; i++) {
+        if (!list[i] || list[i].nat) continue;
+        const entry = { a: list[i].a, b: list[i].b };
+        try { await learnEntry(entry); } catch (e) { continue; }
+        const cur = loadGlossary();
+        for (let j = 0; j < cur.length; j++) {
+          if (!cur[j].nat && eqTerm(cur[j].a, entry.a) && eqTerm(cur[j].b, entry.b)) { cur[j].nat = entry.nat; break; }
+        }
+        saveGlossary(cur);
+        render();
+      }
+    } finally { _learning = false; }
+  }
+  // mergeGlossary/render 이후에도 누락분 학습되도록 노출
+  window.__glossaryLearnMissing = learnMissing;
+
+  $('glossaryBtn').onclick = () => { panel.classList.toggle('open'); if (panel.classList.contains('open')) { render(); learnMissing(); } };
   render();
+  learnMissing();
 })();
 </script>
 <script>

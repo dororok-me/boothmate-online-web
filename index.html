@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.4.6 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.4.5 → v1.4.6):
+  - 반영 로그 중복 제거 범위를 '턴' → '문장'으로 축소. 문장 확정(appendTrans done-flush)마다
+    turnLogged를 비워, 같은 용어가 다른 문장에서 다시 인식되면 매번 새 칩으로 기록(추적용).
+    (한 문장 내 스트리밍 partial 중복만 억제 → 스팸 방지).
   index.html v1.4.5 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.4.4 → v1.4.5):
   - 프롬프트의 "괄호 원문 병기 금지" 지시 제거(괄호 병기를 원하는 방침으로 변경). 병기는
@@ -827,7 +832,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.4.5</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.4.6</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1784,7 +1789,10 @@ function appendTrans(t) {
     srcBuf = "";            // 이 문장 묶음에 원문도 소비됨
     curPair = null;         // 묶음 닫음 → 다음 문장은 새 묶음(원문·번역 함께 새로)
   }
-  if (done.length) transBuf = rest ? recoverRaw(rest) : "";
+  if (done.length) {
+    transBuf = rest ? recoverRaw(rest) : "";
+    turnLogged.clear();   // 문장 확정 → 다음 문장은 같은 용어도 매번 다시 기록 (인식마다 추적)
+  }
   // 진행 중 나머지 번역은 현재(새) 묶음의 임시 번역 줄로
   if (rest) {
     const p = getCurrentPair();

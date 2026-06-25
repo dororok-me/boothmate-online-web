@@ -1,5 +1,16 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.1.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.0.0 → v1.1.0):
+  - 번역 언어를 '단일 고정' → '양방향 언어쌍(A ⇄ B)'으로 변경:
+    통역 언어 A·B 두 개를 고르면, 들어온 말이 A면 B로·B면 A로 자동 번역.
+    입력 언어를 자막(inputTranscription)에서 스크립트 기반으로 감지(detectLang),
+    방향이 바뀌면 출력 언어(curTarget)를 뒤집고 250ms 디바운스 후 세션 재연결.
+    가운데 ⇄ 버튼을 동그란 화살표(🔄)로 교체(=양방향 표시, 클릭 시 좌우 교체).
+    설정은 lang_pair(예: "ko|en")로 저장. 숨김 targetLang은 후처리/텍스트번역 호환용 동기화.
+    하단 텍스트 번역도 입력 언어 감지 → 반대 언어로 번역.
+    구현 메모: 연결 1개 유지(비용 절감). 화자가 바뀌는 첫 발화는 방향 전환(재연결) 동안
+    잠깐 이전 방향으로 나올 수 있음. 번역 모델이 지시문을 따르는지 라이브 검증 필요.
   index.html v1.0.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v0.9.99 → v1.0.0):
   - 환율 환산 기능 추가(BoothmateG CurrencyConverter v3.7.0 → currency.js로 포팅):
@@ -691,10 +702,15 @@
 <div id="optsCollapse" style="display:none; margin-top:10px; padding:12px 14px; border:1px solid var(--t-border); border-radius:10px; background:var(--t-panel-bg);">
 <div style="font-size:13px; font-weight:700; color:#7dd3fc; margin-bottom:8px;">번역 · 입력 설정</div>
 <div class="opts">
-  <label>번역 언어:
-    <select id="targetLang"></select>
+  <label>통역 언어:
+    <select id="langA"></select>
   </label>
-  <span id="targetLangHint" style="font-size:12px; color:var(--t-muted);">(어떤 언어가 들어와도 자동 감지)</span>
+  <button id="pairSwapBtn" type="button" title="두 언어를 양방향으로 자동 번역합니다. 클릭하면 좌우를 바꿉니다." style="background:#2a3a55; color:#cfe0ff; border:none; border-radius:50%; width:30px; height:30px; font-size:15px; line-height:1; cursor:pointer; padding:0;">🔄</button>
+  <label>
+    <select id="langB"></select>
+  </label>
+  <select id="targetLang" style="display:none;"></select>
+  <span id="targetLangHint" style="font-size:12px; color:var(--t-muted);">(양방향 자동 번역)</span>
   <label style="white-space:nowrap;" title="번역 자막의 금액을 자동으로 환산해 괄호로 표시합니다 (예: $24억(₩약 3조…))"><input type="checkbox" id="currencyToggle" checked> 💱 환율 환산</label>
   <label style="display:none;"><input type="checkbox" id="audioToggle"> 번역 음성 재생</label>
   <label>사운드 소스:
@@ -737,7 +753,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.0.0</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.1.0</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -812,12 +828,47 @@ function fillTargetLangOptions() {
     sel.appendChild(opt);
   }
 }
-/* 안내 문구를 선택 언어에 맞게 갱신 */
+/* 안내 문구를 선택 언어쌍에 맞게 갱신 (양방향) */
 function updateTargetLangHint() {
   const hint = $('targetLangHint');
   if (!hint) return;
-  const label = langLabel($('targetLang').value);
-  hint.textContent = '(어떤 언어가 들어와도 자동 감지해서 ' + label + '로 번역됩니다)';
+  const { a, b } = getPair();
+  hint.textContent = '(' + langLabel(a) + ' ⇄ ' + langLabel(b) + ' — 들어온 말의 반대 언어로 자동 번역)';
+}
+
+/* ── 양방향 언어쌍 헬퍼 ── */
+function getPair() {
+  const a = ($('langA') && $('langA').value) || 'ko';
+  const b = ($('langB') && $('langB').value) || 'en';
+  return { a, b };
+}
+function langPrefix(code) { return String(code || '').split('-')[0].toLowerCase(); }
+/* 입력 텍스트가 쌍(a,b) 중 어느 언어인지 스크립트 기반 간이 감지. 불확실하면 null */
+function detectLang(text, a, b) {
+  const t = text || '';
+  const has = {
+    ko: /[가-힣]/.test(t), ja: /[぀-ヿ]/.test(t), zh: /[一-鿿]/.test(t),
+    ar: /[؀-ۿ]/.test(t), he: /[֐-׿]/.test(t), hi: /[ऀ-ॿ]/.test(t),
+    th: /[฀-๿]/.test(t), cyr: /[Ѐ-ӿ]/.test(t), el: /[Ͱ-Ͽ]/.test(t),
+    latin: /[A-Za-z]/.test(t)
+  };
+  const score = (code) => {
+    const p = langPrefix(code);
+    if (p === 'ko') return has.ko ? 2 : 0;
+    if (p === 'ja') return has.ja ? 2 : (has.zh ? 1 : 0);
+    if (p === 'zh') return (has.zh && !has.ja) ? 2 : 0;
+    if (p === 'ar' || p === 'fa' || p === 'ur') return has.ar ? 2 : 0;
+    if (p === 'he') return has.he ? 2 : 0;
+    if (p === 'hi' || p === 'bn' || p === 'ta' || p === 'te') return has.hi ? 2 : 0;
+    if (p === 'th') return has.th ? 2 : 0;
+    if (p === 'ru' || p === 'uk' || p === 'bg' || p === 'sr') return has.cyr ? 2 : 0;
+    if (p === 'el') return has.el ? 2 : 0;
+    return has.latin ? 1 : 0;   // 라틴 계열(영어 등)
+  };
+  const sa = score(a), sb = score(b);
+  if (sa > sb) return a;
+  if (sb > sa) return b;
+  return null;
 }
 
 
@@ -890,17 +941,51 @@ function pushMirror() {
 const savedLevel = localStorage.getItem('speech_level');
 if (savedLevel) $('speechLevel').value = savedLevel;
 $('speechLevel').addEventListener('change', () => { localStorage.setItem('speech_level', $('speechLevel').value); broadcast('config', { speech_level: $('speechLevel').value }); });
-// 번역 언어 select 채우기 (LANGUAGES 목록 기반) + 복원 + 안내문구
+// 숨김 targetLang(호환용) 채우기 — 동적 출력 언어를 담는 용도
 fillTargetLangOptions();
-const savedLang = localStorage.getItem('target_lang');
-if (savedLang) $('targetLang').value = savedLang;
-if (!$('targetLang').value) $('targetLang').value = 'ko';   // 기본 한국어
-updateTargetLangHint();
-$('targetLang').addEventListener('change', () => {
-  localStorage.setItem('target_lang', $('targetLang').value);
+
+// ── 양방향 언어쌍(langA · langB) 채우기 + 복원 + 핸들러 ──
+function fillPairLangOptions() {
+  for (const id of ['langA', 'langB']) {
+    const sel = $(id); if (!sel) continue;
+    sel.innerHTML = '';
+    for (const [code, label] of LANGUAGES) {
+      const opt = document.createElement('option');
+      opt.value = code; opt.textContent = label;
+      sel.appendChild(opt);
+    }
+  }
+}
+fillPairLangOptions();
+{
+  const savedPair = (localStorage.getItem('lang_pair') || 'ko|en').split('|');
+  $('langA').value = savedPair[0] || 'ko';
+  $('langB').value = savedPair[1] || 'en';
+  if (!$('langA').value) $('langA').value = 'ko';
+  if (!$('langB').value || $('langB').value === $('langA').value) $('langB').value = ($('langA').value === 'en' ? 'ko' : 'en');
+}
+function persistPair() { localStorage.setItem('lang_pair', $('langA').value + '|' + $('langB').value); }
+function onPairChange() {
+  if ($('langA').value === $('langB').value) {
+    $('langB').value = ($('langA').value === 'en' ? 'ko' : 'en');
+  }
+  persistPair();
+  const { b } = getPair();
+  curTarget = b;                                   // 기본 방향: A → B
+  if ($('targetLang')) $('targetLang').value = b;
   updateTargetLangHint();
-  broadcast('config', { target_lang: $('targetLang').value });
+  broadcast('config', { target_lang: b });
+  if (running && !userStopped) connectWS();        // 통역 중이면 새 쌍으로 재연결
+}
+$('langA').addEventListener('change', onPairChange);
+$('langB').addEventListener('change', onPairChange);
+$('pairSwapBtn').addEventListener('click', () => {
+  const t = $('langA').value; $('langA').value = $('langB').value; $('langB').value = t;
+  onPairChange();
 });
+// 초기 동기화 (이벤트 발생 없이)
+{ const { b } = getPair(); if ($('targetLang')) $('targetLang').value = b; }
+updateTargetLangHint();
 
 /* (구) 번역 방향 박스 동기화 — 박스는 숨김 처리됨. 호환 위해 함수만 유지. */
 function syncLangBoxes() {
@@ -1068,7 +1153,10 @@ async function runTextTranslate() {
   const inputEl = $('textTransInput'), resultEl = $('textTransResult'), statusEl2 = $('textTransStatus');
   const text = inputEl.value.trim();
   if (!text) { inputEl.focus(); return; }
-  const target = $('targetLang').value;
+  // 양방향: 입력 텍스트 언어를 감지해 쌍의 반대 언어로 번역 (감지 실패 시 langB)
+  const { a: _ta, b: _tb } = getPair();
+  const _det = detectLang(text, _ta, _tb);
+  const target = _det ? ((langPrefix(_det) === langPrefix(_ta)) ? _tb : _ta) : _tb;
   const mode = (localStorage.getItem('conn_mode') || 'relay');
   statusEl2.textContent = '번역 중...';
   $('textTransBtn').disabled = true;
@@ -1565,6 +1653,8 @@ let ws = null, audioContext = null, micStream = null, workletNode = null, runnin
 let sessionLimitTimer = null;   // 한 세션 최대 5분 제한 타이머
 const SESSION_LIMIT_MS = 5 * 60 * 1000;   // 5분
 let userStopped = false;        // 사용자가 정지를 눌렀는지 (true면 재연결 안 함)
+let curTarget = null;           // 양방향: 현재 번역 출력 언어(방향 따라 동적으로 바뀜)
+let pairFlipTimer = null;       // 방향 전환 재연결 디바운스 타이머
 let reconnectTimer = null;      // 재연결 대기 타이머
 let reconnectAttempt = 0;       // 연속 재연결 시도 횟수
 
@@ -1595,6 +1685,8 @@ async function start() {
   running = true;
   userStopped = false;
   reconnectAttempt = 0;
+  // 양방향: 기본 방향은 A → B (langB로 번역). 입력 언어 감지되면 자동 전환.
+  { const { b } = getPair(); curTarget = b; if ($('targetLang')) $('targetLang').value = b; }
   setRunningUI(true);
   // 한 세션 최대 5분 제한 — 5분 지나면 자동 정지 (비용 누수 방지). 무제한 계정은 면제.
   if (sessionLimitTimer) clearTimeout(sessionLimitTimer);
@@ -1614,6 +1706,24 @@ async function start() {
   await startMic();     // 마이크는 한 번만 시작 (재연결돼도 유지)
 }
 
+/* 입력 언어를 감지해 번역 방향을 자동 전환.
+   현재 출력 언어(curTarget)와 같은 언어가 입력으로 들어오면(= 반대편 화자가 말하기 시작)
+   출력 언어를 반대로 뒤집고 짧은 디바운스 후 세션을 재연결한다. */
+function maybeFlipDirection(srcText) {
+  if (!running || userStopped) return;
+  const { a, b } = getPair();
+  const det = detectLang(srcText, a, b);
+  if (!det) return;
+  // 감지된 입력 언어의 반대가 와야 할 출력 언어
+  const desired = (langPrefix(det) === langPrefix(a)) ? b : a;
+  if (langPrefix(desired) === langPrefix(curTarget)) return;   // 이미 올바른 방향
+  curTarget = desired;
+  if ($('targetLang')) $('targetLang').value = desired;
+  setStatus('언어 방향 전환 중…', true);
+  if (pairFlipTimer) clearTimeout(pairFlipTimer);
+  pairFlipTimer = setTimeout(() => { if (running && !userStopped) connectWS(); }, 250);
+}
+
 /* ws 세션만 여는 함수 (마이크와 독립 — 재연결 시 이것만 다시 호출) */
 function connectWS() {
   // 기존 연결이 남아있으면 깨끗이 정리 (중복 연결/재연결 루프 방지)
@@ -1627,7 +1737,10 @@ function connectWS() {
     } catch (e) {}
     ws = null;
   }
-  const TARGET_LANGUAGE = $('targetLang').value;   // 타겟 언어(단일). 소스는 Gemini가 자동 감지
+  // 양방향: 현재 방향의 출력 언어(curTarget). 입력 언어 감지에 따라 동적으로 바뀐다.
+  { const { a, b } = getPair(); if (!curTarget || (langPrefix(curTarget) !== langPrefix(a) && langPrefix(curTarget) !== langPrefix(b))) curTarget = b; }
+  const TARGET_LANGUAGE = curTarget;
+  if ($('targetLang')) $('targetLang').value = TARGET_LANGUAGE;   // 후처리/텍스트번역 호환용 동기화
   const mode = (localStorage.getItem('conn_mode') || 'relay');
   let wsUrl;
   if (mode === 'relay') {
@@ -1666,9 +1779,13 @@ function connectWS() {
     };
     const instr = speechInstruction($('speechLevel').value, TARGET_LANGUAGE);
     const glos = glossaryInstruction(TARGET_LANGUAGE);
-    // 어떤 언어가 들어와도 타겟 언어로 번역하도록 지시 (소스 자동 감지)
-    const toAll = 'Translate every input utterance into ' + langName(TARGET_LANGUAGE) +
-                  ', regardless of the input language. Always output only ' + langName(TARGET_LANGUAGE) + '.';
+    // 양방향 언어쌍 통역 지시 — 이 세션은 TARGET_LANGUAGE로만 출력(방향은 클라이언트가 감지·전환)
+    const { a: _pa, b: _pb } = getPair();
+    const _other = (langPrefix(TARGET_LANGUAGE) === langPrefix(_pa)) ? _pb : _pa;
+    const toAll = 'You are a simultaneous interpreter between ' + langName(_pa) + ' and ' + langName(_pb) +
+                  '. The expected input is ' + langName(_other) + '. Translate every input utterance into ' +
+                  langName(TARGET_LANGUAGE) + '. Output ONLY ' + langName(TARGET_LANGUAGE) +
+                  '; never echo the input language.';
     const combined = [toAll, instr, glos].filter(Boolean).join(' ');
     if (combined) setupMessage.setup.systemInstruction = { parts: [{ text: combined }] };
     ws.send(JSON.stringify(setupMessage));
@@ -1701,7 +1818,7 @@ function connectWS() {
     }
     const sc = msg.serverContent;
     if (sc) {
-      if (sc.inputTranscription && sc.inputTranscription.text) appendSrc(sc.inputTranscription.text);
+      if (sc.inputTranscription && sc.inputTranscription.text) { appendSrc(sc.inputTranscription.text); maybeFlipDirection(sc.inputTranscription.text); }
       if (sc.outputTranscription && sc.outputTranscription.text) appendTrans(sc.outputTranscription.text);
       if (sc.modelTurn && sc.modelTurn.parts) { for (const part of sc.modelTurn.parts) { if (part.inlineData && part.inlineData.data && $('audioToggle').checked) playAudioChunk(part.inlineData.data); } }
       if (sc.turnComplete) finishSegment();

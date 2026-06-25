@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.4.4 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.4.3 → v1.4.4):
+  - [반영 로그 누락 수정] AI가 직접 "표준표기(원문)" 괄호를 붙인 경우, 병기 함수가
+    중복 방지로 건너뛰면서 로그까지 누락되던 문제(예: operational excellence 안 뜸).
+    이제 표준표기가 출력에 등장하면 누가 병기했든 로그를 남기고, 병기 추가만 중복 시 생략.
   index.html v1.4.3 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.4.2 → v1.4.3):
   - 반영 로그 UI를 '전폭 줄' → '칩(알약 버튼) 가로 나열'로 변경. flex-wrap으로 꽉 차면
@@ -816,7 +821,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.4.3</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.4.4</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1632,19 +1637,22 @@ function annotateGlossary(text, outCode) {
     if (!canon || !other || eqTerm(canon, other)) continue;
     let re;
     try { re = flexRegexP(canon); } catch (e) { continue; }   // 영어 표준표기 복수형(cats/dogs)도 병기
-    // 이미 "표준표기(" 형태면 중복 병기 방지
-    const doneRe = new RegExp(re.source + '\\s*\\(', 'gi');
-    if (doneRe.test(out)) continue;
+    // 표준표기가 출력에 등장하면(누가 병기했든) 로그 기록 — AI가 직접 괄호를 붙인 경우도 누락 안 함
     re.lastIndex = 0;
-    let annotated = false;
-    out = replaceSafe(out, re, function (m) { annotated = true; return m + '(' + other + ')'; });
-    if (annotated) {
-      const k = 'ann:' + canon + '(' + other + ')';
+    const present = re.test(out);
+    re.lastIndex = 0;
+    if (present) {
+      const k = 'ann:' + canon;
       if (typeof turnLogged !== 'undefined' && !turnLogged.has(k)) {
         turnLogged.add(k);
         if (typeof reflogAdd === 'function') reflogAdd('glossary', other + ' → ' + canon);
       }
     }
+    // 아직 "표준표기(" 형태가 아니면만 병기 추가 (이미 있으면 중복 방지)
+    const doneRe = new RegExp(re.source + '\\s*\\(', 'gi');
+    if (doneRe.test(out)) continue;
+    re.lastIndex = 0;
+    out = replaceSafe(out, re, function (m) { return m + '(' + other + ')'; });
   }
   return out;
 }

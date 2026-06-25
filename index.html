@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.4.3 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.4.2 → v1.4.3):
+  - 반영 로그 UI를 '전폭 줄' → '칩(알약 버튼) 가로 나열'로 변경. flex-wrap으로 꽉 차면
+    다음 줄로 내려가고, 컨테이너 max-height 58px(=2줄)로 고정 + 초과 시 세로 스크롤.
+    더 이상 항목이 늘어도 패널 높이가 끝없이 커지지 않음.
   index.html v1.4.2 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.4.1 → v1.4.2):
   - [한영 복수형 병기] 영어 표준표기가 단어경계 정규식이라 "cat"이 "cats"에 안 걸려
@@ -805,13 +810,13 @@
     <span style="font-weight:400; color:var(--t-muted); font-size:11px;">— 통역 중 적용된 용어집 항목이 표시됩니다</span>
     <button id="reflogClearBtn" style="margin-left:auto; padding:6px 12px; border-radius:8px; border:1px solid var(--t-border); background:transparent; color:var(--t-muted); font-size:12px; cursor:pointer;">지우기</button>
   </div>
-  <div id="reflogList" style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto;"></div>
+  <div id="reflogList" style="display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; max-height:58px; overflow-y:auto;"></div>
   <div id="reflogEmpty" style="color:var(--t-muted); font-size:12px; padding:8px 2px;">반영된 용어가 여기 표시됩니다.</div>
 </div>
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.4.2</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.4.3</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1221,13 +1226,13 @@ function renderReflog() {
     const e = reflogEntries[i];
     const s = REFLOG_STYLE[e.kind] || REFLOG_STYLE.glossary;
     const row = document.createElement('div');
-    row.style.cssText = 'display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; background:' + s.bg + '; border:1px solid ' + s.bd + ';';
+    row.style.cssText = 'display:inline-flex; align-items:center; gap:6px; height:26px; padding:0 10px; border-radius:999px; background:' + s.bg + '; border:1px solid ' + s.bd + '; white-space:nowrap; box-sizing:border-box; flex:0 0 auto;';
     const tag = document.createElement('span');
     tag.textContent = s.tag;
-    tag.style.cssText = 'font-size:10px; font-weight:700; color:' + s.fg + '; background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:5px; flex-shrink:0;';
+    tag.style.cssText = 'font-size:10px; font-weight:700; color:' + s.fg + '; background:rgba(255,255,255,0.08); padding:1px 6px; border-radius:5px; flex-shrink:0;';
     const txt = document.createElement('span');
     txt.textContent = e.text;
-    txt.style.cssText = 'font-size:13px; color:' + s.fg + ';';
+    txt.style.cssText = 'font-size:12px; color:' + s.fg + ';';
     row.appendChild(tag); row.appendChild(txt);
     list.appendChild(row);
   }

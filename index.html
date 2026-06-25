@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.3.1 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.3.0 → v1.3.1):
+  - [반영 로그 빈 문제 수정] appendTrans가 완성 문장을 내보내며 transBuf를 치환된 텍스트로
+    리셋(recoverRaw=항등)하는 탓에, finishSegment의 반영 로그 수집이 '이미 치환된' 텍스트를
+    받아 교정 내역이 0이던 문제. 턴 단위 '원시' 번역(turnRawTrans)을 따로 누적해 거기서
+    치환 내역(별칭→표준)을 뽑도록 수정. (주석 "(dog)" 잔상은 v1.2.0 세션 잔여 — 새로고침 시 사라짐)
   index.html v1.3.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.2.0 → v1.3.0):
   - 용어집을 '괄호 주석' → 'BoothmateG식 후처리 강제 치환'으로 변경(GlossaryPairEngine 포팅):
@@ -771,7 +777,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.3.0</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.3.1</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1220,6 +1226,7 @@ renderReflog();
 const combinedEl = $('mcCombined');
 let lineSeq = 0;
 let srcBuf = "", transBuf = "";          // 아직 마침표 안 온 미완성 버퍼
+let turnRawTrans = "";                    // 이번 턴의 누적 '원시' 번역(치환 전) — 반영 로그용
 let srcTempEl = null, transTempEl = null; // (구버전 호환용)
 const MAX_LINES = 30;                      // (구버전 호환용, 현재 미사용)
 const MAX_PAIRS = 30;                      // 화면에 유지할 최대 묶음 수
@@ -1322,7 +1329,7 @@ function downloadText(content, filename) {
 /* 화면 자막 리셋 (원문/번역 영역 비우기 + 버퍼 초기화 + 오버레이 미러 갱신) */
 function resetSubtitles() {
   combinedEl.innerHTML = '';
-  srcBuf = ""; transBuf = "";
+  srcBuf = ""; transBuf = ""; turnRawTrans = "";
   srcTempEl = null; transTempEl = null;
   editingLineEl = null;
   curPair = null;
@@ -1610,6 +1617,7 @@ function appendSrc(t) {
 /* ── 번역: 마침표로 문장이 끝나면 그 묶음을 닫음 (원문도 같이 담겨 닫힘) ── */
 function appendTrans(t) {
   transBuf += t;
+  turnRawTrans += t;   // 반영 로그용: 치환 전 원시 번역 누적
   const shown = shownTrans(transBuf);
   const { done, rest } = splitToSentences(shown);
   for (const sent of done) {
@@ -1652,9 +1660,10 @@ function recoverRaw(shownRest) { return shownRest; }
 /* 턴 종료(turnComplete) / 정지 시: 미완성 버퍼를 확정하고 현재 묶음 닫음 */
 function finishSegment() {
   const p = curPair;
-  // 반영 로그 수집용: 확정 직전의 원문/AI원본번역(치환 전) 캡처 (버퍼가 곧 비워지므로 먼저 저장)
+  // 반영 로그 수집용: 이번 턴의 '원시' 번역 누적분(치환 전) 사용 (transBuf는 치환된 잔여만 남음)
   const _refSrc = srcBuf.trim();
-  const _refRawTrans = transBuf;
+  const _refRawTrans = turnRawTrans;
+  turnRawTrans = "";
   if (p && srcBuf.trim()) {
     if (!p.srcLine) {
       p.srcLine = document.createElement('div'); p.srcLine.className = 'srcline';

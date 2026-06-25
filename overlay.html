@@ -57,7 +57,7 @@
     line-height: 1.45;
     word-break: break-word;
   }
-  .srcline.pending { opacity: 0.6; }
+  .srcline.pending { opacity: 1; }
   .transline {
     font-size: var(--trans-size, 22px);
     color: var(--trans-color, #ffffff);
@@ -65,7 +65,7 @@
     line-height: 1.5;
     word-break: break-word;
   }
-  .transline.pending { opacity: 0.6; }
+  .transline.pending { opacity: 1; }
 
   /* ── 대기 메시지 ── */
   #hint {
@@ -143,7 +143,7 @@
 
 <!-- 컨트롤 패널 -->
 <div id="controls">
-  <button class="ctrl-btn" id="togglePanel" title="컨트롤 접기/펼치기">«</button>
+  <button class="ctrl-btn" id="togglePanel" title="컨트롤 접기/펼치기">»</button>
   <div id="panelInner">
     <!-- 투명도 -->
     <span class="ctrl-label">투명도</span>
@@ -249,9 +249,9 @@ traColorPicker.oninput = () => { traColor = traColorPicker.value; applyStyles();
 const panelInner = document.getElementById('panelInner');
 document.getElementById('togglePanel').onclick = () => {
   panelInner.classList.toggle('collapsed');
-  // 접힘이면 » (펼치기 가능), 펼침이면 « (접기 가능)
+  // 접힘이면 « (펼치기 가능), 펼침이면 » (접기 가능)  — 방향 swap
   const collapsed = panelInner.classList.contains('collapsed');
-  document.getElementById('togglePanel').textContent = collapsed ? '»' : '«';
+  document.getElementById('togglePanel').textContent = collapsed ? '«' : '»';
 };
 
 /* ── 자막 렌더링 ── */

@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.3.2 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.3.1 → v1.3.2):
+  - [반영 로그 여전히 빈 문제 진짜 수정] 수집 지점을 finishSegment → shownTrans(치환이
+    실제 일어나는 곳)로 이동. 양방향 방향전환이 finishSegment를 건너뛰어도, 완성문장이
+    appendTrans에서 먼저 표시돼도 모두 잡힘. 턴별 Set(turnLogged)으로 중복 제거.
+  - 참고: 자막의 "계통 통합(system integration)" 같은 괄호는 AI 번역모델이 기술용어에
+    붙이는 원문 병기이며 우리 후처리(주석 아님)와 무관. 후처리는 별칭→표준 치환만 수행.
   index.html v1.3.1 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.3.0 → v1.3.1):
   - [반영 로그 빈 문제 수정] appendTrans가 완성 문장을 내보내며 transBuf를 치환된 텍스트로
@@ -777,7 +784,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.3.1</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.3.2</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1227,6 +1234,7 @@ const combinedEl = $('mcCombined');
 let lineSeq = 0;
 let srcBuf = "", transBuf = "";          // 아직 마침표 안 온 미완성 버퍼
 let turnRawTrans = "";                    // 이번 턴의 누적 '원시' 번역(치환 전) — 반영 로그용
+let turnLogged = new Set();               // 이번 턴에 이미 기록한 치환(중복 방지)
 let srcTempEl = null, transTempEl = null; // (구버전 호환용)
 const MAX_LINES = 30;                      // (구버전 호환용, 현재 미사용)
 const MAX_PAIRS = 30;                      // 화면에 유지할 최대 묶음 수
@@ -1329,7 +1337,7 @@ function downloadText(content, filename) {
 /* 화면 자막 리셋 (원문/번역 영역 비우기 + 버퍼 초기화 + 오버레이 미러 갱신) */
 function resetSubtitles() {
   combinedEl.innerHTML = '';
-  srcBuf = ""; transBuf = ""; turnRawTrans = "";
+  srcBuf = ""; transBuf = ""; turnRawTrans = ""; turnLogged.clear();
   srcTempEl = null; transTempEl = null;
   editingLineEl = null;
   curPair = null;
@@ -1559,7 +1567,13 @@ function shownTrans(raw) {
   const targetLang = $('targetLang').value;
   const usePP = $('ppToggle').checked;
   // 용어집 후처리 강제 치환 (출력 언어 = 현재 방향). AI에 개입하지 않고 별칭→표준표기 교체.
-  let result = applyGlossaryReplace(clean, curTarget || targetLang).text;
+  const _gr = applyGlossaryReplace(clean, curTarget || targetLang);
+  let result = _gr.text;
+  // 반영 로그: 이번 턴에 처음 보는 치환만 기록 (치환이 일어나는 이 지점에서 수집 → 방향전환에도 안 놓침)
+  for (const _c of _gr.corrections) {
+    const _k = _c.from + '→' + _c.to;
+    if (!turnLogged.has(_k)) { turnLogged.add(_k); if (typeof reflogAdd === 'function') reflogAdd('glossary', _c.from + ' → ' + _c.to); }
+  }
   if (usePP && targetLang === "ko" && typeof koreanPostProcess === "function") {
     result = koreanPostProcess(result, $('speechLevel').value, null);
   }
@@ -1660,10 +1674,7 @@ function recoverRaw(shownRest) { return shownRest; }
 /* 턴 종료(turnComplete) / 정지 시: 미완성 버퍼를 확정하고 현재 묶음 닫음 */
 function finishSegment() {
   const p = curPair;
-  // 반영 로그 수집용: 이번 턴의 '원시' 번역 누적분(치환 전) 사용 (transBuf는 치환된 잔여만 남음)
-  const _refSrc = srcBuf.trim();
-  const _refRawTrans = turnRawTrans;
-  turnRawTrans = "";
+  // (반영 로그는 shownTrans에서 치환 시점마다 수집하므로 여기선 별도 수집 불필요)
   if (p && srcBuf.trim()) {
     if (!p.srcLine) {
       p.srcLine = document.createElement('div'); p.srcLine.className = 'srcline';
@@ -1687,7 +1698,8 @@ function finishSegment() {
   if (curPair && (curPair.srcLine || curPair.transLine)) curPair = null;
   trimLines(combinedEl, 'srcline');
   pushMirror();
-  collectReflections(_refSrc, _refRawTrans);   // 반영 로그(용어집 강제 치환 내역) 수집
+  turnLogged.clear();   // 턴 종료 → 다음 턴은 같은 치환도 다시 기록
+  turnRawTrans = "";
 }
 
 /* ════════════════════════════════════════════

@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.5.2 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.5.1 → v1.5.2):
+  - [버그픽스] 문장 분리(splitToSentences)가 소수점(2.2)·천단위(1,000.50)의 '.'을
+    문장 끝으로 오인해 숫자 중간에서 줄을 끊던 문제 수정("2.2 million won"이
+    "2." + "2 million"으로 쪼개짐). '.'이 숫자 사이면 소수점으로 보고 안 끊음.
+  - [번역 정확도] 시스템 프롬프트에 한국어 숫자 단위 정확 변환 지시 추가
+    (천만=10 million, 억=100 million 등). "3천만 달러→3 million" 10배 오류 방지.
   index.html v1.5.1 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.5.0 → v1.5.1):
   - [환율 환산 업그레이드] currency.js를 데스크탑 currency.ts v0.10.0으로 교체.
@@ -872,7 +879,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.5.1</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.5.2</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1494,15 +1501,32 @@ function resetSubtitles() {
   if (typeof pushMirror === 'function') pushMirror();
 }
 
-/* 마침표 단위 문장 분리 */
+/* 마침표 단위 문장 분리.
+   ⚠️ 소수점(2.2)·천단위(1,000.50)의 '.'은 문장 끝이 아니므로 끊지 않는다.
+   '.' 이 앞뒤로 숫자에 둘러싸이면 소수점으로 간주하고 건너뜀(예: "2.2 million" 안 쪼개짐). */
 function splitToSentences(text) {
   const out = [];
-  let rest = (text || "").trim();
-  let m;
-  while ((m = rest.match(/^([\s\S]*?[.!?。！？])\s*/))) {
-    out.push(m[1].trim());
-    rest = rest.slice(m[0].length);
+  const s = (text || "").trim();
+  const isDigit = (c) => c >= '0' && c <= '9';
+  let start = 0, i = 0;
+  while (i < s.length) {
+    const ch = s[i];
+    const isEnder = (ch === '.' || ch === '!' || ch === '?' || ch === '。' || ch === '！' || ch === '？');
+    if (isEnder) {
+      // 숫자.숫자 소수점이면 문장 끝 아님 → 건너뜀
+      const decimal = (ch === '.') && isDigit(s[i - 1]) && isDigit(s[i + 1]);
+      if (!decimal) {
+        const sentence = s.slice(start, i + 1).trim();
+        if (sentence) out.push(sentence);
+        i++;
+        while (i < s.length && /\s/.test(s[i])) i++;   // 뒤따르는 공백 스킵
+        start = i;
+        continue;
+      }
+    }
+    i++;
   }
+  const rest = s.slice(start).trim();
   return { done: out, rest: rest };   // done=완성문장들, rest=미완성 나머지
 }
 function tokenize(text) {
@@ -2145,7 +2169,10 @@ function connectWS() {
     const toAll = 'You are a simultaneous interpreter between ' + langName(_pa) + ' and ' + langName(_pb) +
                   '. The expected input is ' + langName(_other) + '. Translate every input utterance into ' +
                   langName(TARGET_LANGUAGE) + '. Output ONLY ' + langName(TARGET_LANGUAGE) +
-                  '; never echo the input language.';
+                  '; never echo the input language.' +
+                  ' CRITICAL — preserve every number\'s exact magnitude. Convert Korean numeric units precisely: ' +
+                  '만=10 thousand, 십만=100 thousand, 백만=1 million, 천만=10 million, 억=100 million, 십억=1 billion, 조=1 trillion ' +
+                  '(e.g., 3천만 달러 → 30 million dollars, 2.2억 원 → 220 million won, 3억 → 300 million). Never change the order of magnitude.';
     const combined = [toAll, instr, glos].filter(Boolean).join(' ');
     if (combined) setupMessage.setup.systemInstruction = { parts: [{ text: combined }] };
     ws.send(JSON.stringify(setupMessage));

@@ -1,5 +1,18 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.5.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.4.9 → v1.5.0):
+  - [출시 준비] 로그인 화이트리스트 잠금: ALLOWED_EMAILS=['dororok@gmail.com'].
+    출시 전까지 운영자만 로그인 가능(타 계정은 게이트 차단). 출시 시 []로 비우면 개방.
+  - [권한·등급 추상화] 흩어진 쿼터 로직을 단일 모듈 Ent(Entitlements)로 통합.
+    canInterpret/canUseGlossary/canExport(POLICY_SPEC §5) + grade(free_trial_active/
+    free/1h/5h/10h) + remainingSeconds + trialUsed를 한 곳에서 관리. 저장은 localStorage
+    (boothmate_ent_<이메일> JSON), 구버전 boothmate_quota_ 잔여시간 자동 이관. 출시 시
+    이 모듈 내부만 Firebase로 교체하면 됨(방식 A→B).
+  - [무료 정책 변경] 무료 체험 5시간 → 30분(1800초) 1회. 소진 시 trialUsed=true +
+    grade=free(만료)로 전환(재부여 없음). 배지에 등급 라벨 표기.
+  - [등급 게이팅] 용어집 추가는 체험중·5h+에서만, 내보내기/불러오기는 5h+에서만
+    활성(applyEntitlementUI). 잠긴 버튼은 흐리게+안내 툴팁.
   index.html v1.4.9 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.4.8 → v1.4.9):
   - (overlay.html) OBS/스트리밍 전용 모드 추가: overlay.html?obs → 배경 완전 투명(opacity 0)
@@ -1107,42 +1120,74 @@ function startElapsed() {
 }
 function stopElapsed() { if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; } stopQuotaCountdown(); }
 
-/* ── 무료 체험 시간 쿼터 관리 (방식 A: 브라우저 localStorage 저장) ──
-   - 신규 로그인 사용자에게 FREE_QUOTA_SECONDS(5시간) 부여
-   - 통역 중일 때만 1초씩 차감 (정지하면 멈춤)
-   - 0이 되면 통역 시작 차단
-   - 이메일별로 따로 저장. 단 브라우저 저장이라 정직한 사용자용(서버 아님)
-*/
-const FREE_QUOTA_SECONDS = 5 * 3600;   // 5시간 = 18000초
+/* ════════════════════════════════════════════
+   권한·등급 모듈 (Entitlements) — 단일 소스 (방식 A: localStorage)
+   ────────────────────────────────────────────
+   정책(POLICY_SPEC §2·§5) 구현:
+     · 무료 체험: 30분(1800초), 1회만 (소진 후 재부여 없음 → trialUsed)
+     · 등급(grade): free_trial_active → free(만료) / 1h / 5h / 10h
+     · canInterpret  = 잔여시간 > 0
+     · canUseGlossary= 체험중 || 5h·10h   (1h는 통역만)
+     · canExport     = 5h·10h
+   ⚠️ 지금은 localStorage라 정직한 사용자용. 출시 시 이 모듈 내부(load/save/
+      tick/addTime)만 Firebase(users/{uid})로 교체하면 바깥 코드는 그대로 동작.
+   ════════════════════════════════════════════ */
+const FREE_QUOTA_SECONDS = 30 * 60;   // 무료 체험 30분 = 1800초 (새 정책)
+
+/* 시간 제한 완전 면제(무제한) 계정 — 5분 세션 제한 + 쿼터 모두 적용 안 함 */
+const UNLIMITED_EMAILS = ['dororok@gmail.com'];
+
+const Ent = (function(){
+  function curEmail(){ const u = window.__boothmateUser; return (u && u.email) ? u.email : 'anon'; }
+  function isUnlimited(){ const u = window.__boothmateUser; return !!(u && u.email && UNLIMITED_EMAILS.indexOf(u.email) !== -1); }
+  function key(){ return 'boothmate_ent_' + curEmail(); }
+  function defaults(){ return { remainingSeconds: FREE_QUOTA_SECONDS, grade: 'free_trial_active', trialUsed: false }; }
+  function load(){
+    try {
+      const raw = localStorage.getItem(key());
+      if (raw) return Object.assign(defaults(), JSON.parse(raw));
+      // 신규 사용자 → 무료 체험 부여. 단, 구버전(boothmate_quota_<이메일>)이 있으면 잔여시간 이관.
+      const d = defaults();
+      const oldQ = localStorage.getItem('boothmate_quota_' + curEmail());
+      if (oldQ !== null) d.remainingSeconds = Math.max(0, parseInt(oldQ, 10) || 0);
+      save(d);
+      return d;
+    } catch(e){ return defaults(); }
+  }
+  function save(s){ try { localStorage.setItem(key(), JSON.stringify(s)); } catch(e){} }
+
+  return {
+    isUnlimited: isUnlimited,
+    state(){ return isUnlimited() ? { remainingSeconds: Infinity, grade: 'unlimited', trialUsed: false } : load(); },
+    remainingSeconds(){ return this.state().remainingSeconds; },
+    grade(){ return this.state().grade; },
+    /* 권한 (POLICY_SPEC §5) */
+    canInterpret(){ return isUnlimited() || this.remainingSeconds() > 0; },
+    canUseGlossary(){ if (isUnlimited()) return true; const g = this.grade(); return g === 'free_trial_active' || g === '5h' || g === '10h'; },
+    canExport(){ if (isUnlimited()) return true; const g = this.grade(); return g === '5h' || g === '10h'; },
+    /* 통역 1초 차감. 0 도달 시 체험 만료(trialUsed=true, grade=free) */
+    tick(){
+      if (isUnlimited()) return Infinity;
+      const s = load();
+      s.remainingSeconds = Math.max(0, s.remainingSeconds - 1);
+      if (s.remainingSeconds === 0 && s.grade === 'free_trial_active') { s.trialUsed = true; s.grade = 'free'; }
+      save(s);
+      return s.remainingSeconds;
+    },
+    /* 잔여시간 직접 설정 (호환용) */
+    setRemaining(sec){ const s = load(); s.remainingSeconds = Math.max(0, Math.floor(sec)); save(s); },
+    /* 결제 적립 (출시 시 결제 백엔드 성공 후 호출 — POLICY_SPEC §6) */
+    addTime(sec, newGrade){ const s = load(); s.remainingSeconds += Math.max(0, Math.floor(sec)); if (newGrade) s.grade = newGrade; save(s); }
+  };
+})();
+
 let quotaTimer = null;
 
-/* 시간 제한 완전 면제(무제한) 계정 — 5분 세션 제한 + 5시간 쿼터 모두 적용 안 함 */
-const UNLIMITED_EMAILS = ['dororok@gmail.com'];
-function isUnlimitedUser() {
-  const u = window.__boothmateUser;
-  return !!(u && u.email && UNLIMITED_EMAILS.indexOf(u.email) !== -1);
-}
+/* ── 호환 래퍼 (기존 호출부 유지 — 내부는 Ent로 위임) ── */
+function isUnlimitedUser(){ return Ent.isUnlimited(); }
+function getQuotaLeft(){ return Ent.remainingSeconds(); }
+function setQuotaLeft(sec){ Ent.setRemaining(sec); }
 
-function quotaKey() {
-  const u = window.__boothmateUser;
-  const email = (u && u.email) ? u.email : 'anon';
-  return 'boothmate_quota_' + email;
-}
-function getQuotaLeft() {
-  if (isUnlimitedUser()) return Infinity;   // 무제한 계정: 시작 차단/차감 없음
-  try {
-    const v = localStorage.getItem(quotaKey());
-    if (v === null) {
-      // 신규 사용자 → 무료 시간 부여
-      localStorage.setItem(quotaKey(), String(FREE_QUOTA_SECONDS));
-      return FREE_QUOTA_SECONDS;
-    }
-    return Math.max(0, parseInt(v, 10) || 0);
-  } catch(e) { return FREE_QUOTA_SECONDS; }
-}
-function setQuotaLeft(sec) {
-  try { localStorage.setItem(quotaKey(), String(Math.max(0, Math.floor(sec)))); } catch(e){}
-}
 function fmtHMS(sec) {
   sec = Math.max(0, Math.floor(sec));
   const hh = String(Math.floor(sec/3600)).padStart(2,'0');
@@ -1150,40 +1195,66 @@ function fmtHMS(sec) {
   const ss = String(sec%60).padStart(2,'0');
   return hh + ':' + mm + ':' + ss;
 }
+
+/* 등급 한글 라벨 */
+function gradeLabel(g){
+  return ({ free_trial_active:'무료 체험', free:'체험 만료', '1h':'1시간권', '5h':'5시간권', '10h':'10시간권', unlimited:'무제한' })[g] || g;
+}
+
 function renderQuota() {
   const badge = document.getElementById('authQuotaBadge');
-  if (!badge) return;
-  if (isUnlimitedUser()) {
-    badge.textContent = '무제한';
-    badge.style.background = '#1e2f3a'; badge.style.color = '#7abaff';
+  if (Ent.isUnlimited()) {
+    if (badge) { badge.textContent = '무제한'; badge.style.background = '#1e2f3a'; badge.style.color = '#7abaff'; }
+    applyEntitlementUI();
     return;
   }
-  const left = getQuotaLeft();
-  badge.textContent = '남은 시간 ' + fmtHMS(left);
-  // 시간이 얼마 안 남으면 색상 경고
-  if (left <= 0) {
-    badge.style.background = '#3a1e1e'; badge.style.color = '#f09595';
-    badge.textContent = '시간 소진 — 충전 필요';
-  } else if (left <= 300) {   // 5분 이하
-    badge.style.background = '#3a341e'; badge.style.color = '#fac775';
-  } else {
-    badge.style.background = '#1e3a2f'; badge.style.color = '#5dcaa5';
+  const left = Ent.remainingSeconds();
+  if (badge) {
+    badge.textContent = gradeLabel(Ent.grade()) + ' · 남은 시간 ' + fmtHMS(left);
+    if (left <= 0) {
+      badge.style.background = '#3a1e1e'; badge.style.color = '#f09595';
+      badge.textContent = '시간 소진 — 충전 필요';
+    } else if (left <= 300) {   // 5분 이하
+      badge.style.background = '#3a341e'; badge.style.color = '#fac775';
+    } else {
+      badge.style.background = '#1e3a2f'; badge.style.color = '#5dcaa5';
+    }
   }
+  applyEntitlementUI();
 }
+
+/* 등급에 따른 버튼 잠금/해제 (POLICY_SPEC §5). 버튼이 아직 없으면 조용히 통과. */
+function applyEntitlementUI() {
+  const canG = Ent.canUseGlossary();
+  const canX = Ent.canExport();
+  // 용어집 추가 (체험중·5h+ 가능, 1h 잠금)
+  ['gAddBtn', 'gInA', 'gInB'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    el.disabled = !canG;
+    el.style.opacity = canG ? '' : '0.5';
+    el.title = canG ? '' : '용어집은 무료 체험 또는 5시간권 이상에서 사용할 수 있습니다.';
+  });
+  // 내보내기/불러오기 (5h+ 만)
+  ['gExportBtn', 'gImportBtn'].forEach(id => {
+    const el = document.getElementById(id); if (!el) return;
+    el.disabled = !canX;
+    el.style.opacity = canX ? '' : '0.5';
+    el.title = canX ? '' : '용어집 내보내기/불러오기는 5시간권 이상에서 사용할 수 있습니다.';
+  });
+}
+
 // 통역 중 1초마다 차감. 0 되면 자동 정지.
 function startQuotaCountdown() {
-  if (isUnlimitedUser()) { renderQuota(); return; }   // 무제한 계정: 차감 안 함
+  if (Ent.isUnlimited()) { renderQuota(); return; }   // 무제한 계정: 차감 안 함
   if (quotaTimer) clearInterval(quotaTimer);
   quotaTimer = setInterval(() => {
-    let left = getQuotaLeft();
-    left -= 1;
-    setQuotaLeft(left);
+    const left = Ent.tick();
     renderQuota();
     if (left <= 0) {
       stopQuotaCountdown();
       // 시간 소진 → 통역 강제 정지
       if (typeof stop === 'function') { try { stop(); } catch(e){} }
-      showErr('무료 체험 시간(5시간)을 모두 사용했습니다. 정식 출시 후 시간을 충전할 수 있습니다.');
+      showErr('무료 체험 시간(30분)을 모두 사용했습니다. 충전(구매) 후 이용할 수 있습니다.');
     }
   }, 1000);
 }
@@ -1934,9 +2005,9 @@ async function start() {
     localStorage.setItem('gemini_api_key', apiKey);
   }
   if (running) return;
-  // 무료 체험 시간 확인 — 0이면 통역 시작 차단
-  if (getQuotaLeft() <= 0) {
-    showErr('무료 체험 시간(5시간)을 모두 사용했습니다. 정식 출시 후 시간을 충전할 수 있습니다.');
+  // 잔여 시간 확인 — 0이면 통역 시작 차단 (POLICY_SPEC §5 canInterpret)
+  if (!Ent.canInterpret()) {
+    showErr('남은 시간이 없습니다. 무료 체험(30분)을 모두 사용했다면 충전(구매) 후 이용할 수 있습니다.');
     return;
   }
   // 새 세션 시작 전: 화면에 남은 이전 세션 자막이 있으면 자동 저장 후 비움
@@ -2812,9 +2883,12 @@ window.addEventListener('pagehide', () => {
   // 구글 클라우드 콘솔에서 발급받은 클라이언트 ID (공개돼도 안전)
   const GOOGLE_CLIENT_ID = '1091155938663-riqosupp1tig8s8k0k49sl3c3gjmornl.apps.googleusercontent.com';
 
-  // 허용 이메일 목록. 비어있으면 = 누구나 통과(현재 베타).
-  // 나중에 지인만 받으려면 예: ['friend@gmail.com', 'me@gmail.com']
-  const ALLOWED_EMAILS = [];
+  // ── 출시 전 잠금 (PRE-LAUNCH LOCK) ──
+  // 허용 이메일 목록. 비어있으면 = 누구나 통과.
+  // ⚠️ 출시 전까지는 운영자(dororok)만 로그인 가능하게 잠가둠.
+  //    → 나만 중계서버에 도달 가능 → 내 Gemini 비용 안전.
+  // 출시할 때 이 배열을 비우면([]) 누구나 통과, 또는 일부만 받으려면 이메일 추가.
+  const ALLOWED_EMAILS = ['dororok@gmail.com'];
 
   const gate = document.getElementById('authGate');
   const bar = document.getElementById('authBar');

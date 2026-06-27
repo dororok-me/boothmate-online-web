@@ -1,5 +1,15 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.5.1 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.5.0 → v1.5.1):
+  - [환율 환산 업그레이드] currency.js를 데스크탑 currency.ts v0.10.0으로 교체.
+    원본 통화 보존(43,200달러→그대로+괄호 환산, 27,000원→그대로), 환산값 "클수록
+    뒤 더 끊기", 언어별 원화 단위(영어=₩600 million/한국어=6억원). applyConversion에
+    출력 언어(lang) 전달, applyConversionWithLog로 반영 로그 기록.
+  - [도량형 환산 추가] unitConvert.js 신규(데스크탑 unitConvert.ts v0.4.0 포팅). 평↔㎡
+    양방향 환산을 괄호로 병기(원본 유지). 한글 복합 단위(2천만 평/3억 평)·영어(pyeong,
+    million m²) 인식. 설정 상단에 "📐 도량형 환산" 토글(기본 ON).
+  - [반영 로그] 환율/도량형 환산 내역도 칩으로 표시(환율=초록, 도량형=노랑).
   index.html v1.5.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.4.9 → v1.5.0):
   - [출시 준비] 로그인 화이트리스트 잠금: ALLOWED_EMAILS=['dororok@gmail.com'].
@@ -820,6 +830,7 @@
   <select id="targetLang" style="display:none;"></select>
   <span id="targetLangHint" style="font-size:12px; color:var(--t-muted);">(양방향 자동 번역)</span>
   <label style="white-space:nowrap;" title="번역 자막의 금액을 자동으로 환산해 괄호로 표시합니다 (예: $24억(₩약 3조…))"><input type="checkbox" id="currencyToggle" checked> 💱 환율 환산</label>
+  <label style="white-space:nowrap;" title="번역 자막의 면적 단위를 자동으로 환산해 괄호로 표시합니다 (예: 30평(99.2㎡), 100㎡(30.3평))"><input type="checkbox" id="unitToggle" checked> 📐 도량형 환산</label>
   <label style="display:none;"><input type="checkbox" id="audioToggle"> 번역 음성 재생</label>
   <label>사운드 소스:
     <select id="inputMode" style="max-width:240px;">
@@ -861,7 +872,7 @@
 
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.5.0</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.5.1</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -879,6 +890,7 @@
 
 <script src="postprocess.js"></script>
 <script src="currency.js"></script>
+<script src="unitConvert.js"></script>
 <script src="audio.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -1318,6 +1330,8 @@ const REFLOG_MAX = 200;
 let reflogEntries = [];   // { kind, text }
 const REFLOG_STYLE = {
   glossary: { bg: '#16304a', bd: '#2a5278', fg: '#9fd2ff', tag: '용어' },
+  currency: { bg: '#173524', bd: '#2c5e40', fg: '#8fe0b0', tag: '환율' },
+  unit:     { bg: '#2f2a16', bd: '#5c5226', fg: '#e6d28a', tag: '도량형' },
 };
 function renderReflog() {
   const list = $('reflogList'), empty = $('reflogEmpty');
@@ -1799,10 +1813,25 @@ function shownTrans(raw) {
   if (usePP && targetLang === "ko" && typeof koreanPostProcess === "function") {
     result = koreanPostProcess(result, $('speechLevel').value, null);
   }
-  // 환율 환산 (BoothmateG 포팅) — 토글 ON이면 언어 무관하게 금액 환산값 괄호 추가
+  // 환율·도량형 환산 (BoothmateG 포팅) — 출력 언어(_lang) 전달로 언어별 단위, 반영 로그 기록
+  const _convLang = curTarget || targetLang;
   const ccToggle = $('currencyToggle');
   if (ccToggle && ccToggle.checked && window.BoothmateCurrency) {
-    result = window.BoothmateCurrency.applyConversion(result);
+    const _cc = window.BoothmateCurrency.applyConversionWithLog(result, _convLang);
+    result = _cc.result;
+    for (const _c of _cc.changes) {
+      const _k = 'cur:' + _c.from + '→' + _c.to;
+      if (!turnLogged.has(_k)) { turnLogged.add(_k); if (typeof reflogAdd === 'function') reflogAdd('currency', _c.from + ' → ' + _c.to); }
+    }
+  }
+  const unitToggle = $('unitToggle');
+  if (unitToggle && unitToggle.checked && window.BoothmateUnit) {
+    const _uc = window.BoothmateUnit.applyUnitConversionWithLog(result, _convLang);
+    result = _uc.result;
+    for (const _c of _uc.changes) {
+      const _k = 'unit:' + _c.from + '→' + _c.to;
+      if (!turnLogged.has(_k)) { turnLogged.add(_k); if (typeof reflogAdd === 'function') reflogAdd('unit', _c.from + ' → ' + _c.to); }
+    }
   }
   // 용어집 병기 (양방향 일관): 표준표기 뒤에 반대언어 용어를 괄호로 — "댕댕이(dog)" / "dog(댕댕이)"
   result = annotateGlossary(result, curTarget || targetLang);

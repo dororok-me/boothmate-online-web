@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.6.6 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.6.5 → v1.6.6) — 하단 로그창 접기/펼치기(교수님 요청):
+  - 로그창 헤더 "Log" 문구 제거.
+  - 접기/펼치기 토글 버튼(#reflogCollapseBtn) 추가: ⏫=펼친 상태(누르면 접힘) / ⏬=접힌 상태(누르면 펼침).
+    상태 localStorage(reflog_collapsed) 저장. 리스트만 숨기고 헤더(토글·🗑️)는 유지.
   index.html v1.6.5 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.6.4 → v1.6.5) — 상단 정리 + 모바일 리사이즈(교수님 요청):
   - 시작/정지 토글 라벨을 아이콘만(▶/■)으로, 좌우 폭 축소(padding 11x48 → 9x14).
@@ -961,11 +966,11 @@
 <!-- 하단 텍스트 번역 박스 -->
 <!-- 반영 로그: 통역 중 적용된 용어집 항목을 누적 표시 (BoothmateG 반영 로그 포팅) -->
 <div id="reflogBox" style="margin-top:10px; padding:14px; border:1px solid var(--t-border); border-radius:12px; background:var(--t-input-bg); flex-shrink:0;">
-  <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-    <span style="font-size:13px; font-weight:700; color:var(--t-accent);">Log</span>
+  <div id="reflogHead" style="display:flex; align-items:center; gap:8px;">
+    <button id="reflogCollapseBtn" title="접기/펼치기" style="padding:5px 9px; border-radius:8px; border:1px solid var(--t-border); background:transparent; color:var(--t-muted); font-size:13px; cursor:pointer; line-height:1;">⏫</button>
     <button id="reflogClearBtn" title="지우기" style="margin-left:auto; padding:6px 10px; border-radius:8px; border:1px solid var(--t-border); background:transparent; color:var(--t-muted); font-size:14px; cursor:pointer; line-height:1;">🗑️</button>
   </div>
-  <div id="reflogList" style="display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; max-height:58px; overflow-y:auto;"></div>
+  <div id="reflogList" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; max-height:58px; overflow-y:auto;"></div>
 </div>
 
 <!-- 계정 줄(authBar)은 설정 패널 '👤 계정' 그룹 안으로 이동(v1.6.1).
@@ -976,7 +981,7 @@
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   <div style="margin-bottom:6px;"><img src="logo.png" alt="Boothmate" style="height:16px; width:auto; vertical-align:middle; opacity:0.8; background:transparent;"></div>
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.6.5</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.6.6</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -1512,6 +1517,23 @@ function collectReflections(source, rawTrans) {
   }
 }
 if ($('reflogClearBtn')) $('reflogClearBtn').onclick = reflogClear;
+/* 로그창 접기/펼치기 토글 (v1.6.6) — ⏫=펼친 상태(누르면 접힘), ⏬=접힌 상태(누르면 펼침).
+   상태는 localStorage(reflog_collapsed)에 저장. 리스트(#reflogList)만 숨기고 헤더는 유지. */
+(function initReflogCollapse(){
+  const btn = $('reflogCollapseBtn'), list = $('reflogList');
+  if (!btn || !list) return;
+  function apply(collapsed){
+    list.style.display = collapsed ? 'none' : 'flex';
+    btn.textContent = collapsed ? '⏬' : '⏫';
+  }
+  let collapsed = (localStorage.getItem('reflog_collapsed') === '1');
+  apply(collapsed);
+  btn.onclick = () => {
+    collapsed = !collapsed;
+    localStorage.setItem('reflog_collapsed', collapsed ? '1' : '0');
+    apply(collapsed);
+  };
+})();
 renderReflog();
 
 /* ════════════════════════════════════════════

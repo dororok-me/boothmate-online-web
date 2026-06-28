@@ -847,6 +847,9 @@
   /* 클릭 가능한 단어 토큰 (수정 기능) */
   .transline .w { cursor: pointer; border-radius: 3px; padding: 0 1px; }
   .transline .w:hover { background: rgba(125,211,252,0.22); }
+  /* 실시간 수정 기능 숨김 시: 단어가 클릭 가능한 것처럼 보이지 않게 */
+  body.no-live-edit .transline .w { cursor: text; }
+  body.no-live-edit .transline .w:hover { background: none; }
   /* 인식 중인 임시 줄(아직 변하는 중, 수정 불가) — 흐릿하게 구분 */
   .srcline.pending { color: #5a6b85; }
   .transline.pending { color: #6b8299; font-weight: 400; opacity: 0.8; }
@@ -1180,7 +1183,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.10.1 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.10.2 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1663,11 +1666,20 @@ if (localStorage.getItem('input_mode')) $('inputMode').value = localStorage.getI
 $('inputMode').addEventListener('change', applyInputMode);
 applyInputMode();
 
+/* ── 기능 표시 토글 (v1.10.2) ──
+   사람들이 잘 안 쓰는 기능의 '진입점'만 숨김. 코드/동작은 그대로 보존.
+   나중에 되살리려면 해당 값을 true 로만 바꾸면 됩니다. */
+const FEATURE_OVERLAY = false;     // 헤더의 '오버레이' 버튼
+const FEATURE_LIVE_EDIT = false;   // 자막 단어 클릭 → 실시간 수정
+if (!FEATURE_LIVE_EDIT) document.body.classList.add('no-live-edit');
+
 /* ── 오버레이 창 열기 ── */
 $('openOverlayBtn').onclick = () => {
   window.open('overlay.html', 'boothmate_overlay',
     'width=900,height=220,resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no');
 };
+// 오버레이 버튼 숨김(기능 보존, 진입점만 숨김)
+if (!FEATURE_OVERLAY && $('openOverlayBtn')) $('openOverlayBtn').style.display = 'none';
 
 /* 자막 완전 리셋 — 중지/재시작 없이 화면 자막·버퍼·오버레이를 모두 비움.
    통역은 계속 진행되며 다음 문장부터 새로 쌓임. 오클릭 방지로 내용이 있을 때만 확인. */
@@ -2406,7 +2418,7 @@ function finishSegment() {
 /* ════════════════════════════════════════════
    번역 줄 단어 클릭 → 수정 (줄 단위)
    ════════════════════════════════════════════ */
-combinedEl.addEventListener('click', (e) => {
+if (FEATURE_LIVE_EDIT) combinedEl.addEventListener('click', (e) => {
   const w = e.target.closest('.w');
   if (!w) return;
   const line = w.closest('.transline');

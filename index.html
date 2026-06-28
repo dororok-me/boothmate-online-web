@@ -1170,7 +1170,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.8.9 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.0 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2226,6 +2226,7 @@ function stopAutoScroll() {
 /* ── 원문: 현재 묶음의 원문 줄에 누적 (묶음 닫기는 번역이 담당) ── */
 function appendSrc(t) {
   clearErr();   // 실제 자막이 들어오기 시작하면 이전 에러 메시지 제거
+  noteSpeech(); // 무음 자동 정지 타이머 리셋 (실제 음성 인식 입력이 들어옴)
   const p = getCurrentPair();
   srcBuf += t.replace(/\n+/g, ' ');
   if (!p.srcLine) {
@@ -2372,6 +2373,44 @@ let ws = null, audioContext = null, micStream = null, workletNode = null, runnin
 let sessionLimitTimer = null;   // 한 세션 최대 5분 제한 타이머
 const SESSION_LIMIT_MS = 5 * 60 * 1000;   // 5분
 let userStopped = false;        // 사용자가 정지를 눌렀는지 (true면 재연결 안 함)
+
+/* ── 무음 자동 정지 ──
+   '사운드'가 아니라 실제 음성 인식 결과(입력 transcription = appendSrc)가
+   설정 시간(1·3·5분) 동안 들어오지 않으면 자동 정지. 정지 30초 전 경고. */
+let silenceTimer = null;        // 무음 감시 인터벌
+let lastSpeechAt = 0;           // 마지막 음성 인식 입력 시각(ms)
+let silenceWarned = false;      // 30초 전 경고를 이미 띄웠는지
+function getAutoStopMs() {
+  const min = parseInt(localStorage.getItem('auto_stop_min') || '0', 10);
+  return (min > 0 ? min : 0) * 60 * 1000;   // 0 = 사용 안 함
+}
+function noteSpeech() {         // appendSrc(음성 인식 입력)에서 호출 — 무음 타이머 리셋
+  lastSpeechAt = Date.now();
+  silenceWarned = false;
+}
+function startSilenceWatch() {
+  stopSilenceWatch();
+  if (getAutoStopMs() <= 0) return;          // 사용 안 함이면 감시하지 않음
+  lastSpeechAt = Date.now();
+  silenceWarned = false;
+  silenceTimer = setInterval(() => {
+    const limit = getAutoStopMs();
+    if (limit <= 0 || !running) return;
+    const idle = Date.now() - lastSpeechAt;
+    if (idle >= limit) {
+      stop();
+      showErr('음성 입력이 ' + Math.round(limit / 60000) + '분간 없어 자동 정지했습니다. 계속하려면 "시작"을 누르세요.');
+    } else if (!silenceWarned && idle >= limit - 30000) {
+      silenceWarned = true;
+      const left = Math.max(1, Math.ceil((limit - idle) / 1000));
+      showErr('⚠ 음성 입력이 없습니다 — 약 ' + left + '초 후 자동 정지됩니다. (계속 말하면 해제)');
+    }
+  }, 1000);
+}
+function stopSilenceWatch() {
+  if (silenceTimer) { clearInterval(silenceTimer); silenceTimer = null; }
+  silenceWarned = false;
+}
 let curTarget = null;           // 양방향: 현재 번역 출력 언어(방향 따라 동적으로 바뀜)
 let pairFlipTimer = null;       // 방향 전환 재연결 디바운스 타이머
 let reconnectTimer = null;      // 재연결 대기 타이머
@@ -2421,6 +2460,7 @@ async function start() {
   setStatus('연결 중...', false);
   startAutoScroll();
   startElapsed();
+  startSilenceWatch();  // 무음 자동 정지 감시 시작
   connectWS();          // ws 연결
   await startMic();     // 마이크는 한 번만 시작 (재연결돼도 유지)
 }
@@ -2732,6 +2772,7 @@ function stop() {
   if (typeof stopPlayback === "function") stopPlayback();
   stopElapsed();
   stopAutoScroll();
+  stopSilenceWatch();   // 무음 자동 정지 감시 종료
   setStatus('정지됨', false);
   finishSegment();
   autoSaveSession();   // 정지 시 현재 세션 자동 저장
@@ -2815,6 +2856,18 @@ window.addEventListener('pagehide', () => {
       '<div class="row" style="max-width:none;"><label style="display:flex; align-items:center; gap:8px; width:auto; cursor:pointer;"><input type="checkbox" id="reflogToggle" checked> Log 표시</label></div>' +
       '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">통역 중 적용된 용어집·환산 내역을 자막 아래에 표시합니다. 끄면 반영 로그 영역이 숨겨집니다.</div>' +
     '</div>' +
+    '<div class="grp"><div class="grp-ttl">무음 자동 정지</div>' +
+      '<div class="row" style="max-width:none; gap:8px; align-items:center;">' +
+        '<label style="width:auto;">음성 입력이 없으면</label>' +
+        '<select id="autoStopSel" style="padding:6px 10px; border-radius:8px; border:1px solid var(--t-border); background:var(--t-input-bg); color:var(--t-text); font-size:13px;">' +
+          '<option value="0">사용 안 함</option>' +
+          '<option value="1">1분 후 정지</option>' +
+          '<option value="3">3분 후 정지</option>' +
+          '<option value="5">5분 후 정지</option>' +
+        '</select>' +
+      '</div>' +
+      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">말소리(음성 인식 결과)가 설정한 시간 동안 들어오지 않으면 자동 정지합니다. 정지 30초 전에 경고를 표시하며, 다시 말하면 해제됩니다.</div>' +
+    '</div>' +
     '<div class="grp"><div class="grp-ttl">자막 기록</div>' +
       '<div class="row" style="max-width:none; gap:8px; flex-wrap:wrap;">' +
         '<button id="subExportBtn" class="g-tool">자막 내보내기</button>' +
@@ -2826,6 +2879,16 @@ window.addEventListener('pagehide', () => {
     '</div>';
 
   const root = document.documentElement.style;
+  // 무음 자동 정지 시간 선택 — 저장/복원, 통역 중 변경 시 즉시 반영
+  (function initAutoStop() {
+    const sel = $('autoStopSel');
+    if (!sel) return;
+    sel.value = localStorage.getItem('auto_stop_min') || '0';
+    sel.addEventListener('change', () => {
+      localStorage.setItem('auto_stop_min', sel.value);
+      if (running) startSilenceWatch();   // 통역 중이면 새 설정으로 즉시 재시작
+    });
+  })();
   // Log 표시 on/off (설정 토글) — 하단 ✕ 버튼과 동일한 상태 공유(applyReflogVisible)
   (function initReflogToggle() {
     const tg = $('reflogToggle');

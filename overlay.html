@@ -278,8 +278,9 @@ function renderSubtitles(srcLines, transLines) {
   const existing = wrap.querySelectorAll('.pair');
   const maxLen = Math.max(srcLines.length, transLines.length);
 
-  // 부족한 pair 추가
-  while (wrap.querySelectorAll('.pair').length < maxLen) {
+  // 부족한 pair 추가 (정해진 개수만큼만 — 무한 루프 불가)
+  const haveCount = wrap.querySelectorAll('.pair').length;
+  for (let i = haveCount; i < maxLen; i++) {
     const div = document.createElement('div');
     div.className = 'pair';
     const s = document.createElement('div'); s.className = 'srcline';
@@ -288,9 +289,10 @@ function renderSubtitles(srcLines, transLines) {
     wrap.appendChild(div);
   }
 
-  // 넘치는 pair 제거
-  const pairs = wrap.querySelectorAll('.pair');
-  while (pairs.length > maxLen) { pairs[pairs.length - 1].remove(); }
+  // 넘치는 pair 제거 — ⚠️ querySelectorAll은 정적 NodeList라 while+length로 돌면
+  //   .remove()해도 length가 안 줄어 무한 루프(렌더러 정지)가 된다. 경계 for로 안전하게 제거.
+  const allPairs = wrap.querySelectorAll('.pair');
+  for (let i = allPairs.length - 1; i >= maxLen; i--) allPairs[i].remove();
 
   // 내용 채우기
   const curPairs = wrap.querySelectorAll('.pair');

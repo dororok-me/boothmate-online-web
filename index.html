@@ -1020,6 +1020,7 @@
   .mc-area { background: var(--t-area-bg); border: none !important; border-radius: 16px; padding: 38px 44px; }
   .pair { background: transparent !important; border: none !important; border-radius: 0; padding: 0 !important; margin-bottom: 28px; }
   .pair:last-child { margin-bottom: 4px; }
+  .pair.offpair { display: none !important; }   /* 쌍 밖 언어 발화 숨김 */
   .srcline { color: var(--mc-src-color); font-weight: 500; line-height: 1.5; margin-bottom: 8px; }
   .transline { line-height: 1.4; }
   /* 번역 중(pending) 문장도 완료 문장과 동일한 색·굵기로 — 색 구별 없음 */
@@ -1179,7 +1180,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.9 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.10.0 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1297,6 +1298,41 @@ function detectLang(text, a, b) {
   return null;
 }
 
+/* 언어 쌍 잠금(v1.10.0): 원문 텍스트가 쌍의 두 언어가 '아닌' 다른 언어인지 판별.
+   → true면 그 발화는 화면/오버레이에 표시하지 않음(쌍 밖 언어 차단).
+   스크립트(문자 체계) 기준으로 판정: 쌍에 없는 강한 스크립트가 섞이면 쌍 밖으로 간주.
+   라틴(영어/숫자/약어)은 어디서나 섞일 수 있어 단독 판정에서 제외. */
+function scriptsFor(code) {
+  const p = langPrefix(code);
+  if (p === 'ko') return ['hangul'];
+  if (p === 'ja') return ['kana', 'cjk'];
+  if (p === 'zh') return ['cjk'];
+  if (p === 'ru' || p === 'uk' || p === 'bg' || p === 'sr') return ['cyr'];
+  if (p === 'ar' || p === 'fa' || p === 'ur') return ['arabic'];
+  if (p === 'he') return ['hebrew'];
+  if (p === 'hi' || p === 'bn' || p === 'ta' || p === 'te') return ['indic'];
+  if (p === 'th') return ['thai'];
+  if (p === 'el') return ['greek'];
+  return ['latin'];   // en 등 라틴 계열
+}
+function isForeignToPair(text, a, b) {
+  const t = text || '';
+  const present = [];
+  if (/[가-힣]/.test(t)) present.push('hangul');
+  if (/[぀-ヿ]/.test(t)) present.push('kana');
+  if (/[一-鿿]/.test(t)) present.push('cjk');
+  if (/[Ѐ-ӿ]/.test(t)) present.push('cyr');
+  if (/[؀-ۿ]/.test(t)) present.push('arabic');
+  if (/[֐-׿]/.test(t)) present.push('hebrew');
+  if (/[ऀ-ॿ]/.test(t)) present.push('indic');
+  if (/[฀-๿]/.test(t)) present.push('thai');
+  if (/[Ͱ-Ͽ]/.test(t)) present.push('greek');
+  if (!present.length) return false;   // 강한 스크립트 없음(숫자·라틴만) → 차단 안 함
+  const allowed = new Set([].concat(scriptsFor(a), scriptsFor(b)));
+  for (const s of present) if (!allowed.has(s)) return true;
+  return false;
+}
+
 
 const statusEl = $('status'), errEl = $('errbox');   // statusEl: 대기/통역중 표시줄은 제거됨(v1.6.1) → null
 // 상태 표시줄(#status)은 삭제됨. 실제 오류는 #errbox(showErr)로 안내하므로 setStatus는 표시줄이 있을 때만 동작.
@@ -1351,10 +1387,10 @@ bmConnect();
 /* 미러 전송: 메인 화면의 원문/번역 줄을 그대로 오버레이에 보냄.
    오버레이는 재조립 없이 이 줄들을 그대로 표시 → 불일치/중복/깜빡임 없음 */
 function pushMirror() {
-  const srcLines = Array.from(combinedEl.querySelectorAll('.srcline')).map(el => ({
+  const srcLines = Array.from(combinedEl.querySelectorAll('.pair:not(.offpair) .srcline')).map(el => ({
     text: el.textContent, pending: el.classList.contains('pending')
   }));
-  const transLines = Array.from(combinedEl.querySelectorAll('.transline')).map(el => ({
+  const transLines = Array.from(combinedEl.querySelectorAll('.pair:not(.offpair) .transline')).map(el => ({
     text: el.textContent, pending: el.classList.contains('pending')
   }));
   broadcast('mirror', { srcLines, transLines });
@@ -2265,6 +2301,12 @@ function appendSrc(t) {
   noteSpeech(); // 무음 자동 정지 타이머 리셋 (실제 음성 인식 입력이 들어옴)
   const p = getCurrentPair();
   srcBuf += t.replace(/\n+/g, ' ');
+  // 쌍 밖 언어 차단(v1.10.0): 원문이 쌍의 두 언어가 아니면 이 묶음(원문+번역)을 숨김
+  if (!p._offpair) {
+    const pr = getPair();
+    if (isForeignToPair(srcBuf, pr.a, pr.b)) { p._offpair = true; p.el.classList.add('offpair'); }
+  }
+  if (p._offpair) return;   // 숨긴 묶음 — 화면/오버레이에 표시 안 함
   if (!p.srcLine) {
     p.srcLine = document.createElement('div');
     p.srcLine.className = 'srcline';
@@ -2281,6 +2323,13 @@ function appendSrc(t) {
 function appendTrans(t) {
   transBuf += t;
   turnRawTrans += t;   // 반영 로그용: 치환 전 원시 번역 누적
+  // 쌍 밖 언어 차단(v1.10.0): 현재 묶음 원문이 쌍 밖이면 번역도 표시하지 않고 버림
+  if (curPair && curPair._offpair) { transBuf = ''; turnRawTrans = ''; return; }
+  { const pr = getPair();
+    if (srcBuf.trim() && isForeignToPair(srcBuf, pr.a, pr.b)) {
+      if (curPair) { curPair._offpair = true; curPair.el.classList.add('offpair'); }
+      transBuf = ''; turnRawTrans = ''; return;
+    } }
   const shown = shownTrans(transBuf);
   const { done, rest } = splitToSentences(shown);
   for (const sent of done) {

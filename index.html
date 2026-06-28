@@ -1179,7 +1179,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.4 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.5 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2497,8 +2497,11 @@ async function start() {
   startAutoScroll();
   startElapsed();
   startSilenceWatch();  // 무음 자동 정지 감시 시작
+  console.log('[start] 0) start() — connectWS 호출');
   connectWS();          // ws 연결
+  console.log('[start] 0b) connectWS 반환 — startMic 호출');
   await startMic();     // 마이크는 한 번만 시작 (재연결돼도 유지)
+  console.log('[start] 7) startMic 완료 — 시작 절차 끝');
 }
 
 /* 입력 언어를 감지해 번역 방향을 자동 전환.
@@ -2689,6 +2692,7 @@ async function startMic() {
     //   조기 return 경로에서 컨텍스트를 닫지 않아 누수되면, Chrome의 컨텍스트 개수 제한에
     //   걸려 렌더러가 다운된다(탭/창 사운드 시작을 몇 번 취소·재시도하면 종종 발생).
     const inputMode = ($('inputMode') && $('inputMode').value) || 'mic';
+    console.log('[start] 1) startMic 진입 — inputMode=' + inputMode);
 
     if (inputMode === 'screen') {
       // ── 화면 소리 캡처 (getDisplayMedia + 시스템 오디오) ──
@@ -2739,8 +2743,10 @@ async function startMic() {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: baseConstraints });
       }
     }
+    console.log('[start] 2) 스트림 확보 완료 — audioTracks=' + (micStream.getAudioTracks ? micStream.getAudioTracks().length : '?'));
     // 스트림 확보 완료 → 이제서야 AudioContext 생성 (취소/실패 경로에서는 만들지 않음 → 누수 0)
     audioContext = new AudioContext();
+    console.log('[start] 3) AudioContext 생성 — state=' + audioContext.state + ' rate=' + audioContext.sampleRate);
     const inRate = audioContext.sampleRate;        // 실제 컨텍스트 레이트
     const TARGET = 16000;
     const ratio = inRate / TARGET;
@@ -2759,11 +2765,14 @@ async function startMic() {
     } catch (e) {}
 
     const source = audioContext.createMediaStreamSource(micStream);
+    console.log('[start] 4) MediaStreamSource 생성됨');
     // ScriptProcessorNode (버퍼 4096, mono in/out)
     workletNode = audioContext.createScriptProcessor(4096, 1, 1);
     let __frac = 0;          // 다운샘플 보간 잔여 위치
+    let __firstAudio = true;
     workletNode.onaudioprocess = (e) => {
       if (!(ws && ws.readyState === WebSocket.OPEN)) return;
+      if (__firstAudio) { __firstAudio = false; console.log('[start] 6) 첫 오디오 콜백 — 정상 처리 중'); }
       const input = e.inputBuffer.getChannelData(0);
       // 16k로 선형보간 다운샘플
       const out = [];
@@ -2800,6 +2809,7 @@ async function startMic() {
     __silentGain.gain.value = 0;
     workletNode.connect(__silentGain);
     __silentGain.connect(audioContext.destination);
+    console.log('[start] 5) 오디오 그래프 연결 완료 — 콜백 대기');
     setStatus('통역 중 — 말해보세요', true);
   } catch (err) {
     showErr('마이크 오류: ' + err.message);

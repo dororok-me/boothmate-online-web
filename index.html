@@ -1170,7 +1170,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.1 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.2 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2649,7 +2649,9 @@ async function startMic() {
     // v0.9.8: AudioWorklet이 이 Chrome(149)에서 마이크 연결 시 렌더러를 죽임.
     //   → AudioWorklet/pcm-processor.js 폐기, 구식이지만 안정적인 ScriptProcessorNode로 전환.
     //   AudioContext는 장치 기본 레이트로 열고, 인라인으로 16kHz 다운샘플 후 전송.
-    audioContext = new AudioContext();
+    // v1.9.2: ⚠️ AudioContext는 '스트림 확보 후'에 생성한다. 화면 공유 취소/오디오 없음 등
+    //   조기 return 경로에서 컨텍스트를 닫지 않아 누수되면, Chrome의 컨텍스트 개수 제한에
+    //   걸려 렌더러가 다운된다(탭/창 사운드 시작을 몇 번 취소·재시도하면 종종 발생).
     const inputMode = ($('inputMode') && $('inputMode').value) || 'mic';
 
     if (inputMode === 'screen') {
@@ -2667,7 +2669,8 @@ async function startMic() {
       } catch (dispErr) {
         showErr('화면 공유가 취소되었거나 실패했습니다. (' + dispErr.name + ') 다시 시작을 눌러 주세요.');
         setStatus('화면 공유 취소됨', false);
-        running = false; setRunningUI(false); stopElapsed();
+        if (ws) { try { ws.close(); } catch (e) {} ws = null; }
+        running = false; userStopped = true; setRunningUI(false); stopElapsed(); stopSilenceWatch();
         return;
       }
       // 오디오 트랙이 없으면 = "오디오 공유" 체크 안 함
@@ -2676,7 +2679,8 @@ async function startMic() {
         setStatus('오디오 공유 안 됨', false);
         micStream.getTracks().forEach(t => t.stop());
         micStream = null;
-        running = false; setRunningUI(false); stopElapsed();
+        if (ws) { try { ws.close(); } catch (e) {} ws = null; }
+        running = false; userStopped = true; setRunningUI(false); stopElapsed(); stopSilenceWatch();
         return;
       }
       // 화면(영상) 트랙은 안 쓰므로 정지 — 오디오만 사용
@@ -2699,9 +2703,13 @@ async function startMic() {
         micStream = await navigator.mediaDevices.getUserMedia({ audio: baseConstraints });
       }
     }
+    // 스트림 확보 완료 → 이제서야 AudioContext 생성 (취소/실패 경로에서는 만들지 않음 → 누수 0)
+    audioContext = new AudioContext();
     const inRate = audioContext.sampleRate;        // 실제 컨텍스트 레이트
     const TARGET = 16000;
     const ratio = inRate / TARGET;
+    // 방어: 비정상 레이트로 ratio가 0/NaN이면 다운샘플 while 루프가 무한 반복 → 렌더러 멈춤. 차단.
+    if (!isFinite(ratio) || ratio <= 0) { throw new Error('오디오 샘플레이트 비정상 (ratio=' + ratio + ')'); }
     // 진단: 실제 트랙 레이트와 컨텍스트 레이트 비교 (윈도우 미스매치 점검용)
     try {
       const at0 = micStream.getAudioTracks()[0];
@@ -2757,6 +2765,11 @@ async function startMic() {
   } catch (err) {
     showErr('마이크 오류: ' + err.message);
     setStatus('마이크 오류', false);
+    // 부분 초기화된 자원 정리 + 상태 복구 (누수·다운 방지, 재시작 가능하게)
+    try { if (workletNode) { workletNode.disconnect(); workletNode = null; } } catch (e) {}
+    try { if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; } } catch (e) {}
+    try { if (audioContext) { audioContext.close(); audioContext = null; } } catch (e) {}
+    running = false; setRunningUI(false); stopElapsed();
   }
 }
 function stop() {

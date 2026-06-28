@@ -1170,7 +1170,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.0 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.1 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2381,7 +2381,7 @@ let silenceTimer = null;        // 무음 감시 인터벌
 let lastSpeechAt = 0;           // 마지막 음성 인식 입력 시각(ms)
 let silenceWarned = false;      // 30초 전 경고를 이미 띄웠는지
 function getAutoStopMs() {
-  const min = parseInt(localStorage.getItem('auto_stop_min') || '0', 10);
+  const min = parseInt(localStorage.getItem('auto_stop_min') || '3', 10);   // 기본 3분
   return (min > 0 ? min : 0) * 60 * 1000;   // 0 = 사용 안 함
 }
 function noteSpeech() {         // appendSrc(음성 인식 입력)에서 호출 — 무음 타이머 리셋
@@ -2883,7 +2883,7 @@ window.addEventListener('pagehide', () => {
   (function initAutoStop() {
     const sel = $('autoStopSel');
     if (!sel) return;
-    sel.value = localStorage.getItem('auto_stop_min') || '0';
+    sel.value = localStorage.getItem('auto_stop_min') || '3';   // 기본 3분
     sel.addEventListener('change', () => {
       localStorage.setItem('auto_stop_min', sel.value);
       if (running) startSilenceWatch();   // 통역 중이면 새 설정으로 즉시 재시작

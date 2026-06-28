@@ -1179,7 +1179,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.3 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.4 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2153,7 +2153,11 @@ function replaceSafe(text, re, fn) {
   re.lastIndex = 0;
   // 괄호 깊이를 추적하며 매치 위치가 괄호 밖인지 확인
   const positions = [];
+  let guard = 0;
   while ((m = re.exec(text)) !== null) {
+    // 0폭 매치 방어: lastIndex가 전진하지 않으면 무한 루프 → 강제 전진(렌더러 정지 방지)
+    if (m[0] === '') { re.lastIndex++; if (re.lastIndex > text.length) break; continue; }
+    if (++guard > 5000) break;   // 비정상적으로 많은 매치 — 백스톱
     // 매치 시작점까지 괄호 깊이 계산
     let d = 0;
     for (let i = 0; i < m.index; i++) {
@@ -2740,8 +2744,9 @@ async function startMic() {
     const inRate = audioContext.sampleRate;        // 실제 컨텍스트 레이트
     const TARGET = 16000;
     const ratio = inRate / TARGET;
-    // 방어: 비정상 레이트로 ratio가 0/NaN이면 다운샘플 while 루프가 무한 반복 → 렌더러 멈춤. 차단.
-    if (!isFinite(ratio) || ratio <= 0) { throw new Error('오디오 샘플레이트 비정상 (ratio=' + ratio + ')'); }
+    // 방어: 비정상 레이트로 ratio가 0/NaN/극소면 다운샘플 while 루프가 폭주/무한 반복 → 렌더러 멈춤. 차단.
+    // (탭/창 사운드 소스에서 레이트가 비정상으로 보고되는 경우 방지)
+    if (!isFinite(ratio) || ratio < 0.05 || ratio > 64) { throw new Error('오디오 샘플레이트 비정상 (ratio=' + ratio + ', rate=' + inRate + ')'); }
     // 진단: 실제 트랙 레이트와 컨텍스트 레이트 비교 (윈도우 미스매치 점검용)
     try {
       const at0 = micStream.getAudioTracks()[0];
@@ -2763,12 +2768,14 @@ async function startMic() {
       // 16k로 선형보간 다운샘플
       const out = [];
       let pos = __frac;
+      const __cap = input.length + 8;          // 정상 출력 길이 상한(백스톱): ratio>=1이면 input.length 이하
       while (pos < input.length) {
         const idx = Math.floor(pos);
         const next = Math.min(idx + 1, input.length - 1);
         const t = pos - idx;
         out.push(input[idx] * (1 - t) + input[next] * t);
         pos += ratio;
+        if (out.length > __cap) break;          // 폭주 방어 — 어떤 경우에도 렌더러를 멈추지 않음
       }
       __frac = pos - input.length;
       if (__frac < 0) __frac = 0;

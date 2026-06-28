@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.7.1 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.7.0 → v1.7.1) — 반영 로그 중복 수정(교수님 보고):
+  - 같은 용어가 치환 로그(applyGlossaryReplace: 별칭→표준)와 병기 로그(annotateGlossary: 반대언어→표준)
+    양쪽에서 따로 기록돼 한 용어가 두 번씩 나오던 문제 수정.
+  - 두 경로의 중복키를 'g:'+표준표기로 통일 → 치환 로그가 먼저 기록하면 병기 로그는 생략. 용어당 1개만 표시.
   index.html v1.7.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.6.9 → v1.7.0) — 앱형 고정 레이아웃 재설계(교수님 요청, 특히 모바일):
   - 상단을 한 줄로 통합(#appHeader): 로고(좌) + 시작/정지·오버레이·용어집·설정(우). 상단 공간 절약·항상 고정.
@@ -1037,7 +1042,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.7.0 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.7.1 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1956,7 +1961,8 @@ function annotateGlossary(text, outCode) {
     const present = re.test(out);
     re.lastIndex = 0;
     if (present) {
-      const k = 'ann:' + canon;
+      // 치환 로그(applyGlossaryReplace)가 이미 같은 표준표기를 기록했으면 병기 로그는 생략(중복 방지).
+      const k = 'g:' + canon;
       if (typeof turnLogged !== 'undefined' && !turnLogged.has(k)) {
         turnLogged.add(k);
         if (typeof reflogAdd === 'function') reflogAdd('glossary', other + ' → ' + canon);
@@ -2021,7 +2027,11 @@ function shownTrans(raw) {
   // 반영 로그: 이번 턴에 처음 보는 치환만 기록 (치환이 일어나는 이 지점에서 수집 → 방향전환에도 안 놓침)
   for (const _c of _gr.corrections) {
     const _k = _c.from + '→' + _c.to;
-    if (!turnLogged.has(_k)) { turnLogged.add(_k); if (typeof reflogAdd === 'function') reflogAdd('glossary', _c.from + ' → ' + _c.to); }
+    if (!turnLogged.has(_k)) {
+      turnLogged.add(_k);
+      turnLogged.add('g:' + _c.to);   // 같은 표준표기는 병기 로그(annotateGlossary)에서 중복 기록 안 함 (두 번 표시 방지)
+      if (typeof reflogAdd === 'function') reflogAdd('glossary', _c.from + ' → ' + _c.to);
+    }
   }
   if (usePP && targetLang === "ko" && typeof koreanPostProcess === "function") {
     result = koreanPostProcess(result, $('speechLevel').value, null);

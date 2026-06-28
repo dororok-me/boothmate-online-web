@@ -739,7 +739,8 @@
     padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer; flex: 0 0 auto;
   }
   #glossaryPanel .g-close:hover { background: #ef4444; color: #fff; }
-  #glossaryPanel .g-add { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: nowrap; }
+  #glossaryPanel .g-add { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  #glossaryPanel .g-add-terms, #glossaryPanel .g-add-syn { display: flex; gap: 8px; align-items: center; }
   #glossaryPanel .g-add .g-arrow, #glossaryPanel .g-add button { flex: 0 0 auto; }
   #glossaryPanel .g-add input {
     padding: 7px 10px; border: 1px solid #2a3a55; border-radius: 6px;
@@ -750,6 +751,9 @@
   #glossaryPanel #gInB { background: #f4e2b2; border-color: #dcc079; color: #4d3a12; }
   #glossaryPanel #gInA::placeholder { color: #7a869b; }
   #glossaryPanel #gInB::placeholder { color: #9a824d; }
+  /* 유사어(치환 변이형) 입력칸 — 용어1/2와 구별되는 중립 회색 */
+  #glossaryPanel #gInSyn { background: #f3f5f9; border-color: #d7deea; color: #33415c; }
+  #glossaryPanel #gInSyn::placeholder { color: #8a95a8; }
   #glossaryPanel .g-add .g-arrow { color: #7dd3fc; font-size: 16px; }
   #glossaryPanel .g-add button {
     padding: 7px 16px; font-size: 13px; background: #378ADD; color: #fff;
@@ -757,9 +761,14 @@
   }
   #glossaryPanel .g-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
   #glossaryPanel .g-item {
-    display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+    display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 10px;
     background: #0f1626; border: 1px solid #1e2b40; border-radius: 6px;
   }
+  #glossaryPanel .g-item .g-main { display: flex; align-items: center; gap: 10px; }
+  #glossaryPanel .g-item .g-syn { font-size: 12px; color: var(--t-muted); padding-left: 2px; word-break: break-word; }
+  #glossaryPanel .g-item .g-syn-empty { opacity: 0.55; font-style: italic; }
+  #glossaryPanel .g-item .g-syn-edit { display: flex; }
+  #glossaryPanel .g-item .g-esyn { flex: 1 1 0; min-width: 0; }
   /* 리스트 행 교차 색(zebra) */
   #glossaryPanel .g-item:nth-child(even) { background: #131d33; }
   /* 열(용어1/용어2) 구별: 용어1=파랑 칩, 용어2=초록 칩 */
@@ -1170,7 +1179,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.2 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.3 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2047,6 +2056,29 @@ async function learnEntry(entry) {
   try { const t2 = await aiTranslateTerm(bHead, keyLang(ka)); pushAlias(ka, t2); } catch (e) {}
   entry.nat = nat;
   return entry;
+}
+/* 수동 유사어 기반 nat 생성 (AI 자동 학습 없음, v1.9.3).
+   entry = {a, b, syn} — a/b는 표준 용어, syn은 사용자가 직접 넣은 변이형(쉼표 구분).
+   각 변이형을 언어(한/비한)로 분류해 같은 언어 표준어의 별칭으로 넣는다.
+   → 통역 중 그 변이형이 출력에 나오면 표준어로 강제 치환(applyGlossaryReplace). */
+function natFromEntry(entry) {
+  const aHead = splitAliases(entry.a)[0] || entry.a;
+  const bHead = splitAliases(entry.b)[0] || entry.b;
+  const ka = gKey(aHead), kb = gKey(bHead);
+  const nat = {};
+  nat[ka] = [aHead];
+  if (nat[kb] === undefined) nat[kb] = [];
+  if (nat[kb].indexOf(bHead) === -1 && !eqTerm(bHead, nat[kb][0])) nat[kb].push(bHead);
+  // a/b 칸에 쉼표로 들어온 추가어 보존(하위호환)
+  for (const w of splitAliases(entry.a).slice(1)) if (nat[ka].indexOf(w) === -1) nat[ka].push(w);
+  for (const w of splitAliases(entry.b).slice(1)) if (nat[kb].indexOf(w) === -1) nat[kb].push(w);
+  // 수동 유사어 — 언어별 분류 후 해당 표준어의 별칭으로
+  for (const w of splitAliases(entry.syn || '')) {
+    const k = gKey(w);
+    if (nat[k] === undefined) nat[k] = [k === ka ? aHead : bHead];
+    if (nat[k].indexOf(w) === -1 && !eqTerm(w, nat[k][0])) nat[k].push(w);
+  }
+  return nat;
 }
 /* 출력 언어(outCode)에 맞춰 별칭→표준표기 강제 치환. {text, corrections} 반환 */
 function applyGlossaryReplace(text, outCode) {
@@ -3117,10 +3149,15 @@ window.addEventListener('pagehide', () => {
   panel.innerHTML =
     '<div class="g-head"><div class="g-ttl">📖 용어집 (양방향 — 영어 ⇄ 한국어)</div><button type="button" id="gCloseBtn" class="g-close" title="용어집 닫기">✕ 닫기</button></div>' +
     '<div class="g-add">' +
-      '<input type="text" id="gInA" placeholder="용어 1 (예: dog)">' +
-      '<span class="g-arrow">⇄</span>' +
-      '<input type="text" id="gInB" placeholder="용어 2 (예: 댕댕이, 개, 강아지)">' +
-      '<button id="gAddBtn">추가</button>' +
+      '<div class="g-add-terms">' +
+        '<input type="text" id="gInA" placeholder="용어 1 (예: dog)">' +
+        '<span class="g-arrow">⇄</span>' +
+        '<input type="text" id="gInB" placeholder="용어 2 (예: 댕댕이)">' +
+      '</div>' +
+      '<div class="g-add-syn">' +
+        '<input type="text" id="gInSyn" placeholder="유사어(치환할 변이형) — 쉼표로 구분, 비워도 됨 (예: 개, 강아지)">' +
+        '<button id="gAddBtn">추가</button>' +
+      '</div>' +
     '</div>' +
     '<div class="g-tools">' +
       '<span class="g-explabel">내보내기:</span>' +
@@ -3136,23 +3173,21 @@ window.addEventListener('pagehide', () => {
   if ($('gCloseBtn')) $('gCloseBtn').onclick = () => panel.classList.remove('open');
 
   const listEl = $('gList');
-  // 학습 상태 표시: 학습 전 "학습 중…", 학습 후 별칭(치환 대상) 표시
-  function setLearnStatus(learnEl, it) {
-    if (!it.nat) { learnEl.textContent = '학습 중…'; return; }
-    const aliases = [];
-    for (const k of ['ko', 'x']) { const col = it.nat[k]; if (col) for (let i = 1; i < col.length; i++) if (col[i]) aliases.push(col[i]); }
-    learnEl.textContent = aliases.length ? ('치환: ' + aliases.join(', ')) : '';
-  }
-  // 보기 모드 행: 용어쌍 + 학습상태 + 수정/삭제
+  // 보기 모드: 용어1 ⇄ 용어2(동일폭) + 수정/삭제, 그 아래 유사어(치환 변이형) 목록
   function viewRow(row, it, idx) {
     row.innerHTML =
-      '<span class="g-a"></span><span class="g-mid">⇄</span><span class="g-b"></span>' +
-      '<span class="g-learn" style="font-size:11px; color:#7a8ba8; flex-shrink:0;"></span>' +
-      '<button class="g-edit" title="유사어 추가·수정">수정</button>' +
-      '<button class="g-del">삭제</button>';
+      '<div class="g-main">' +
+        '<span class="g-a"></span><span class="g-mid">⇄</span><span class="g-b"></span>' +
+        '<button class="g-edit" title="유사어 추가·수정">수정</button>' +
+        '<button class="g-del">삭제</button>' +
+      '</div>' +
+      '<div class="g-syn"></div>';
     row.querySelector('.g-a').textContent = it.a;
     row.querySelector('.g-b').textContent = it.b;
-    setLearnStatus(row.querySelector('.g-learn'), it);
+    const synEl = row.querySelector('.g-syn');
+    const syns = splitAliases(it.syn || '');
+    if (syns.length) { synEl.textContent = '유사어(치환): ' + syns.join(', '); }
+    else { synEl.textContent = '유사어 없음'; synEl.classList.add('g-syn-empty'); }
     row.querySelector('.g-edit').onclick = () => editRow(row, idx);
     row.querySelector('.g-del').onclick = () => {
       const cur = loadGlossary();
@@ -3161,41 +3196,33 @@ window.addEventListener('pagehide', () => {
       render();
     };
   }
-  // 편집 모드 행: 두 칸을 입력칸으로 바꿔 유사어(쉼표 구분)를 직접 편집
+  // 편집 모드: 용어1/용어2 + 유사어 박스 (추가 폼과 동일 구조). 저장 시 nat 즉시 재생성(AI 없음).
   function editRow(row, idx) {
     const it = loadGlossary()[idx];
     if (!it) { render(); return; }
     row.innerHTML =
-      '<input class="g-ein g-ea" type="text"><span class="g-mid">⇄</span><input class="g-ein g-eb" type="text">' +
-      '<button class="g-save">저장</button><button class="g-cancel">취소</button>';
-    const ea = row.querySelector('.g-ea'), eb = row.querySelector('.g-eb');
-    ea.value = it.a; eb.value = it.b;
+      '<div class="g-main">' +
+        '<input class="g-ein g-ea" type="text"><span class="g-mid">⇄</span><input class="g-ein g-eb" type="text">' +
+        '<button class="g-save">저장</button><button class="g-cancel">취소</button>' +
+      '</div>' +
+      '<div class="g-syn-edit"><input class="g-ein g-esyn" type="text" placeholder="유사어(치환할 변이형) — 쉼표로 구분"></div>';
+    const ea = row.querySelector('.g-ea'), eb = row.querySelector('.g-eb'), es = row.querySelector('.g-esyn');
+    ea.value = it.a; eb.value = it.b; es.value = it.syn || '';
     ea.focus();
-    async function save() {
-      const a = ea.value.trim(), b = eb.value.trim();
-      if (!a || !b) { alert('두 칸을 모두 입력하세요.'); return; }
+    function save() {
+      const a = ea.value.trim(), b = eb.value.trim(), syn = es.value.trim();
+      if (!a || !b) { alert('용어 1과 용어 2를 모두 입력하세요.'); return; }
       const cur = loadGlossary();
       if (!cur[idx]) { render(); return; }
-      // nat(치환에 쓰이는 별칭 목록)는 a/b 문자열로부터 다시 만들어야 새 유사어가 반영됨.
-      // → 추가(add)와 동일하게 nat을 비우고 learnEntry로 재생성. (offline이어도 쉼표 유사어는 nat에 들어감)
-      cur[idx].a = a; cur[idx].b = b; cur[idx].nat = undefined;
+      cur[idx] = { a: a, b: b, syn: syn, nat: natFromEntry({ a: a, b: b, syn: syn }) };
       saveGlossary(cur);
-      render();   // 먼저 "학습 중…" 표시
-      try {
-        const entry = { a: a, b: b };
-        await learnEntry(entry);   // splitAliases(a/b) + (가능하면)AI 1회 → entry.nat
-        const list2 = loadGlossary();
-        for (let i = list2.length - 1; i >= 0; i--) {
-          if (!list2[i].nat && eqTerm(list2[i].a, a) && eqTerm(list2[i].b, b)) { list2[i].nat = entry.nat; break; }
-        }
-        saveGlossary(list2);
-        render();
-      } catch (e) { /* 학습 실패 — 직접 넣은 유사어는 그대로 동작 */ }
+      render();
     }
     row.querySelector('.g-save').onclick = save;
     row.querySelector('.g-cancel').onclick = render;
-    eb.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); });
+    es.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); });
     ea.addEventListener('keydown', (e) => { if (e.key === 'Enter') eb.focus(); });
+    eb.addEventListener('keydown', (e) => { if (e.key === 'Enter') es.focus(); });
   }
   function render() {
     const list = loadGlossary();
@@ -3209,31 +3236,23 @@ window.addEventListener('pagehide', () => {
       listEl.appendChild(row);
     });
   }
-  async function add() {
+  function add() {
     const a = $('gInA').value.trim();
     const b = $('gInB').value.trim();
-    if (!a || !b) { alert('두 칸을 모두 입력하세요.'); return; }
-    const entry = { a: a, b: b };
+    const syn = $('gInSyn').value.trim();
+    if (!a || !b) { alert('용어 1과 용어 2를 모두 입력하세요.'); return; }
+    const entry = { a: a, b: b, syn: syn, nat: natFromEntry({ a: a, b: b, syn: syn }) };
     const cur = loadGlossary();
     cur.push(entry);
     saveGlossary(cur);
-    $('gInA').value = ''; $('gInB').value = '';
+    $('gInA').value = ''; $('gInB').value = ''; $('gInSyn').value = '';
     $('gInA').focus();
-    render();   // 먼저 "학습 중…" 표시
-    // 자연 번역어 학습 (AI 1회). 실패해도 기본 치환은 동작.
-    try {
-      await learnEntry(entry);
-      const list = loadGlossary();
-      for (let i = list.length - 1; i >= 0; i--) {
-        if (!list[i].nat && eqTerm(list[i].a, entry.a) && eqTerm(list[i].b, entry.b)) { list[i].nat = entry.nat; break; }
-      }
-      saveGlossary(list);
-      render();
-    } catch (e) { /* 학습 실패 — 기본 동작 유지 */ }
+    render();
   }
   $('gAddBtn').onclick = add;
-  $('gInB').addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
+  $('gInSyn').addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
   $('gInA').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('gInB').focus(); });
+  $('gInB').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('gInSyn').focus(); });
 
   // 내보내기: 선택한 형식(csv/txt/xlsx)으로 저장. 형식: "용어1, 용어2" 한 줄에 하나
   function downloadBlob(content, filename, mime) {
@@ -3255,7 +3274,7 @@ window.addEventListener('pagehide', () => {
     if (fmt === 'xlsx') {
       loadSheetJS(function(err){
         if (err) { alert('엑셀 라이브러리 로드 실패. 인터넷 연결을 확인하세요.'); return; }
-        const aoa = list.map(function(it){ return [it.a, it.b]; });
+        const aoa = list.map(function(it){ return [it.a, it.b].concat(splitAliases(it.syn || '')); });
         const ws = XLSX.utils.aoa_to_sheet(aoa);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'glossary');
@@ -3263,8 +3282,8 @@ window.addEventListener('pagehide', () => {
       });
       return;
     }
-    // csv / txt — 둘 다 "용어1, 용어2" 쉼표 구분 (txt도 동일 형식)
-    const lines = list.map(function(it){ return it.a + ', ' + it.b; }).join('\n');
+    // csv / txt — "용어1, 용어2, 유사어, 유사어..." 쉼표 구분 (3번째 칸부터 유사어)
+    const lines = list.map(function(it){ return [it.a, it.b].concat(splitAliases(it.syn || '')).join(', '); }).join('\n');
     if (fmt === 'txt') downloadBlob(lines, 'glossary_' + stamp() + '.txt', 'text/plain;charset=utf-8');
     else downloadBlob('\uFEFF' + lines, 'glossary_' + stamp() + '.csv', 'text/csv;charset=utf-8'); // CSV는 BOM(엑셀 한글)
   };
@@ -3280,11 +3299,12 @@ window.addEventListener('pagehide', () => {
       const key = a + '|' + b;
       if (seen[key]) continue;
       seen[key] = true;
-      merged.push(it.nat ? { a: a, b: b, nat: it.nat } : { a: a, b: b });   // 학습값(nat) 보존
+      const syn = (it.syn !== undefined && it.syn !== null) ? String(it.syn) : '';
+      merged.push({ a: a, b: b, syn: syn, nat: it.nat || natFromEntry({ a: a, b: b, syn: syn }) });   // 기존 nat 보존, 없으면 동기 생성
     }
     saveGlossary(merged);
     render();
-    if (window.__glossaryLearnMissing) window.__glossaryLearnMissing();   // 새로 불러온 용어 학습
+    if (window.__glossaryLearnMissing) window.__glossaryLearnMissing();   // nat 누락분 동기 보정
     alert('불러오기 완료: 총 ' + merged.length + '개 용어');
   }
   // CSV/TSV 텍스트 → 쌍 배열 (구분자 자동: 콤마/탭, 따옴표 처리, 헤더 자동 건너뜀)
@@ -3306,12 +3326,13 @@ window.addEventListener('pagehide', () => {
       }
       cells.push(cur);
       const a = (cells[0] || '').trim();
-      // 2번째 칸부터 끝까지 = b쪽(표준+별칭). 쉼표 구분으로 합쳐 별칭 목록 보존.
-      const b = cells.slice(1).map(function (c) { return c.trim(); }).filter(Boolean).join(', ');
+      const b = (cells[1] || '').trim();
+      // 3번째 칸부터 = 유사어(치환 변이형). 쉼표로 합침.
+      const syn = cells.slice(2).map(function (c) { return c.trim(); }).filter(Boolean).join(', ');
       if (!a || !b) continue;
       // 첫 줄이 헤더로 보이면 건너뜀
       if (i === 0 && /^(용어|단어|영어|한국어|term|word|english|korean|source|target|a|b)$/i.test(a)) continue;
-      pairs.push({ a: a, b: b });
+      pairs.push({ a: a, b: b, syn: syn });
     }
     return pairs;
   }
@@ -3340,7 +3361,9 @@ window.addEventListener('pagehide', () => {
               const b = (r[1] != null ? String(r[1]) : '').trim();
               if (!a || !b) return;
               if (idx === 0 && /^(용어|단어|영어|한국어|term|word|english|korean|source|target|a|b)$/i.test(a)) return;
-              pairs.push({ a: a, b: b });
+              // 3번째 칸부터 = 유사어(치환 변이형)
+              const syn = r.slice(2).map(function (c) { return (c != null ? String(c) : '').trim(); }).filter(Boolean).join(', ');
+              pairs.push({ a: a, b: b, syn: syn });
             });
             mergeGlossary(pairs);
           } catch (err2) { alert('엑셀 파싱 실패: 올바른 파일인지 확인하세요.'); }
@@ -3376,25 +3399,26 @@ window.addEventListener('pagehide', () => {
     }
   };
 
-  // 학습 안 된(nat 없는) 기존/불러온 용어를 백그라운드에서 1회씩 학습
-  let _learning = false;
-  async function learnMissing() {
-    if (_learning) return;
-    _learning = true;
-    try {
-      const list = loadGlossary();
-      for (let i = 0; i < list.length; i++) {
-        if (!list[i] || list[i].nat) continue;
-        const entry = { a: list[i].a, b: list[i].b };
-        try { await learnEntry(entry); } catch (e) { continue; }
-        const cur = loadGlossary();
-        for (let j = 0; j < cur.length; j++) {
-          if (!cur[j].nat && eqTerm(cur[j].a, entry.a) && eqTerm(cur[j].b, entry.b)) { cur[j].nat = entry.nat; break; }
-        }
-        saveGlossary(cur);
-        render();
+  // nat 보정 + 기존(AI 학습) 항목의 별칭을 유사어 박스로 1회 이관 (AI 호출 없음, 동기)
+  function learnMissing() {
+    const list = loadGlossary();
+    let changed = false;
+    for (let i = 0; i < list.length; i++) {
+      const it = list[i];
+      if (!it) continue;
+      if (it.syn === undefined) {
+        // 이전 버전의 AI 학습 결과(nat 별칭)를 유사어 박스 값으로 이관 → 보이고 편집 가능하게
+        const aliases = [];
+        if (it.nat) for (const k of ['ko', 'x']) { const col = it.nat[k]; if (col) for (let j = 1; j < col.length; j++) if (col[j]) aliases.push(col[j]); }
+        it.syn = aliases.join(', ');
+        it.nat = natFromEntry(it);
+        changed = true;
+      } else if (!it.nat) {
+        it.nat = natFromEntry(it);
+        changed = true;
       }
-    } finally { _learning = false; }
+    }
+    if (changed) { saveGlossary(list); render(); }
   }
   // mergeGlossary/render 이후에도 누락분 학습되도록 노출
   window.__glossaryLearnMissing = learnMissing;

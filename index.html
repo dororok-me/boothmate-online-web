@@ -1179,7 +1179,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.5 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.6 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2497,6 +2497,8 @@ async function start() {
   startAutoScroll();
   startElapsed();
   startSilenceWatch();  // 무음 자동 정지 감시 시작
+  window.__startCount = (window.__startCount || 0) + 1;
+  console.log('[진단] start() 누적 호출 횟수 = ' + window.__startCount + ' (1보다 크면 시작이 자동 반복되는 것)');
   console.log('[start] 0) start() — connectWS 호출');
   connectWS();          // ws 연결
   console.log('[start] 0b) connectWS 반환 — startMic 호출');
@@ -2524,6 +2526,8 @@ function maybeFlipDirection(srcText) {
 
 /* ws 세션만 여는 함수 (마이크와 독립 — 재연결 시 이것만 다시 호출) */
 function connectWS() {
+  window.__cwCount = (window.__cwCount || 0) + 1;
+  console.log('[진단] connectWS 누적 호출 횟수 = ' + window.__cwCount + ' (재연결은 여기만 늘어야 정상)');
   // 기존 연결이 남아있으면 깨끗이 정리 (중복 연결/재연결 루프 방지)
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
   if (ws) {
@@ -2691,6 +2695,11 @@ async function startMic() {
     // v1.9.2: ⚠️ AudioContext는 '스트림 확보 후'에 생성한다. 화면 공유 취소/오디오 없음 등
     //   조기 return 경로에서 컨텍스트를 닫지 않아 누수되면, Chrome의 컨텍스트 개수 제한에
     //   걸려 렌더러가 다운된다(탭/창 사운드 시작을 몇 번 취소·재시도하면 종종 발생).
+    // ⚠️ 재진입 방어(v1.9.6): startMic이 다시 호출될 때 이전 오디오 자원이 남아 있으면
+    //   먼저 정리한다. 안 그러면 AudioContext가 계속 쌓여 Chrome 한계 도달 → 렌더러 다운.
+    if (workletNode) { try { workletNode.disconnect(); } catch (e) {} workletNode = null; }
+    if (audioContext) { try { audioContext.close(); } catch (e) {} audioContext = null; }
+    if (micStream) { try { micStream.getTracks().forEach(t => t.stop()); } catch (e) {} micStream = null; }
     const inputMode = ($('inputMode') && $('inputMode').value) || 'mic';
     console.log('[start] 1) startMic 진입 — inputMode=' + inputMode);
 

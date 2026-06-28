@@ -1013,7 +1013,8 @@
   .pair:last-child { margin-bottom: 4px; }
   .srcline { color: var(--mc-src-color); font-weight: 500; line-height: 1.5; margin-bottom: 8px; }
   .transline { line-height: 1.4; }
-  .transline.pending { color: var(--t-accent) !important; opacity: 1 !important; font-weight: var(--mc-trans-weight) !important; }
+  /* 번역 중(pending) 문장도 완료 문장과 동일한 색·굵기로 — 색 구별 없음 */
+  .transline.pending { color: var(--mc-trans-color) !important; opacity: 1 !important; font-weight: var(--mc-trans-weight) !important; }
   .srcline.pending { opacity: 0.6; }
 
   /* ── 하단 로그 ── */
@@ -1161,7 +1162,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.8.6 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.8.7 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

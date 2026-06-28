@@ -1136,6 +1136,7 @@
   <label>
     <select id="langB"></select>
   </label>
+  <div style="flex-basis:100%; width:100%; font-size:11px; color:var(--t-muted); margin:-2px 0 2px 2px; line-height:1.4;">언어를 자동 인식해 양방향으로 번역합니다.</div>
   <select id="targetLang" style="display:none;"></select>
   <label style="white-space:nowrap;" title="번역 자막의 금액을 자동으로 환산해 괄호로 표시합니다 (예: $24억(₩약 3조…))"><input type="checkbox" id="currencyToggle" checked> 💱 환율 환산</label>
   <label style="white-space:nowrap;" title="번역 자막의 면적 단위를 자동으로 환산해 괄호로 표시합니다 (예: 30평(99.2㎡), 100㎡(30.3평))"><input type="checkbox" id="unitToggle" checked> 📐 도량형 환산</label>
@@ -1183,7 +1184,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.10.2 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.10.3 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -3211,9 +3212,7 @@ window.addEventListener('pagehide', () => {
     // 핵심 옵션(번역 언어/입력/음성 소스)도 함께 펼치기/접기
     const oc = document.getElementById('optsCollapse');
     if (oc) oc.style.display = isOpen ? 'block' : 'none';
-    // 설정 버튼 글자를 상태에 따라 토글
-    $('mcOptBtn').textContent = isOpen ? '✕' : '⚙';
-    // 닫기 상태일 때 붉은색
+    // 아이콘은 SVG 세 줄로 고정(글자 교체 안 함). 열림 상태는 배경색으로만 표시.
     if (isOpen) {
       $('mcOptBtn').style.background = '#dc2626';
       $('mcOptBtn').style.color = '#fff';
@@ -3228,7 +3227,6 @@ window.addEventListener('pagehide', () => {
       panel.classList.remove('open');
       const oc = document.getElementById('optsCollapse');
       if (oc) oc.style.display = 'none';
-      $('mcOptBtn').textContent = '⚙';
     };
   }
 })();

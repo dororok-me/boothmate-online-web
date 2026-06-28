@@ -1179,7 +1179,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.8 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.9.9 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2588,6 +2588,9 @@ function connectWS() {
                   '. The expected input is ' + langName(_other) + '. Translate every input utterance into ' +
                   langName(TARGET_LANGUAGE) + '. Output ONLY ' + langName(TARGET_LANGUAGE) +
                   '; never echo the input language.' +
+                  ' LANGUAGE LOCK — this session handles ONLY ' + langName(_pa) + ' and ' + langName(_pb) +
+                  '. If an utterance is spoken in any OTHER language, IGNORE it completely and output nothing for it; do NOT translate it. ' +
+                  'Never output any language other than ' + langName(TARGET_LANGUAGE) + '.' +
                   ' CRITICAL — preserve every number\'s exact magnitude. Convert Korean numeric units precisely: ' +
                   '만=10 thousand, 십만=100 thousand, 백만=1 million, 천만=10 million, 억=100 million, 십억=1 billion, 조=1 trillion ' +
                   '(e.g., 3천만 달러 → 30 million dollars, 2.2억 원 → 220 million won, 3억 → 300 million). Never change the order of magnitude. ' +

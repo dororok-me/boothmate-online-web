@@ -1,5 +1,14 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.7.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.6.9 → v1.7.0) — 앱형 고정 레이아웃 재설계(교수님 요청, 특히 모바일):
+  - 상단을 한 줄로 통합(#appHeader): 로고(좌) + 시작/정지·오버레이·용어집·설정(우). 상단 공간 절약·항상 고정.
+  - 페이지 전체를 100dvh 고정(body flex column, overflow:hidden) → 페이지 스크롤 없음.
+    자막창(#mcWrap)이 헤더와 로그 사이 남는 공간을 자동으로 꽉 채움(내부만 스크롤). 모바일에서 시작버튼이 안 밀림.
+  - 설정/용어집 패널은 #panelArea(최대 58~64dvh, 내부 스크롤)에서 열려 레이아웃을 깨지 않음.
+  - 하단 로그: 화살표 접기 대신 평소 표시 + ✕로 숨김(숨기면 자막창이 그만큼 넓어짐). 높이 2줄 고정.
+    ✕와 설정 'Log 표시' 체크박스가 같은 상태 공유(applyReflogVisible, reflog_visible).
+  - 수동 드래그 리사이즈(#mcResizeHandle) 제거 — 자동 채움으로 대체. 푸터는 버전 한 줄로 축소.
   index.html v1.6.9 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.6.8 → v1.6.9) — 용어집 색 대비 강화(교수님 요청):
   - 용어1=흰색 계열(밝은 회백, 어두운 글자), 용어2=앰버(노랑) 계열로 두 열을 확실히 구별.
@@ -573,7 +582,9 @@
 <title>Boothmate on Google</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
 <style>
-  body { font-family: "Pretendard", -apple-system, system-ui, sans-serif; background: #0d1220; color: #e2e8f0; margin: 0 auto; padding: 12px 20px; max-width: 900px; box-sizing: border-box; min-height: 100vh; }
+  /* 앱형 고정 레이아웃: 페이지 스크롤 없이 화면(100dvh)에 꽉 맞춤. 자막창이 남는 공간을 채움 (v1.7.0) */
+  html, body { height: 100%; }
+  body { font-family: "Pretendard", -apple-system, system-ui, sans-serif; background: #0d1220; color: #e2e8f0; margin: 0 auto; padding: 8px 14px; max-width: 900px; box-sizing: border-box; height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
   h1 { font-size: 16px; color: #378ADD; margin: 0 0 6px 0; }
   .api-row input { width: 100%; box-sizing: border-box; padding: 10px; background: #1a2235; border: 1px solid #2a3a55; border-radius: 8px; color: #e2e8f0; font-size: 14px; }
   .opts { display: flex; gap: 14px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
@@ -581,19 +592,20 @@
   select { padding: 6px 10px; background: #1a2235; border: 1px solid #2a3a55; border-radius: 6px; color: #e2e8f0; font-size: 14px; }
   .controls { display: flex; gap: 10px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
   button { padding: 10px 20px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-  /* 상단 바: 좌측 로고 + 우측 설정 아이콘 */
-  #topBar { display: flex; align-items: center; justify-content: space-between; margin: 2px 0 0; }
-  #topLogo { text-align: left; }
-  #topLogo img { height: 48px; width: auto; display: block; }
-  /* 메인 액션: 시작/정지 토글(중앙). 카운터는 버튼 박스 안 */
-  #mainAction { display: flex; flex-direction: column; align-items: center; margin: 14px 0 6px; }
-  /* 시작/정지 결합 토글: 아이콘만(▶/■), 좌우 폭 최소. 카운터는 아이콘 아래 박스 안 */
+  /* 상단 바(고정): 로고(좌) + 액션들(우) 한 줄 */
+  #appHeader { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; padding-bottom: 6px; border-bottom: 1px solid var(--t-border); }
+  #topLogo { flex: 0 0 auto; }
+  #topLogo img { height: 38px; width: auto; display: block; }
+  #headerActions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+  /* 시작/정지 토글: 아이콘(▶/■) + 카운터 한 박스 (한 줄 헤더라 컴팩트하게) */
   #toggleBtn {
-    background: #4b5563; color: #e5e7eb; padding: 9px 14px; border-radius: 10px;
-    display: inline-flex; flex-direction: column; align-items: center; gap: 2px; line-height: 1.15;
+    background: #4b5563; color: #e5e7eb; padding: 6px 16px; border-radius: 9px;
+    display: inline-flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1.1;
   }
-  #toggleBtn #toggleLabel { font-size: 18px; font-weight: 700; }
-  #toggleBtn #elapsed { font-family: monospace; font-size: 12px; font-weight: 600; letter-spacing: 1px; color: inherit; opacity: 0.75; }
+  #toggleBtn #toggleLabel { font-size: 16px; font-weight: 700; }
+  #toggleBtn #elapsed { font-family: monospace; font-size: 11px; font-weight: 600; letter-spacing: 1px; color: inherit; opacity: 0.78; }
+  /* 설정/용어집 패널 영역: 닫히면 0높이, 열리면 최대 58dvh까지 펼쳐지고 내부 스크롤 */
+  #panelArea { flex: 0 0 auto; max-height: 58dvh; overflow-y: auto; }
   #toggleBtn:hover { background: #5b6573; transform: translateY(-1px); }
   #toggleBtn.running { background: #dc2626; color: white; box-shadow: 0 2px 8px rgba(220,38,38,0.45); animation: pulseStop 2s ease-in-out infinite; }
   #toggleBtn.running:hover { background: #ef4444; }
@@ -604,37 +616,26 @@
   #status { font-size: 13px; color: #7a8ba8; }
   .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #555; margin-right: 6px; }
   .dot.live { background: #22c55e; }
-  #errbox { color: #f87171; font-size: 13px; margin: 10px 0; white-space: pre-wrap; word-break: break-all; }
+  #errbox { color: #f87171; font-size: 13px; margin: 6px 0; white-space: pre-wrap; word-break: break-all; flex: 0 0 auto; }
+  #errbox:empty { display: none; margin: 0; }
 
   /* ── 메인 콘솔: 상단 원문 / 하단 번역 분리 + 텔레프롬프터 흐름 ── */
   :root {
     --mc-src-size: 18px; --mc-src-color: #94a3b8; --mc-src-weight: 400;
     --mc-trans-size: 24px; --mc-trans-color: #7dd3fc; --mc-trans-weight: 600;
   }
+  /* 자막창: 헤더와 로그 사이 남는 공간을 모두 채움(flex:1). 내부(.mc-area)만 스크롤 */
   #mcWrap {
-    margin-top: 10px;
+    margin-top: 8px;
     display: flex; flex-direction: column;
-    height: 34vh;          /* 기본 높이(상하로 덜 넓게). 아래 핸들을 드래그해 조절 */
-    min-height: 130px;
+    flex: 1 1 auto; min-height: 90px;
     overflow: hidden;
-    /* CSS resize는 모바일(터치)에서 동작 안 함 → 아래 #mcResizeHandle + 포인터 이벤트로 직접 구현 */
   }
   .mc-area {
     background: #0a0e1a; border-radius: 12px; padding: 14px 18px;
     overflow-y: auto; position: relative;
     flex: 1 1 auto; min-height: 0; border-left: 4px solid #6366f1;
   }
-  /* 자막창 크기 조절 핸들 (PC 마우스 + 모바일 터치 모두 지원) — 박스 아래 슬림 바 */
-  #mcResizeHandle {
-    flex: 0 0 18px; height: 18px; margin-top: 3px; border-radius: 6px;
-    cursor: ns-resize; touch-action: none;
-    display: flex; align-items: center; justify-content: center;
-    background: var(--t-input-bg);
-  }
-  #mcResizeHandle::before {
-    content: ''; width: 46px; height: 4px; border-radius: 2px; background: var(--t-border);
-  }
-  #mcResizeHandle:hover::before { background: var(--t-accent); }
   #mcCombined {
     display: flex; flex-direction: column;
   }
@@ -914,6 +915,17 @@
     --t-word-hover: rgba(180,83,9,0.14);
     --mc-src-color: #6b5d44; --mc-trans-color: #2a2318; --mc-trans-weight: 700;
   }
+  /* 모바일: 헤더를 더 컴팩트하게(한 줄 유지), 자막 공간 최대 확보 (v1.7.0) */
+  @media (max-width: 640px) {
+    body { padding: 6px 10px; }
+    #appHeader { gap: 8px; }
+    #topLogo img { height: 32px; }
+    #headerActions { gap: 6px; }
+    .icon-btn { font-size: 17px; padding: 7px 9px; }
+    #toggleBtn { padding: 5px 12px; }
+    .mc-area { padding: 12px 14px; }
+    #panelArea { max-height: 64dvh; }
+  }
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -953,25 +965,22 @@
   </select>
   <input type="checkbox" id="ppToggle" checked>
 </div>
-<!-- 상단 바: 좌측 로고 + 우측 설정 아이콘 (v1.6.5) -->
-<div id="topBar">
+<!-- 상단 바(고정): 로고 + 시작/정지 + 오버레이 + 용어집 + 설정 한 줄 (v1.7.0) -->
+<div id="appHeader">
   <div id="topLogo"><img src="logo.png" alt="Boothmate"></div>
-  <button id="mcOptBtn" class="icon-btn" title="설정">⚙</button>
+  <div id="headerActions">
+    <button id="toggleBtn">
+      <span id="toggleLabel">▶</span>
+      <span id="elapsed">00:00:00</span>
+    </button>
+    <button id="openOverlayBtn" class="icon-btn" title="오버레이">🖥️</button>
+    <button id="glossaryBtn" class="icon-btn" title="용어집">📖</button>
+    <button id="mcOptBtn" class="icon-btn" title="설정">⚙</button>
+  </div>
 </div>
-<!-- 메인 액션: 시작/정지 토글(화면 중앙). 카운터(00:00:00)는 버튼 박스 안에 (v1.6.2) -->
-<div id="mainAction">
-  <button id="toggleBtn">
-    <span id="toggleLabel">▶</span>
-    <span id="elapsed">00:00:00</span>
-  </button>
-</div>
-<!-- 보조 버튼(오버레이·용어집)은 이모티콘만, 중앙 정렬 별도 줄 -->
-<div class="controls" style="justify-content:center; margin-top:2px;">
-  <button id="openOverlayBtn" class="icon-btn" title="오버레이">🖥️</button>
-  <button id="glossaryBtn" class="icon-btn" title="용어집">📖</button>
-</div>
-<!-- 설정 패널(번역·입력 옵션 + mcPanel): 상단 ⚙ 버튼으로 열고닫음, 위치는 보조버튼 아래(v1.6.5) -->
-<div id="optsCollapse" style="display:none; margin-top:10px; padding:12px 14px; border:1px solid var(--t-border); border-radius:10px; background:var(--t-panel-bg);">
+<!-- 설정/용어집 패널 영역(열면 펼쳐지며 스크롤, 닫으면 0높이) — 고정 레이아웃을 깨지 않음 (v1.7.0) -->
+<div id="panelArea">
+<div id="optsCollapse" style="display:none; margin-top:8px; padding:12px 14px; border:1px solid var(--t-border); border-radius:10px; background:var(--t-panel-bg);">
 <div style="font-size:13px; font-weight:700; color:#7dd3fc; margin-bottom:8px;">번역 · 입력 설정</div>
 <div class="opts">
   <label>통역 언어:
@@ -1005,23 +1014,22 @@
 </div>
 </div>
 <div id="mcPanel"></div>
-<!-- 설정 영역(설정 버튼 + optsCollapse + mcPanel)은 페이지 하단(반영 로그·계정 줄 아래)으로 이동(v1.6.0) -->
 <div id="glossaryPanel"></div>
+</div><!-- /panelArea -->
 <div id="errbox"></div>
+<!-- 자막창: 헤더와 로그 사이 남는 공간을 꽉 채움(내부만 스크롤) (v1.7.0) -->
 <div id="mcWrap">
   <div id="mcCombined" class="mc-area"></div>
-  <!-- 드래그 핸들: PC/모바일(터치) 모두 자막창 높이 조절 (v1.6.5) -->
-  <div id="mcResizeHandle" title="드래그해서 자막창 크기를 조절하세요"></div>
 </div>
 
 <!-- 하단 텍스트 번역 박스 -->
 <!-- 반영 로그: 통역 중 적용된 용어집 항목을 누적 표시 (BoothmateG 반영 로그 포팅) -->
-<div id="reflogBox" style="margin-top:10px; padding:14px; border:1px solid var(--t-border); border-radius:12px; background:var(--t-input-bg); flex-shrink:0;">
-  <div id="reflogHead" style="display:flex; align-items:center; gap:8px;">
-    <button id="reflogCollapseBtn" title="접기/펼치기" style="padding:5px 9px; border-radius:8px; border:1px solid var(--t-border); background:transparent; color:var(--t-muted); font-size:13px; cursor:pointer; line-height:1;">⏫</button>
-    <button id="reflogClearBtn" title="지우기" style="margin-left:auto; padding:6px 10px; border-radius:8px; border:1px solid var(--t-border); background:transparent; color:var(--t-muted); font-size:14px; cursor:pointer; line-height:1;">🗑️</button>
+<div id="reflogBox" style="margin-top:8px; padding:8px 12px; border:1px solid var(--t-border); border-radius:12px; background:var(--t-input-bg); flex:0 0 auto;">
+  <div id="reflogHead" style="display:flex; align-items:center; gap:6px; justify-content:flex-end;">
+    <button id="reflogClearBtn" title="로그 지우기" style="padding:4px 9px; border-radius:8px; border:1px solid var(--t-border); background:transparent; color:var(--t-muted); font-size:13px; cursor:pointer; line-height:1;">🗑️</button>
+    <button id="reflogHideBtn" title="로그 숨기기 (설정에서 다시 켤 수 있어요)" style="padding:4px 10px; border-radius:8px; border:1px solid var(--t-border); background:transparent; color:var(--t-muted); font-size:13px; cursor:pointer; line-height:1;">✕</button>
   </div>
-  <div id="reflogList" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; max-height:58px; overflow-y:auto;"></div>
+  <div id="reflogList" style="margin-top:6px; display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; height:58px; overflow-y:auto;"></div>
 </div>
 
 <!-- 계정 줄(authBar)은 설정 패널 '👤 계정' 그룹 안으로 이동(v1.6.1).
@@ -1029,11 +1037,7 @@
 
 
 
-<footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
-  <div style="margin-bottom:6px;"><img src="logo.png" alt="Boothmate" style="height:16px; width:auto; vertical-align:middle; opacity:0.8; background:transparent;"></div>
-  Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.6.9</div>
-</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.7.0 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1293,41 +1297,9 @@ function startElapsed() {
 }
 function stopElapsed() { if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; } stopQuotaCountdown(); }
 
-/* ── 자막 창 크기(드래그 조절) 저장·복원 (v1.6.5) ──
-   CSS resize:vertical는 모바일(터치)에서 동작하지 않으므로, 전용 핸들(#mcResizeHandle) +
-   포인터 이벤트로 직접 구현 → PC 마우스/모바일 터치 모두 지원. 높이는 localStorage에 저장. */
-(function initSubtitleResize(){
-  const wrap = document.getElementById('mcWrap');
-  const handle = document.getElementById('mcResizeHandle');
-  if (!wrap) return;
-  const saved = localStorage.getItem('mc_wrap_h');
-  if (saved) wrap.style.height = saved;
-  if (!handle) return;
-  let startY = 0, startH = 0, dragging = false;
-  const onMove = (e) => {
-    if (!dragging) return;
-    const y = (e.clientY != null) ? e.clientY : (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-    let h = startH + (y - startY);
-    h = Math.max(130, Math.min(Math.round(window.innerHeight * 0.92), h));
-    wrap.style.height = h + 'px';
-    if (e.cancelable) e.preventDefault();
-  };
-  const onUp = () => {
-    if (!dragging) return;
-    dragging = false;
-    document.removeEventListener('pointermove', onMove);
-    document.removeEventListener('pointerup', onUp);
-    if (wrap.style.height) localStorage.setItem('mc_wrap_h', wrap.style.height);
-  };
-  handle.addEventListener('pointerdown', (e) => {
-    dragging = true;
-    startY = e.clientY;
-    startH = wrap.offsetHeight;
-    document.addEventListener('pointermove', onMove);
-    document.addEventListener('pointerup', onUp);
-    if (e.cancelable) e.preventDefault();
-  });
-})();
+/* 자막창은 고정 레이아웃(flex:1)에서 남는 공간을 자동으로 채움(v1.7.0).
+   예전(v1.6.5) 수동 드래그 높이(mc_wrap_h)는 더 이상 쓰지 않으므로 제거해 flex 자동 높이를 보장. */
+try { localStorage.removeItem('mc_wrap_h'); } catch (e) {}
 
 /* ════════════════════════════════════════════
    권한·등급 모듈 (Entitlements) — 단일 소스 (방식 A: localStorage)
@@ -1568,22 +1540,21 @@ function collectReflections(source, rawTrans) {
   }
 }
 if ($('reflogClearBtn')) $('reflogClearBtn').onclick = reflogClear;
-/* 로그창 접기/펼치기 토글 (v1.6.6) — ⏫=펼친 상태(누르면 접힘), ⏬=접힌 상태(누르면 펼침).
-   상태는 localStorage(reflog_collapsed)에 저장. 리스트(#reflogList)만 숨기고 헤더는 유지. */
-(function initReflogCollapse(){
-  const btn = $('reflogCollapseBtn'), list = $('reflogList');
-  if (!btn || !list) return;
-  function apply(collapsed){
-    list.style.display = collapsed ? 'none' : 'flex';
-    btn.textContent = collapsed ? '⏬' : '⏫';
-  }
-  let collapsed = (localStorage.getItem('reflog_collapsed') === '1');
-  apply(collapsed);
-  btn.onclick = () => {
-    collapsed = !collapsed;
-    localStorage.setItem('reflog_collapsed', collapsed ? '1' : '0');
-    apply(collapsed);
-  };
+/* 로그창 표시/숨김 (v1.7.0) — 평소 표시, 하단 ✕로 숨김(자막창이 그만큼 넓어짐).
+   숨김 상태는 localStorage(reflog_visible)에 저장. 설정의 'Log 표시' 체크박스로 다시 켤 수 있음.
+   설정 체크박스와 ✕ 버튼이 같은 상태를 공유하도록 단일 함수로 통일. */
+function applyReflogVisible(visible) {
+  const box = $('reflogBox');
+  if (box) box.style.display = visible ? '' : 'none';
+  localStorage.setItem('reflog_visible', visible ? '1' : '0');
+  const tg = $('reflogToggle');               // 설정 패널 체크박스(있으면 동기화)
+  if (tg) tg.checked = visible;
+}
+(function initReflogVisibility(){
+  const saved = localStorage.getItem('reflog_visible');
+  applyReflogVisible(saved === null ? true : (saved === '1'));   // 기본 ON
+  const hideBtn = $('reflogHideBtn');
+  if (hideBtn) hideBtn.onclick = () => applyReflogVisible(false);
 })();
 renderReflog();
 
@@ -2709,17 +2680,14 @@ window.addEventListener('pagehide', () => {
     '</div>';
 
   const root = document.documentElement.style;
-  // 반영 로그 표시 on/off (설정 토글) — #reflogBox 표시 제어, localStorage 저장(기본 ON)
+  // Log 표시 on/off (설정 토글) — 하단 ✕ 버튼과 동일한 상태 공유(applyReflogVisible)
   (function initReflogToggle() {
-    const box = $('reflogBox'), tg = $('reflogToggle');
-    if (!box || !tg) return;
+    const tg = $('reflogToggle');
+    if (!tg) return;
     const saved = localStorage.getItem('reflog_visible');
-    const visible = (saved === null) ? true : (saved === '1');
-    tg.checked = visible;
-    box.style.display = visible ? '' : 'none';
+    tg.checked = (saved === null) ? true : (saved === '1');
     tg.addEventListener('change', () => {
-      box.style.display = tg.checked ? '' : 'none';
-      localStorage.setItem('reflog_visible', tg.checked ? '1' : '0');
+      if (typeof applyReflogVisible === 'function') applyReflogVisible(tg.checked);
     });
   })();
   // API 키 복원/저장 (입력란이 이 패널 안에 있으므로 여기서 바인딩)

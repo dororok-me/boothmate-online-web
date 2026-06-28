@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.6.4 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.6.3 → v1.6.4) — 문구 정리 + 설정 그룹 박스화(교수님 요청):
+  - 언어쌍 안내문구 "(… 들어온 말의 반대 언어로 자동 번역)"(#targetLangHint) 제거.
+  - 언어 전환 아이콘 🔄(어두운 원형 배경) → 배경 투명한 화살표 ⇄로 교체.
+  - 자막창 placeholder "시작을 누르고 말하면…" 제거(빈 박스로 시작).
+  - 반영 로그 헤더/설정 그룹 제목 "📌 반영 로그" → "Log"(이모티콘 제거).
+  - 설정 패널 각 그룹(.grp)을 테두리 박스로 묶음('번역·입력 설정'과 동일 스타일).
   index.html v1.6.3 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.6.2 → v1.6.3) — 반영 로그 헤더 간소화(교수님 요청):
   - 헤더 안내문구 "— 통역 중 적용된 용어집 항목이 표시됩니다" 제거.
@@ -629,9 +636,10 @@
     padding: 6px 14px; border-radius: 8px; cursor: pointer;
   }
   #mcPanel .mc-panel-close:hover { background: #ef4444; color: #fff; }
-  #mcPanel .grp { margin-bottom: 12px; }
+  /* 설정 각 그룹을 박스로 묶음('번역·입력 설정'과 같은 스타일) */
+  #mcPanel .grp { margin-bottom: 12px; padding: 12px 14px; border: 1px solid var(--t-border); border-radius: 10px; background: var(--t-input-bg); }
   #mcPanel .grp:last-child { margin-bottom: 0; }
-  #mcPanel .grp-ttl { font-size: 12px; font-weight: 700; color: #7dd3fc; margin-bottom: 6px; }
+  #mcPanel .grp-ttl { font-size: 12px; font-weight: 700; color: #7dd3fc; margin-bottom: 8px; }
   #mcPanel .row { display: flex; align-items: center; gap: 10px; margin: 6px 0; max-width: 420px; }
   #mcPanel .row label { color: #9fb0cc; width: 60px; }
   #mcPanel input[type="range"] { flex: 1; }
@@ -888,14 +896,14 @@
 <div id="glossaryPanel"></div>
 <div id="errbox"></div>
 <div id="mcWrap">
-  <div id="mcCombined" class="mc-area"><div class="hint">시작을 누르고 말하면 원문과 번역이 여기 교대로 흐릅니다.</div></div>
+  <div id="mcCombined" class="mc-area"></div>
 </div>
 
 <!-- 하단 텍스트 번역 박스 -->
 <!-- 반영 로그: 통역 중 적용된 용어집 항목을 누적 표시 (BoothmateG 반영 로그 포팅) -->
 <div id="reflogBox" style="margin-top:10px; padding:14px; border:1px solid var(--t-border); border-radius:12px; background:var(--t-input-bg); flex-shrink:0;">
   <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-    <span style="font-size:13px; font-weight:700; color:var(--t-accent);">📌 반영 로그</span>
+    <span style="font-size:13px; font-weight:700; color:var(--t-accent);">Log</span>
     <button id="reflogClearBtn" title="지우기" style="margin-left:auto; padding:6px 10px; border-radius:8px; border:1px solid var(--t-border); background:transparent; color:var(--t-muted); font-size:14px; cursor:pointer; line-height:1;">🗑️</button>
   </div>
   <div id="reflogList" style="display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; max-height:58px; overflow-y:auto;"></div>
@@ -914,12 +922,11 @@
   <label>통역 언어:
     <select id="langA"></select>
   </label>
-  <span id="pairSwapBtn" title="두 언어는 양방향으로 자동 번역됩니다" style="display:inline-flex; align-items:center; justify-content:center; background:#2a3a55; color:#cfe0ff; border-radius:50%; width:30px; height:30px; font-size:15px; line-height:1;">🔄</span>
+  <span id="pairSwapBtn" title="두 언어는 양방향으로 자동 번역됩니다" style="display:inline-flex; align-items:center; justify-content:center; background:transparent; color:var(--t-muted); width:24px; font-size:18px; line-height:1;">⇄</span>
   <label>
     <select id="langB"></select>
   </label>
   <select id="targetLang" style="display:none;"></select>
-  <span id="targetLangHint" style="font-size:12px; color:var(--t-muted);">(양방향 자동 번역)</span>
   <label style="white-space:nowrap;" title="번역 자막의 금액을 자동으로 환산해 괄호로 표시합니다 (예: $24억(₩약 3조…))"><input type="checkbox" id="currencyToggle" checked> 💱 환율 환산</label>
   <label style="white-space:nowrap;" title="번역 자막의 면적 단위를 자동으로 환산해 괄호로 표시합니다 (예: 30평(99.2㎡), 100㎡(30.3평))"><input type="checkbox" id="unitToggle" checked> 📐 도량형 환산</label>
   <label style="display:none;"><input type="checkbox" id="audioToggle"> 번역 음성 재생</label>
@@ -947,7 +954,7 @@
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   <div style="margin-bottom:6px;"><img src="logo.png" alt="Boothmate" style="height:16px; width:auto; vertical-align:middle; opacity:0.8; background:transparent;"></div>
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.6.3</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.6.4</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -2570,8 +2577,8 @@ window.addEventListener('pagehide', () => {
       '<div class="row"><label>굵기</label><div class="stepper"><button type="button" id="mcTransWeightDec" class="stp">−</button><span class="val" id="mcTransWeightV"></span><button type="button" id="mcTransWeightInc" class="stp">+</button></div></div>' +
       '<div class="row"><label>색상</label><input type="color" id="mcTransColor"><button id="mcTransColorReset" class="mini-reset">테마색</button></div>' +
     '</div>' +
-    '<div class="grp"><div class="grp-ttl">📌 반영 로그</div>' +
-      '<div class="row" style="max-width:none;"><label style="display:flex; align-items:center; gap:8px; width:auto; cursor:pointer;"><input type="checkbox" id="reflogToggle" checked> 반영 로그 표시</label></div>' +
+    '<div class="grp"><div class="grp-ttl">Log</div>' +
+      '<div class="row" style="max-width:none;"><label style="display:flex; align-items:center; gap:8px; width:auto; cursor:pointer;"><input type="checkbox" id="reflogToggle" checked> Log 표시</label></div>' +
       '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">통역 중 적용된 용어집·환산 내역을 자막 아래에 표시합니다. 끄면 반영 로그 영역이 숨겨집니다.</div>' +
     '</div>' +
     '<div class="grp"><div class="grp-ttl">자막 기록</div>' +

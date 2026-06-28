@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.6.8 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.6.7 → v1.6.8) — 용어집 색 구별(교수님 요청):
+  - 용어1 입력칸=파랑 계열, 용어2 입력칸=초록 계열로 칸 색 구별(#gInA/#gInB, 편집칸 g-ea/g-eb도 동일).
+  - 리스트 행 교차 색(zebra, nth-child(even)) + 열 구별(용어1=파랑 칩/용어2=초록 칩).
   index.html v1.6.7 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.6.6 → v1.6.7) — 용어집 유사어 인라인 편집(교수님 요청):
   - 기존엔 용어 추가/삭제만 가능 → 등록된 용어쌍을 목록에서 '수정' 버튼으로 인라인 편집 가능.
@@ -708,9 +712,12 @@
   #glossaryPanel .g-ttl { font-size: 13px; font-weight: 700; color: #7dd3fc; margin-bottom: 10px; }
   #glossaryPanel .g-add { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
   #glossaryPanel .g-add input {
-    padding: 7px 10px; background: #1a2235; border: 1px solid #2a3a55; border-radius: 6px;
+    padding: 7px 10px; border: 1px solid #2a3a55; border-radius: 6px;
     color: #e2e8f0; font-size: 13px; width: 200px;
   }
+  /* 용어1 = 파랑 계열, 용어2 = 초록 계열로 칸 색 구별 */
+  #glossaryPanel #gInA { background: #1a2c4a; border-color: #34507a; color: #dbe7ff; }
+  #glossaryPanel #gInB { background: #16301f; border-color: #2c5a40; color: #c5f0d3; }
   #glossaryPanel .g-add .g-arrow { color: #7dd3fc; font-size: 16px; }
   #glossaryPanel .g-add button {
     padding: 7px 16px; font-size: 13px; background: #378ADD; color: #fff;
@@ -721,9 +728,20 @@
     display: flex; align-items: center; gap: 10px; padding: 6px 10px;
     background: #0f1626; border: 1px solid #1e2b40; border-radius: 6px;
   }
-  #glossaryPanel .g-item .g-a { color: #cfe0ff; font-weight: 600; }
-  #glossaryPanel .g-item .g-mid { color: #7dd3fc; }
-  #glossaryPanel .g-item .g-b { color: #9fe6b0; font-weight: 600; flex: 1; }
+  /* 리스트 행 교차 색(zebra) */
+  #glossaryPanel .g-item:nth-child(even) { background: #131d33; }
+  /* 열(용어1/용어2) 구별: 용어1=파랑 칩, 용어2=초록 칩 */
+  #glossaryPanel .g-item .g-a {
+    color: #cfe0ff; font-weight: 600; min-width: 92px;
+    background: rgba(55,138,221,0.16); border: 1px solid rgba(55,138,221,0.32);
+    padding: 3px 8px; border-radius: 5px;
+  }
+  #glossaryPanel .g-item .g-mid { color: #7dd3fc; flex: 0 0 auto; }
+  #glossaryPanel .g-item .g-b {
+    color: #9fe6b0; font-weight: 600; flex: 1;
+    background: rgba(70,200,130,0.14); border: 1px solid rgba(70,200,130,0.30);
+    padding: 3px 8px; border-radius: 5px;
+  }
   #glossaryPanel .g-item .g-del {
     background: #3a2230; color: #f0a0b0; border: none; border-radius: 5px;
     padding: 3px 9px; font-size: 12px; cursor: pointer;
@@ -736,8 +754,11 @@
   #glossaryPanel .g-item .g-edit:hover { background: #294a6e; }
   #glossaryPanel .g-item .g-ein {
     flex: 1; min-width: 70px; padding: 4px 8px; font-size: 13px;
-    background: #1a2235; border: 1px solid #2a3a55; border-radius: 5px; color: #e2e8f0;
+    border: 1px solid #2a3a55; border-radius: 5px; color: #e2e8f0;
   }
+  /* 편집 입력칸도 용어1=파랑 / 용어2=초록 */
+  #glossaryPanel .g-item .g-ea { background: #1a2c4a; border-color: #34507a; color: #dbe7ff; }
+  #glossaryPanel .g-item .g-eb { background: #16301f; border-color: #2c5a40; color: #c5f0d3; }
   #glossaryPanel .g-item .g-save {
     background: #1e3a2f; color: #9fe6b0; border: none; border-radius: 5px;
     padding: 3px 9px; font-size: 12px; cursor: pointer;
@@ -1005,7 +1026,7 @@
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   <div style="margin-bottom:6px;"><img src="logo.png" alt="Boothmate" style="height:16px; width:auto; vertical-align:middle; opacity:0.8; background:transparent;"></div>
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.6.7</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.6.8</div>
 </footer>
 
 <!-- 단어 수정창 -->

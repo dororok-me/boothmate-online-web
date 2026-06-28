@@ -728,7 +728,17 @@
     color: #e2e8f0; font-size: 13px;
   }
   #glossaryPanel.open { display: block; }
-  #glossaryPanel .g-ttl { font-size: 13px; font-weight: 700; color: #7dd3fc; margin-bottom: 10px; }
+  #glossaryPanel .g-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #2a3a55;
+    position: sticky; top: 0; background: inherit; z-index: 1;
+  }
+  #glossaryPanel .g-ttl { font-size: 13px; font-weight: 700; color: #7dd3fc; }
+  #glossaryPanel .g-close {
+    background: #2a3a55; color: #cfe0ff; font-size: 13px; font-weight: 600;
+    padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer; flex: 0 0 auto;
+  }
+  #glossaryPanel .g-close:hover { background: #ef4444; color: #fff; }
   #glossaryPanel .g-add { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: nowrap; }
   #glossaryPanel .g-add .g-arrow, #glossaryPanel .g-add button { flex: 0 0 auto; }
   #glossaryPanel .g-add input {
@@ -971,7 +981,12 @@
 
   /* ── 헤더 (얇게) ── */
   #appHeader { height: 62px; padding: 0 2px; gap: 14px; }
+  #topLogo { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; }
   #topLogo img { height: 34px; }
+  #topLogo .logo-sub {
+    font-size: 10px; font-weight: 700; letter-spacing: 3px; text-transform: lowercase;
+    color: var(--t-accent); margin-top: 3px; margin-left: 2px;
+  }
   #headerActions { gap: 14px; }
   #elapsed { font-family: ui-monospace, SFMono-Regular, monospace; font-size: 13px; font-weight: 600; letter-spacing: 1.5px; color: var(--t-text); }
   /* 시작·정지 — 동그란 단순 버튼 */
@@ -1011,7 +1026,7 @@
   #mcPanel .mc-panel-title, #mcPanel .grp-ttl, #glossaryPanel .g-ttl,
   #glossaryPanel .g-add .g-arrow, #glossaryPanel .g-item .g-mid { color: var(--t-accent) !important; }
   #langSwapBtn { background: var(--t-btn2-bg) !important; color: var(--t-accent) !important; }
-  #mcPanel .stepper .stp, #mcPanel .mc-panel-close, #glossaryPanel .g-tool,
+  #mcPanel .stepper .stp, #mcPanel .mc-panel-close, #glossaryPanel .g-close, #glossaryPanel .g-tool,
   #glossaryPanel .g-item .g-cancel, #authLogoutBtn, #refreshMicBtn {
     background: var(--t-btn2-bg) !important; color: var(--t-btn2-text) !important;
   }
@@ -1077,7 +1092,7 @@
 </div>
 <!-- 상단 바(고정): 로고 + 시작/정지 + 오버레이 + 용어집 + 설정 한 줄 (v1.7.0) -->
 <div id="appHeader">
-  <div id="topLogo"><img src="logo.png" alt="Boothmate"></div>
+  <div id="topLogo"><img src="logo.png" alt="Boothmate"><span class="logo-sub">online</span></div>
   <div id="headerActions">
     <span id="elapsed">00:00:00</span>
     <button id="toggleBtn" title="시작 / 정지"><span id="toggleLabel">▶</span></button>
@@ -1146,7 +1161,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.8.3 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.8.5 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -3007,7 +3022,7 @@ window.addEventListener('pagehide', () => {
 (function initGlossaryPanel() {
   const panel = $('glossaryPanel');
   panel.innerHTML =
-    '<div class="g-ttl">📖 용어집 (양방향 — 영어 ⇄ 한국어)</div>' +
+    '<div class="g-head"><div class="g-ttl">📖 용어집 (양방향 — 영어 ⇄ 한국어)</div><button type="button" id="gCloseBtn" class="g-close" title="용어집 닫기">✕ 닫기</button></div>' +
     '<div class="g-add">' +
       '<input type="text" id="gInA" placeholder="용어 1 (예: dog)">' +
       '<span class="g-arrow">⇄</span>' +
@@ -3023,8 +3038,9 @@ window.addEventListener('pagehide', () => {
       '<input type="file" id="gFileInput" accept=".txt,.csv,.xlsx,.xls,text/plain,text/csv" style="display:none;">' +
       '<span id="gCount" class="g-count"></span>' +
     '</div>' +
-    '<div class="g-list" id="gList"></div>' +
-    '<div class="g-hint">두 표현을 등록하면 양방향으로 적용됩니다. 어느 칸에 영어/한국어를 넣든 상관없어요. <b>등록 시 AI가 그 단어의 평소 번역어(예: cat→"고양이")를 1회 자동 학습</b>해, 통역 중에는 <b>AI 번역에 개입하지 않고 후처리로 "고양이 → 냥냥이"처럼 표준표기로 강제 치환</b>합니다(반영 내역은 아래 "반영 로그"에 표시). <b>한 칸에 쉼표로 변이형을 여러 개 넣으면 모두 표준표기(첫 항목)로 바뀝니다</b> — 예: "댕댕이, 개, 강아지" → 개·강아지도 댕댕이로. (AI가 문맥따라 다르게 번역하는 단어는 이렇게 변이형을 직접 넣어주세요.) <b>이미 등록한 용어도 목록의 "수정" 버튼으로 유사어를 추가·편집</b>할 수 있습니다(AI가 못 잡는 유사어를 직접 보강). 학습 상태는 목록 오른쪽에 표시됩니다. 파일은 한 줄에 "용어1, 표준표기, 별칭, 별칭..." (1번째=반대언어 용어, 2번째=표준표기, 3번째부터 별칭). 내보내기는 위 형식 선택 후 저장, 불러오기는 txt·csv·Excel 지원(기존 목록에 병합·중복 제거, 학습값 유지). 통역 중 추가 시 <b>후처리 치환은 다음 문장부터</b>, <b>AI 프롬프트 반영은 다음 (재)연결/방향전환부터</b> 적용됩니다.</div>';
+    '<div class="g-list" id="gList"></div>';
+
+  if ($('gCloseBtn')) $('gCloseBtn').onclick = () => panel.classList.remove('open');
 
   const listEl = $('gList');
   // 학습 상태 표시: 학습 전 "학습 중…", 학습 후 별칭(치환 대상) 표시

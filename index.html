@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  index.html v1.6.7 — Boothmate Online 메인 콘솔 (dororok AI Lab)
+  변경점 (v1.6.6 → v1.6.7) — 용어집 유사어 인라인 편집(교수님 요청):
+  - 기존엔 용어 추가/삭제만 가능 → 등록된 용어쌍을 목록에서 '수정' 버튼으로 인라인 편집 가능.
+    두 칸이 입력칸으로 바뀌어 쉼표 구분 유사어를 직접 추가·수정(저장/취소). AI가 못 잡는 유사어 보강.
+  - 대표어(첫 항목) 변경 시에만 자동 학습(nat) 재요청, 유사어만 추가하면 학습값 유지.
+  - 데이터 모델은 그대로(a/b 쉼표 구분 별칭) — splitAliases/applyGlossaryReplace 재사용.
   index.html v1.6.6 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.6.5 → v1.6.6) — 하단 로그창 접기/펼치기(교수님 요청):
   - 로그창 헤더 "Log" 문구 제거.
@@ -722,6 +728,24 @@
     background: #3a2230; color: #f0a0b0; border: none; border-radius: 5px;
     padding: 3px 9px; font-size: 12px; cursor: pointer;
   }
+  /* 유사어 인라인 편집 (수정/저장/취소 + 입력칸) */
+  #glossaryPanel .g-item .g-edit {
+    background: #1f3550; color: #9fc4ef; border: none; border-radius: 5px;
+    padding: 3px 9px; font-size: 12px; cursor: pointer;
+  }
+  #glossaryPanel .g-item .g-edit:hover { background: #294a6e; }
+  #glossaryPanel .g-item .g-ein {
+    flex: 1; min-width: 70px; padding: 4px 8px; font-size: 13px;
+    background: #1a2235; border: 1px solid #2a3a55; border-radius: 5px; color: #e2e8f0;
+  }
+  #glossaryPanel .g-item .g-save {
+    background: #1e3a2f; color: #9fe6b0; border: none; border-radius: 5px;
+    padding: 3px 9px; font-size: 12px; cursor: pointer;
+  }
+  #glossaryPanel .g-item .g-cancel {
+    background: #2a3a55; color: #cfe0ff; border: none; border-radius: 5px;
+    padding: 3px 9px; font-size: 12px; cursor: pointer;
+  }
   #glossaryPanel .g-empty { color: #5a6b85; font-size: 12px; padding: 8px 0; }
   #glossaryPanel .g-hint { color: #7a8ba8; font-size: 11px; margin-top: 8px; }
   #glossaryPanel .g-tools { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
@@ -981,7 +1005,7 @@
 <footer style="flex-shrink:0; text-align:center; margin-top:10px; padding:8px 0; font-size:11px; color:var(--t-muted); line-height:1.5;">
   <div style="margin-bottom:6px;"><img src="logo.png" alt="Boothmate" style="height:16px; width:auto; vertical-align:middle; opacity:0.8; background:transparent;"></div>
   Developed by dororok AI Lab &nbsp;·&nbsp; © 2026 dororok AI Lab. All rights reserved.
-  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.6.6</div>
+  <div style="font-size:10px; color:var(--t-muted); opacity:0.7; margin-top:3px;">Boothmate Online v1.6.7</div>
 </footer>
 
 <!-- 단어 수정창 -->
@@ -2891,9 +2915,70 @@ window.addEventListener('pagehide', () => {
       '<span id="gCount" class="g-count"></span>' +
     '</div>' +
     '<div class="g-list" id="gList"></div>' +
-    '<div class="g-hint">두 표현을 등록하면 양방향으로 적용됩니다. 어느 칸에 영어/한국어를 넣든 상관없어요. <b>등록 시 AI가 그 단어의 평소 번역어(예: cat→"고양이")를 1회 자동 학습</b>해, 통역 중에는 <b>AI 번역에 개입하지 않고 후처리로 "고양이 → 냥냥이"처럼 표준표기로 강제 치환</b>합니다(반영 내역은 아래 "반영 로그"에 표시). <b>한 칸에 쉼표로 변이형을 여러 개 넣으면 모두 표준표기(첫 항목)로 바뀝니다</b> — 예: "댕댕이, 개, 강아지" → 개·강아지도 댕댕이로. (AI가 문맥따라 다르게 번역하는 단어는 이렇게 변이형을 직접 넣어주세요.) 학습 상태는 목록 오른쪽에 표시됩니다. 파일은 한 줄에 "용어1, 표준표기, 별칭, 별칭..." (1번째=반대언어 용어, 2번째=표준표기, 3번째부터 별칭). 내보내기는 위 형식 선택 후 저장, 불러오기는 txt·csv·Excel 지원(기존 목록에 병합·중복 제거, 학습값 유지). 통역 중 추가 시 <b>후처리 치환은 다음 문장부터</b>, <b>AI 프롬프트 반영은 다음 (재)연결/방향전환부터</b> 적용됩니다.</div>';
+    '<div class="g-hint">두 표현을 등록하면 양방향으로 적용됩니다. 어느 칸에 영어/한국어를 넣든 상관없어요. <b>등록 시 AI가 그 단어의 평소 번역어(예: cat→"고양이")를 1회 자동 학습</b>해, 통역 중에는 <b>AI 번역에 개입하지 않고 후처리로 "고양이 → 냥냥이"처럼 표준표기로 강제 치환</b>합니다(반영 내역은 아래 "반영 로그"에 표시). <b>한 칸에 쉼표로 변이형을 여러 개 넣으면 모두 표준표기(첫 항목)로 바뀝니다</b> — 예: "댕댕이, 개, 강아지" → 개·강아지도 댕댕이로. (AI가 문맥따라 다르게 번역하는 단어는 이렇게 변이형을 직접 넣어주세요.) <b>이미 등록한 용어도 목록의 "수정" 버튼으로 유사어를 추가·편집</b>할 수 있습니다(AI가 못 잡는 유사어를 직접 보강). 학습 상태는 목록 오른쪽에 표시됩니다. 파일은 한 줄에 "용어1, 표준표기, 별칭, 별칭..." (1번째=반대언어 용어, 2번째=표준표기, 3번째부터 별칭). 내보내기는 위 형식 선택 후 저장, 불러오기는 txt·csv·Excel 지원(기존 목록에 병합·중복 제거, 학습값 유지). 통역 중 추가 시 <b>후처리 치환은 다음 문장부터</b>, <b>AI 프롬프트 반영은 다음 (재)연결/방향전환부터</b> 적용됩니다.</div>';
 
   const listEl = $('gList');
+  // 학습 상태 표시: 학습 전 "학습 중…", 학습 후 별칭(치환 대상) 표시
+  function setLearnStatus(learnEl, it) {
+    if (!it.nat) { learnEl.textContent = '학습 중…'; return; }
+    const aliases = [];
+    for (const k of ['ko', 'x']) { const col = it.nat[k]; if (col) for (let i = 1; i < col.length; i++) if (col[i]) aliases.push(col[i]); }
+    learnEl.textContent = aliases.length ? ('치환: ' + aliases.join(', ')) : '';
+  }
+  // 보기 모드 행: 용어쌍 + 학습상태 + 수정/삭제
+  function viewRow(row, it, idx) {
+    row.innerHTML =
+      '<span class="g-a"></span><span class="g-mid">⇄</span><span class="g-b"></span>' +
+      '<span class="g-learn" style="font-size:11px; color:#7a8ba8; flex-shrink:0;"></span>' +
+      '<button class="g-edit" title="유사어 추가·수정">수정</button>' +
+      '<button class="g-del">삭제</button>';
+    row.querySelector('.g-a').textContent = it.a;
+    row.querySelector('.g-b').textContent = it.b;
+    setLearnStatus(row.querySelector('.g-learn'), it);
+    row.querySelector('.g-edit').onclick = () => editRow(row, idx);
+    row.querySelector('.g-del').onclick = () => {
+      const cur = loadGlossary();
+      cur.splice(idx, 1);
+      saveGlossary(cur);
+      render();
+    };
+  }
+  // 편집 모드 행: 두 칸을 입력칸으로 바꿔 유사어(쉼표 구분)를 직접 편집
+  function editRow(row, idx) {
+    const it = loadGlossary()[idx];
+    if (!it) { render(); return; }
+    row.innerHTML =
+      '<input class="g-ein g-ea" type="text"><span class="g-mid">⇄</span><input class="g-ein g-eb" type="text">' +
+      '<button class="g-save">저장</button><button class="g-cancel">취소</button>';
+    const ea = row.querySelector('.g-ea'), eb = row.querySelector('.g-eb');
+    ea.value = it.a; eb.value = it.b;
+    ea.focus();
+    async function save() {
+      const a = ea.value.trim(), b = eb.value.trim();
+      if (!a || !b) { alert('두 칸을 모두 입력하세요.'); return; }
+      const cur = loadGlossary();
+      if (!cur[idx]) { render(); return; }
+      // nat(치환에 쓰이는 별칭 목록)는 a/b 문자열로부터 다시 만들어야 새 유사어가 반영됨.
+      // → 추가(add)와 동일하게 nat을 비우고 learnEntry로 재생성. (offline이어도 쉼표 유사어는 nat에 들어감)
+      cur[idx].a = a; cur[idx].b = b; cur[idx].nat = undefined;
+      saveGlossary(cur);
+      render();   // 먼저 "학습 중…" 표시
+      try {
+        const entry = { a: a, b: b };
+        await learnEntry(entry);   // splitAliases(a/b) + (가능하면)AI 1회 → entry.nat
+        const list2 = loadGlossary();
+        for (let i = list2.length - 1; i >= 0; i--) {
+          if (!list2[i].nat && eqTerm(list2[i].a, a) && eqTerm(list2[i].b, b)) { list2[i].nat = entry.nat; break; }
+        }
+        saveGlossary(list2);
+        render();
+      } catch (e) { /* 학습 실패 — 직접 넣은 유사어는 그대로 동작 */ }
+    }
+    row.querySelector('.g-save').onclick = save;
+    row.querySelector('.g-cancel').onclick = render;
+    eb.addEventListener('keydown', (e) => { if (e.key === 'Enter') save(); });
+    ea.addEventListener('keydown', (e) => { if (e.key === 'Enter') eb.focus(); });
+  }
   function render() {
     const list = loadGlossary();
     const cnt = $('gCount'); if (cnt) cnt.textContent = list.length ? (list.length + '개') : '';
@@ -2902,26 +2987,7 @@ window.addEventListener('pagehide', () => {
     list.forEach((it, idx) => {
       const row = document.createElement('div');
       row.className = 'g-item';
-      row.innerHTML =
-        '<span class="g-a"></span><span class="g-mid">⇄</span><span class="g-b"></span>' +
-        '<span class="g-learn" style="font-size:11px; color:#7a8ba8; flex-shrink:0;"></span>' +
-        '<button class="g-del">삭제</button>';
-      row.querySelector('.g-a').textContent = it.a;
-      row.querySelector('.g-b').textContent = it.b;
-      // 학습 상태 표시: 학습 전 "학습 중…", 학습 후 별칭(치환 대상) 표시
-      const learnEl = row.querySelector('.g-learn');
-      if (!it.nat) { learnEl.textContent = '학습 중…'; }
-      else {
-        const aliases = [];
-        for (const k of ['ko', 'x']) { const col = it.nat[k]; if (col) for (let i = 1; i < col.length; i++) if (col[i]) aliases.push(col[i]); }
-        learnEl.textContent = aliases.length ? ('치환: ' + aliases.join(', ')) : '';
-      }
-      row.querySelector('.g-del').onclick = () => {
-        const cur = loadGlossary();
-        cur.splice(idx, 1);
-        saveGlossary(cur);
-        render();
-      };
+      viewRow(row, it, idx);
       listEl.appendChild(row);
     });
   }

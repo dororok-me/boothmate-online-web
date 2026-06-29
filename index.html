@@ -1164,10 +1164,12 @@
 </div>
 <!-- 설정/용어집 패널 영역(열면 펼쳐지며 스크롤, 닫으면 0높이) — 고정 레이아웃을 깨지 않음 (v1.7.0) -->
 <div id="panelArea">
+<!-- 설정 닫기 — 패널 영역 상단에 고정(플로팅). 설정 열릴 때만 표시 -->
+<div id="setCloseBar" style="display:none; position:sticky; top:0; z-index:30; justify-content:flex-end; padding:2px 0 6px; background:var(--t-bg);"><button type="button" id="mcCloseBtn" class="mc-close">✕ 닫기</button></div>
 <div id="optsCollapse" style="display:none; margin-top:8px;">
-<!-- 사운드 설정 (최상단 별도 박스) — 닫기 버튼도 여기 -->
+<!-- 사운드 설정 (최상단 별도 박스) -->
 <div style="padding:12px 14px; border:1px solid var(--t-border); border-radius:10px; background:var(--t-panel-bg); margin-bottom:10px;">
-<div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px;"><span style="font-size:13px; font-weight:700; color:var(--t-accent);">🔊 사운드 설정</span><button type="button" id="mcCloseBtn" class="mc-close">✕ 닫기</button></div>
+<div style="font-size:13px; font-weight:700; color:var(--t-accent); margin-bottom:8px;">🔊 사운드 설정</div>
 <div class="opts">
   <label>사운드 선택:
     <select id="inputMode" style="max-width:240px;">
@@ -1230,7 +1232,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.12.1 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.12.2 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -3265,6 +3267,9 @@ window.addEventListener('pagehide', () => {
     // 핵심 옵션(번역 언어/입력/음성 소스)도 함께 펼치기/접기
     const oc = document.getElementById('optsCollapse');
     if (oc) oc.style.display = isOpen ? 'block' : 'none';
+    // 닫기 버튼 플로팅 바 표시/숨김 (설정 열릴 때만)
+    const scb = document.getElementById('setCloseBar');
+    if (scb) scb.style.display = isOpen ? 'flex' : 'none';
     // 아이콘은 SVG 세 줄로 고정(글자 교체 안 함). 열림 상태는 배경색으로만 표시.
     if (isOpen) {
       $('mcOptBtn').style.background = '#dc2626';

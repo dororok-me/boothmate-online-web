@@ -90,6 +90,8 @@
   // ── 포맷 헬퍼 ──
   function formatWonEnglish(v) {
     var u = function (n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); };
+    if (v >= 1e15) return "₩" + u(v / 1e15) + " quadrillion";
+    if (v >= 1e12) return "₩" + u(v / 1e12) + " trillion";   // 조 단위 (1조=1e12) — billion으로 안 끊김
     if (v >= 1e9) return "₩" + u(v / 1e9) + " billion";
     if (v >= 1e6) return "₩" + u(v / 1e6) + " million";
     return "₩" + fmtComma(v);
@@ -142,6 +144,8 @@
   }
   function formatUSDsimple(v) {
     var u = function (n) { return Number.isInteger(n) ? String(n) : n.toFixed(1); };
+    if (v >= 1e15) return "$" + u(v / 1e15) + " quadrillion";
+    if (v >= 1e12) return "$" + u(v / 1e12) + " trillion";   // 조 단위 — billion으로 안 끊김
     if (v >= 1e9) return "$" + u(v / 1e9) + " billion";
     if (v >= 1e6) return "$" + u(v / 1e6) + " million";
     return "$" + fmtComma(v);

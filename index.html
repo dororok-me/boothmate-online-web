@@ -1090,6 +1090,30 @@
 </head>
 <body class="theme-light">
 <script>
+  /* ── 설정값 계정별 분리 (v1.11.7) ──
+     로그인한 이메일별로 설정/용어집/세션을 분리 저장. 기존 코드는 평면 키를 그대로 쓰되,
+     이 프록시가 '설정 키'만 투명하게 이메일 네임스페이스(u:<email>:)로 리다이렉트한다.
+     (※ 같은 PC 안에서 계정별 분리. 기기 간 동기화 아님 — 그건 출시 시 Firebase로.) */
+  (function(){
+    var SETTING_KEYS = {
+      mc_theme:1, mc_src_color:1, mc_trans_color:1, mc_src_size:1, mc_trans_size:1,
+      mc_src_weight:1, mc_trans_weight:1, mc_wrap_h:1, speech_level:1, lang_pair:1,
+      mic_device_id:1, sys_audio_mode:1, input_mode:1, reflog_visible:1, reflog_collapsed:1,
+      sessions:1, glossary:1, conn_mode:1, gemini_api_key:1, auto_stop_min:1,
+      relay_url:1, relay_ticket:1, bm_native_overlay:1
+    };
+    var email = null;
+    try { var u = JSON.parse(localStorage.getItem('boothmate_user') || 'null'); email = (u && u.email) ? u.email : null; } catch(e){}
+    window.__settingsEmail = email;
+    if (!email) return;   // 로그인 전 → 평면 키 사용. 로그인 성공 시 reload로 네임스페이스 적용.
+    var pfx = 'u:' + email + ':';
+    var g = localStorage.getItem.bind(localStorage);
+    var s = localStorage.setItem.bind(localStorage);
+    var r = localStorage.removeItem.bind(localStorage);
+    localStorage.getItem = function(k){ return g(SETTING_KEYS[k] ? pfx + k : k); };
+    localStorage.setItem = function(k, v){ return s(SETTING_KEYS[k] ? pfx + k : k, v); };
+    localStorage.removeItem = function(k){ return r(SETTING_KEYS[k] ? pfx + k : k); };
+  })();
   /* 저장된 테마 즉시 복원 (깜빡임 방지) */
   (function(){
     var t = localStorage.getItem('mc_theme') || 'theme-light';
@@ -1206,7 +1230,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.11.6 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.11.7 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -3581,7 +3605,7 @@ window.addEventListener('pagehide', () => {
   // ⚠️ 출시 전까지는 운영자(dororok)만 로그인 가능하게 잠가둠.
   //    → 나만 중계서버에 도달 가능 → 내 Gemini 비용 안전.
   // 출시할 때 이 배열을 비우면([]) 누구나 통과, 또는 일부만 받으려면 이메일 추가.
-  const ALLOWED_EMAILS = ['dororok@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com'];
+  const ALLOWED_EMAILS = ['dororok@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com'];
 
   const gate = document.getElementById('authGate');
   const bar = document.getElementById('authBar');   // v1.6.1: 설정 패널로 이동 → null일 수 있음(가드 처리)
@@ -3629,6 +3653,9 @@ window.addEventListener('pagehide', () => {
     }
     // 로그인 유지 (새로고침해도 유지)
     try { localStorage.setItem('boothmate_user', JSON.stringify(user)); } catch(e){}
+    // 설정 계정별 분리: 이 이메일 네임스페이스로 설정을 다시 로드하려면 새로고침 1회 필요
+    // (boothmate_user를 방금 저장했으므로 reload 후 restoreSession이 자동 로그인 상태로 복원)
+    if (window.__settingsEmail !== user.email) { location.reload(); return; }
     showApp(user);
   };
 

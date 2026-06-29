@@ -1230,7 +1230,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.11.8 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.11.9 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -3288,12 +3288,12 @@ window.addEventListener('pagehide', () => {
 (function initGlossaryPanel() {
   const panel = $('glossaryPanel');
   panel.innerHTML =
-    '<div class="g-head"><div class="g-ttl">📖 용어집 (양방향 — 영어 ⇄ 한국어)</div><button type="button" id="gCloseBtn" class="g-close" title="용어집 닫기">✕ 닫기</button></div>' +
+    '<div class="g-head"><div class="g-ttl">📖 용어집 (양방향 — 한국어 ⇄ 모든 외국어)</div><button type="button" id="gCloseBtn" class="g-close" title="용어집 닫기">✕ 닫기</button></div>' +
     '<div class="g-add">' +
       '<div class="g-add-terms">' +
-        '<input type="text" id="gInA" placeholder="용어 1 (예: dog)">' +
+        '<input type="text" id="gInA" placeholder="용어 1 (외국어 — 예: dog · chat · いぬ)">' +
         '<span class="g-arrow">⇄</span>' +
-        '<input type="text" id="gInB" placeholder="용어 2 (예: 댕댕이)">' +
+        '<input type="text" id="gInB" placeholder="용어 2 (한국어 — 예: 개)">' +
       '</div>' +
       '<div class="g-add-syn">' +
         '<input type="text" id="gInSyn" placeholder="유사어(치환할 변이형) — 쉼표로 구분, 비워도 됨 (예: 개, 강아지)">' +

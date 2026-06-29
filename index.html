@@ -1190,7 +1190,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.10.6 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.10.7 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1729,6 +1729,10 @@ function renderReflog() {
   }
 }
 function reflogAdd(kind, text) {
+  // 연속 중복 방지: 직전 항목과 종류·내용이 같으면 추가하지 않음
+  // (통화 변환이 문장 경계에 걸쳐 turnLogged가 비워질 때 같은 항목이 두 번 찍히는 것 방지)
+  const last = reflogEntries[reflogEntries.length - 1];
+  if (last && last.kind === kind && last.text === text) return;
   reflogEntries.push({ kind: kind, text: text });
   if (reflogEntries.length > REFLOG_MAX) reflogEntries = reflogEntries.slice(-REFLOG_MAX);
   renderReflog();

@@ -153,6 +153,24 @@
 
   var NUM = "(\\d+(?:,\\d+)*(?:\\.\\d+)?)";
 
+  // ── 한국어 복합 수사 파서 ──
+  // 번역기가 "8억 5천만 달러", "4억 3,900만 달러", "23조 3,486억" 처럼 여러 단위를 이어 쓰면
+  // 기존엔 마지막 단위(예: 5천만)만 잡혀 값이 10~100배 틀렸다. 런 전체를 한 덩어리로 합산한다.
+  var KUNIT = "(?:조|억|천만|백만|만|천)";
+  // 복합 런: (숫자+단위) 1회 이상 + 선택적 끝자리 숫자.  "5천만", "152억", "8억 5천만", "4억 3,900만"
+  var KRUN = "((?:\\d[\\d,]*(?:\\.\\d+)?\\s*" + KUNIT + "\\s*)+(?:\\d[\\d,]*(?:\\.\\d+)?)?)";
+  var KUNIT_VAL = { "조": 1e12, "억": 1e8, "천만": 1e7, "백만": 1e6, "만": 1e4, "천": 1e3 };
+  function parseKoreanAmount(str) {
+    var re = /(\d[\d,]*(?:\.\d+)?)\s*(조|억|천만|백만|만|천)?/g;
+    var total = 0, matched = false, m;
+    while ((m = re.exec(str)) !== null) {
+      if (!m[0] || !m[0].trim()) { if (re.lastIndex <= m.index) re.lastIndex = m.index + 1; continue; }
+      var n = parseFloat(stripComma(m[1]));
+      if (!isNaN(n)) { total += n * (m[2] ? KUNIT_VAL[m[2]] : 1); matched = true; }
+    }
+    return matched ? total : NaN;
+  }
+
   // 1. $숫자 + 조/억/만 (한국어 모드) — 원본 달러 표기는 그대로, 환산(괄호)만 단위로 끊음
   function convertDollarKoreanUnit(text) {
     var usdRate = rates.USD;
@@ -176,6 +194,11 @@
     var usdRate = rates.USD;
     if (!usdRate || usdRate <= 0) return text;
     var out = text;
+    // 복합 한국어 수사("5억 3천만", "23조 3,486억") + 원 → 달러 (런 전체 합산)
+    out = replaceMatches(out, new RegExp("₩?\\s*" + KRUN + "\\s*원", "g"), function (m) {
+      var a = parseKoreanAmount(m[1]); if (isNaN(a)) return null;
+      return m[0] + "(" + formatUSDsimple(a / usdRate) + ")";
+    });
     var krwUnit = function (pattern, multiplier) {
       out = replaceMatches(out, new RegExp(pattern, "g"), function (m) {
         var a = parseFloat(stripComma(m[1])); if (isNaN(a)) return null;
@@ -205,24 +228,17 @@
     var usdRate = rates.USD;
     if (!usdRate || usdRate <= 0) return text;
     var out = text;
-    var P = [
-      ["조", 1e12], ["억", 1e8],
-      ["천만", 1e7], ["백만", 1e6], ["만", 1e4], ["천", 1e3]
-    ];
-    for (var i = 0; i < P.length; i++) {
-      (function (unit, mult) {
-        out = replaceMatches(out, new RegExp(NUM + "\\s*" + unit + "\\s*달러", "g"), function (m) {
-          var a = parseFloat(stripComma(m[1])); if (isNaN(a)) return null;
-          return m[0] + "(" + formatKRW(a * mult * usdRate) + ")";
-        });
-      })(P[i][0], P[i][1]);
-    }
-    // 큰 숫자(쉼표 포함) + 달러
+    // 복합 한국어 수사("8억 5천만", "4억 3,900만", "152억") + 달러 — 런 전체를 합산해 한 번에 환산
+    out = replaceMatches(out, new RegExp(KRUN + "\\s*달러", "g"), function (m) {
+      var a = parseKoreanAmount(m[1]); if (isNaN(a)) return null;
+      return m[0] + "(" + formatKRW(a * usdRate) + ")";
+    });
+    // 큰 숫자(쉼표 포함, 단위 없음) + 달러
     out = replaceMatches(out, /(\d{1,3}(?:,\d{3})+)\s*달러/g, function (m) {
       var usd = parseFloat(stripComma(m[1])); if (isNaN(usd)) return null;
       return m[0] + "(" + formatKRW(usd * usdRate) + ")";
     });
-    // 작은 숫자(쉼표 없음) + 달러
+    // 작은 숫자(쉼표·단위 없음) + 달러
     out = replaceMatches(out, /(\d+(?:\.\d+)?)\s*달러/g, function (m) {
       var usd = parseFloat(m[1]); if (isNaN(usd)) return null;
       return m[0] + "(" + formatKRW(usd * usdRate) + ")";

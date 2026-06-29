@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.4 → v1.13.5) — (currency.js) 복합 한국어 수사 환율 환산 버그 수정(교수님 보고):
+  - "8억 5천만 달러", "4억 3,900만 달러", "1억 7,900만 달러"처럼 단위가 여러 개인 금액에서
+    마지막 단위(5천만/3,900만/7,900만)만 잡혀 환산값이 10~100배 틀리던 문제 수정.
+  - 복합 수사 런 전체를 합산하는 parseKoreanAmount + KRUN 패턴 도입(달러·원 양쪽 적용).
+    예) 4억 3,900만 달러: ₩599억(오류) → ₩6,743억(정상). 단일 단위·쉼표·소수 표기는 그대로 동작.
   변경점 (v1.13.3 → v1.13.4) — (overlay.html) 컨트롤 바 Claude Design 리디자인(교수님 요청):
   - 우상단 컨트롤을 하나의 프로스티드 다크 툴바(hairline 테두리·blur)로 정리.
   - A−/A+·줄간격은 inline SVG 아이콘 버튼, 색상칸은 동그란 스와치로. 인디고 강조색 통일.
@@ -1247,7 +1252,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.4 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.5 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

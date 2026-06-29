@@ -1155,13 +1155,13 @@
   <label style="white-space:nowrap;" title="번역 자막의 금액을 자동으로 환산해 괄호로 표시합니다 (예: $24억(₩약 3조…))"><input type="checkbox" id="currencyToggle" checked> 💱 환율 환산</label>
   <label style="white-space:nowrap;" title="번역 자막의 면적 단위를 자동으로 환산해 괄호로 표시합니다 (예: 30평(99.2㎡), 100㎡(30.3평))"><input type="checkbox" id="unitToggle" checked> 📐 도량형 환산</label>
   <label style="display:none;"><input type="checkbox" id="audioToggle"> 번역 음성 재생</label>
-  <label>외부 사운드 선택:
+  <label>사운드 선택:
     <select id="inputMode" style="max-width:240px;">
-      <option value="mic">🎤 마이크 / 오디오 장치</option>
-      <option value="screen">🖥️ 화면 사운드 (줌 등, 크롬 권장)</option>
+      <option value="mic">🎤 외부 마이크 또는 오인페</option>
+      <option value="screen">🖥️ 내 컴퓨터 사운드</option>
     </select>
   </label>
-  <span id="micSourceWrap"><label>내 컴퓨터 사운드:
+  <span id="micSourceWrap"><label>목록에서 선택:
     <select id="micSelect" style="max-width:280px;">
       <option value="">기본 장치</option>
     </select>
@@ -1197,7 +1197,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.11.4 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.11.5 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

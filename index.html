@@ -1230,7 +1230,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.11.7 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.11.8 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1572,8 +1572,9 @@ const Ent = (function(){
     grade(){ return this.state().grade; },
     /* 권한 (POLICY_SPEC §5) */
     canInterpret(){ return isUnlimited() || this.remainingSeconds() > 0; },
-    canUseGlossary(){ if (isUnlimited()) return true; const g = this.grade(); return g === 'free_trial_active' || g === '5h' || g === '10h'; },
-    canExport(){ if (isUnlimited()) return true; const g = this.grade(); return g === 'free_trial_active' || g === '5h' || g === '10h'; },
+    // 베타 기간: 모든 사용자에게 전 기능 개방(용어집·내보내기). 출시 시 아래 등급 게이팅으로 복원.
+    canUseGlossary(){ return true; /* 출시 복원: isUnlimited() || ['free_trial_active','5h','10h'].includes(this.grade()) */ },
+    canExport(){ return true; /* 출시 복원: isUnlimited() || ['5h','10h'].includes(this.grade()) */ },
     /* 통역 1초 차감. 0 도달 시 체험 만료(trialUsed=true, grade=free) */
     tick(){
       if (isUnlimited()) return Infinity;

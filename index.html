@@ -1232,7 +1232,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.12.7 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.12.8 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2361,6 +2361,18 @@ function stopAutoScroll() {
   }
 }
 
+/* 유휴 플러시(v1.12.8): 번역/원문 스트림이 ~1.2초 동안 멈추면(다음 발화 미도착)
+   대기(pending) 중인 마지막 문장을 자동으로 확정 표시한다. turnComplete가 늦거나
+   종결부호 없이 끝난 번역이 다음 발화 전까지 안 보이던 문제 해결. */
+let idleFlushTimer = null;
+function scheduleIdleFlush() {
+  if (idleFlushTimer) clearTimeout(idleFlushTimer);
+  idleFlushTimer = setTimeout(function () {
+    idleFlushTimer = null;
+    if (running && !userStopped && (transBuf.trim() || srcBuf.trim())) finishSegment();
+  }, 1200);
+}
+
 /* ── 원문: 현재 묶음의 원문 줄에 누적 (묶음 닫기는 번역이 담당) ── */
 function appendSrc(t) {
   clearErr();   // 실제 자막이 들어오기 시작하면 이전 에러 메시지 제거
@@ -2383,6 +2395,7 @@ function appendSrc(t) {
   p.srcLine.classList.remove('pending');
   trimLines(combinedEl, 'srcline');
   pushMirror();
+  scheduleIdleFlush();
 }
 
 /* ── 번역: 마침표로 문장이 끝나면 그 묶음을 닫음 (원문도 같이 담겨 닫힘) ── */
@@ -2434,12 +2447,14 @@ function appendTrans(t) {
   }
   trimLines(combinedEl, 'transline');
   pushMirror();
+  scheduleIdleFlush();
 }
 /* 후처리 적용된 rest를 다시 원본 버퍼로 쓰기 위한 근사 (후처리는 멱등에 가까워 그대로 사용) */
 function recoverRaw(shownRest) { return shownRest; }
 
 /* 턴 종료(turnComplete) / 정지 시: 미완성 버퍼를 확정하고 현재 묶음 닫음 */
 function finishSegment() {
+  if (idleFlushTimer) { clearTimeout(idleFlushTimer); idleFlushTimer = null; }
   const p = curPair;
   // (반영 로그는 shownTrans에서 치환 시점마다 수집하므로 여기선 별도 수집 불필요)
   if (p && srcBuf.trim()) {
@@ -2962,6 +2977,7 @@ function stop() {
   stopElapsed();
   stopAutoScroll();
   stopSilenceWatch();   // 무음 자동 정지 감시 종료
+  if (idleFlushTimer) { clearTimeout(idleFlushTimer); idleFlushTimer = null; }
   setStatus('정지됨', false);
   finishSegment();
   autoSaveSession();   // 정지 시 현재 세션 자동 저장

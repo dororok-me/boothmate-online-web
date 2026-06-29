@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.0 → v1.13.1) — 반영 로그 표시 개선(교수님 요청):
+  - 용어 치환 로그를 '등록 표제어 → 표준표기'로 표시(예: "patient → 피험자").
+    기존엔 AI가 낸 변이형 기준("환자 → 피험자")이라 내가 등록한 게 적용됐는지 알기 어려웠음.
+    (applyGlossaryReplace corrections에 src=반대언어 표제어 추가, shownTrans 로그가 이를 사용)
+  - 환율 로그에서 화살표 뒤 원금액 중복 제거: "130억 달러 → 130억 달러(₩약…)" → "130억 달러 → ₩약…".
   index.html v1.8.0 — Boothmate Online 메인 콘솔 (dororok AI Lab)
   변경점 (v1.7.1 → v1.8.0) — 방향 A 리디자인 (자막 중심·미니멀):
   - 테마 변수(--t-*) 재정의: 라이트=흰 배경·인디고(#4F46E5) 강조, 다크도 방향 A 팔레트로 정리.
@@ -1232,7 +1237,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.0 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.1 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1786,7 +1791,7 @@ function collectReflections(source, rawTrans) {
   if (!rawTrans || !rawTrans.trim()) return;
   const gr = applyGlossaryReplace(rawTrans, curTarget || ($('targetLang') && $('targetLang').value) || '');
   for (const c of gr.corrections) {
-    const entryText = c.from + ' → ' + c.to;
+    const entryText = (c.src || c.from) + ' → ' + c.to;
     const last = reflogEntries[reflogEntries.length - 1];
     if (!last || last.text !== entryText) reflogAdd('glossary', entryText);
   }
@@ -2185,6 +2190,7 @@ function natFromEntry(entry) {
 /* 출력 언어(outCode)에 맞춰 별칭→표준표기 강제 치환. {text, corrections} 반환 */
 function applyGlossaryReplace(text, outCode) {
   const outP = (/ko/.test(String(outCode))) ? 'ko' : 'x';
+  const otherP = (outP === 'ko') ? 'x' : 'ko';
   let out = text;
   const corrections = [];
   for (const it of loadGlossary()) {
@@ -2192,6 +2198,8 @@ function applyGlossaryReplace(text, outCode) {
     const col = it.nat && it.nat[outP];
     if (!col || !col.length) continue;
     const canonical = col[0];
+    // 사용자가 등록한 반대언어 표제어(예: patient). 로그에 "patient → 피험자"로 보여주기 위함.
+    const srcHead = (it.nat[otherP] && it.nat[otherP][0]) || '';
     for (let i = 1; i < col.length; i++) {
       const alias = col[i];
       if (!alias || eqTerm(alias, canonical)) continue;
@@ -2199,7 +2207,7 @@ function applyGlossaryReplace(text, outCode) {
       try { re = flexRegex(alias); } catch (e) { continue; }
       let hit = false;
       out = out.replace(re, function (m) { hit = true; return canonical; });
-      if (hit) corrections.push({ from: alias, to: canonical });
+      if (hit) corrections.push({ from: alias, to: canonical, src: srcHead });
     }
   }
   return { text: out, corrections: corrections };
@@ -2304,7 +2312,9 @@ function shownTrans(raw) {
     if (!turnLogged.has(_k)) {
       turnLogged.add(_k);
       turnLogged.add('g:' + _c.to);   // 같은 표준표기는 병기 로그(annotateGlossary)에서 중복 기록 안 함 (두 번 표시 방지)
-      if (typeof reflogAdd === 'function') reflogAdd('glossary', _c.from + ' → ' + _c.to);
+      // 로그는 사용자가 등록한 표제어 기준으로 표시: "patient → 피험자" (실제 변이형 환자는 숨김)
+      const _left = _c.src || _c.from;
+      if (typeof reflogAdd === 'function') reflogAdd('glossary', _left + ' → ' + _c.to);
     }
   }
   if (usePP && targetLang === "ko" && typeof koreanPostProcess === "function") {
@@ -2318,7 +2328,12 @@ function shownTrans(raw) {
     result = _cc.result;
     for (const _c of _cc.changes) {
       const _k = 'cur:' + _c.from + '→' + _c.to;
-      if (!turnLogged.has(_k)) { turnLogged.add(_k); if (typeof reflogAdd === 'function') reflogAdd('currency', _c.from + ' → ' + _c.to); }
+      // _c.to는 "원금액(환산)" 형태라 화살표 뒤에 원금액이 중복됨 → 괄호 안 환산값만 추출해 표시
+      let _conv = _c.to;
+      if (_conv.indexOf(_c.from) === 0) _conv = _conv.slice(_c.from.length);
+      _conv = _conv.replace(/^\s*\(/, '').replace(/\)\s*$/, '').trim();
+      if (!_conv) _conv = _c.to;
+      if (!turnLogged.has(_k)) { turnLogged.add(_k); if (typeof reflogAdd === 'function') reflogAdd('currency', _c.from + ' → ' + _conv); }
     }
   }
   const unitToggle = $('unitToggle');

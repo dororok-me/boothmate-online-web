@@ -752,8 +752,14 @@
   #glossaryPanel #gInA::placeholder { color: #7a869b; }
   #glossaryPanel #gInB::placeholder { color: #9a824d; }
   /* 유사어(치환 변이형) 입력칸 — 용어1/2와 구별되는 중립 회색 */
-  #glossaryPanel #gInSyn { background: #f3f5f9; border-color: #d7deea; color: #33415c; }
-  #glossaryPanel #gInSyn::placeholder { color: #8a95a8; }
+  #glossaryPanel #gInSyn { background: #f3f5f9; border-color: #d7deea; color: #1c2842; font-weight: 500; }
+  #glossaryPanel #gInSyn::placeholder { color: #8a95a8; font-weight: 400; }
+  #glossaryPanel .g-search {
+    width: 100%; box-sizing: border-box; padding: 8px 12px; margin-bottom: 8px;
+    border: 1px solid var(--t-border); border-radius: 8px; background: var(--t-input-bg);
+    color: var(--t-text); font-size: 13px;
+  }
+  #glossaryPanel .g-search::placeholder { color: var(--t-muted); }
   #glossaryPanel .g-add .g-arrow { color: #7dd3fc; font-size: 16px; }
   #glossaryPanel .g-add button {
     padding: 7px 16px; font-size: 13px; background: #378ADD; color: #fff;
@@ -768,7 +774,7 @@
   #glossaryPanel .g-item .g-syn { font-size: 12px; color: var(--t-muted); padding-left: 2px; word-break: break-word; }
   #glossaryPanel .g-item .g-syn-empty { opacity: 0.55; font-style: italic; }
   #glossaryPanel .g-item .g-syn-edit { display: flex; }
-  #glossaryPanel .g-item .g-esyn { flex: 1 1 0; min-width: 0; }
+  #glossaryPanel .g-item .g-esyn { flex: 1 1 0; min-width: 0; background: #f3f5f9; border-color: #d7deea; color: #1c2842; font-weight: 500; }
   /* 리스트 행 교차 색(zebra) */
   #glossaryPanel .g-item:nth-child(even) { background: #131d33; }
   /* 열(용어1/용어2) 구별: 용어1=파랑 칩, 용어2=초록 칩 */
@@ -822,7 +828,7 @@
   #glossaryPanel .g-tool.g-danger:hover { background: #5a2a3a; }
   #glossaryPanel .g-count { color: #7a8ba8; font-size: 12px; margin-left: 4px; }
   #glossaryPanel .g-explabel { color: #9fb0cc; font-size: 12px; }
-  #glossaryPanel .g-sel { padding: 5px 8px; background: #1a2235; border: 1px solid #2a3a55; border-radius: 6px; color: #e2e8f0; font-size: 12px; }
+  #glossaryPanel .g-sel { padding: 6px 12px; background: #2a3a55; border: none; border-radius: 6px; color: #cfe0ff; font-size: 12px; cursor: pointer; }
 
   /* 텔레프롬프터 줄: 마침표 단위 한 줄, 오래되면 위로 흐르며 페이드 */
   /* ── 원문+번역 묶음 박스 (한 세트로 항상 함께) ── */
@@ -1040,7 +1046,7 @@
   #mcPanel .mc-panel-title, #mcPanel .grp-ttl, #glossaryPanel .g-ttl,
   #glossaryPanel .g-add .g-arrow, #glossaryPanel .g-item .g-mid { color: var(--t-accent) !important; }
   #langSwapBtn { background: var(--t-btn2-bg) !important; color: var(--t-accent) !important; }
-  #mcPanel .stepper .stp, #mcPanel .mc-panel-close, #glossaryPanel .g-close, #glossaryPanel .g-tool,
+  #mcPanel .stepper .stp, #mcPanel .mc-panel-close, #glossaryPanel .g-close, #glossaryPanel .g-tool, #glossaryPanel .g-sel,
   #glossaryPanel .g-item .g-cancel, #authLogoutBtn, #refreshMicBtn {
     background: var(--t-btn2-bg) !important; color: var(--t-btn2-text) !important;
   }
@@ -1184,7 +1190,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.10.3 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.10.4 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -3256,6 +3262,7 @@ window.addEventListener('pagehide', () => {
       '<input type="file" id="gFileInput" accept=".txt,.csv,.xlsx,.xls,text/plain,text/csv" style="display:none;">' +
       '<span id="gCount" class="g-count"></span>' +
     '</div>' +
+    '<input type="text" id="gSearch" class="g-search" placeholder="🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다">' +
     '<div class="g-list" id="gList"></div>';
 
   if ($('gCloseBtn')) $('gCloseBtn').onclick = () => panel.classList.remove('open');
@@ -3312,15 +3319,32 @@ window.addEventListener('pagehide', () => {
     ea.addEventListener('keydown', (e) => { if (e.key === 'Enter') eb.focus(); });
     eb.addEventListener('keydown', (e) => { if (e.key === 'Enter') es.focus(); });
   }
+  function gNorm(s) { return String(s || '').toLowerCase().replace(/\s+/g, ''); }
+  // 검색어: 검색창 우선, 비어 있으면 추가 입력칸(용어1/2)으로 — 입력 중 비슷한 용어 표시
+  function gFilterText() {
+    const s = ($('gSearch') && $('gSearch').value || '').trim();
+    if (s) return s;
+    const a = ($('gInA') && $('gInA').value || '').trim();
+    const b = ($('gInB') && $('gInB').value || '').trim();
+    return a || b;
+  }
   function render() {
     const list = loadGlossary();
-    const cnt = $('gCount'); if (cnt) cnt.textContent = list.length ? (list.length + '개') : '';
-    if (!list.length) { listEl.innerHTML = '<div class="g-empty">등록된 용어가 없습니다.</div>'; return; }
-    listEl.innerHTML = '';
+    const cnt = $('gCount');
+    if (!list.length) { if (cnt) cnt.textContent = ''; listEl.innerHTML = '<div class="g-empty">등록된 용어가 없습니다.</div>'; return; }
+    const ftext = gFilterText();
+    const q = gNorm(ftext);
+    const view = [];
     list.forEach((it, idx) => {
+      if (!q || gNorm(it.a).indexOf(q) >= 0 || gNorm(it.b).indexOf(q) >= 0 || gNorm(it.syn).indexOf(q) >= 0) view.push({ it: it, idx: idx });
+    });
+    if (cnt) cnt.textContent = q ? (view.length + ' / ' + list.length + '개') : (list.length + '개');
+    if (!view.length) { listEl.innerHTML = '<div class="g-empty">"' + escapeHtml(ftext) + '"와 비슷한 용어가 없습니다.</div>'; return; }
+    listEl.innerHTML = '';
+    view.forEach(function (e) {
       const row = document.createElement('div');
       row.className = 'g-item';
-      viewRow(row, it, idx);
+      viewRow(row, e.it, e.idx);   // 원본 인덱스 유지 → 수정/삭제 정확
       listEl.appendChild(row);
     });
   }
@@ -3341,6 +3365,10 @@ window.addEventListener('pagehide', () => {
   $('gInSyn').addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
   $('gInA').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('gInB').focus(); });
   $('gInB').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('gInSyn').focus(); });
+  // 검색창 + 추가 입력칸 입력 시 목록을 비슷한 용어로 실시간 필터
+  if ($('gSearch')) $('gSearch').addEventListener('input', render);
+  $('gInA').addEventListener('input', render);
+  $('gInB').addEventListener('input', render);
 
   // 내보내기: 선택한 형식(csv/txt/xlsx)으로 저장. 형식: "용어1, 용어2" 한 줄에 하나
   function downloadBlob(content, filename, mime) {

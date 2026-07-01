@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.12 → v1.13.13) — 로그인 화이트리스트에 테스트 계정 1개 추가:
+  - sandra.jy.lim@gmail.com → ALLOWED_EMAILS 등록.
   변경점 (v1.13.11 → v1.13.12) — 로그인 화이트리스트에 테스트 계정 1개 추가:
   - myfate0429@gmail.com → ALLOWED_EMAILS 등록.
   변경점 (v1.13.10 → v1.13.11) — 로그인 화이트리스트에 테스트 계정 1개 추가:
@@ -1266,7 +1268,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.12 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.13 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -3696,7 +3698,7 @@ window.addEventListener('pagehide', () => {
   // ⚠️ 출시 전까지는 운영자(dororok)만 로그인 가능하게 잠가둠.
   //    → 나만 중계서버에 도달 가능 → 내 Gemini 비용 안전.
   // 출시할 때 이 배열을 비우면([]) 누구나 통과, 또는 일부만 받으려면 이메일 추가.
-  const ALLOWED_EMAILS = ['dororok@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com', 'alicecha0114@gmail.com', 'heira.jung@gmail.com', 'topclasstrancc@gmail.com', 'itswonsun@gmail.com', 'janeyu0114@gmail.com', 'interpreterceci@gmail.com', 'min.interpreter@gmail.com', 'skch159@gmail.com', 'luckyeunji@gmail.com', 'myfate0429@gmail.com'];
+  const ALLOWED_EMAILS = ['dororok@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com', 'alicecha0114@gmail.com', 'heira.jung@gmail.com', 'topclasstrancc@gmail.com', 'itswonsun@gmail.com', 'janeyu0114@gmail.com', 'interpreterceci@gmail.com', 'min.interpreter@gmail.com', 'skch159@gmail.com', 'luckyeunji@gmail.com', 'myfate0429@gmail.com', 'sandra.jy.lim@gmail.com'];
 
   const gate = document.getElementById('authGate');
   const bar = document.getElementById('authBar');   // v1.6.1: 설정 패널로 이동 → null일 수 있음(가드 처리)

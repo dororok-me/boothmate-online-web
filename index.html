@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.21 → v1.13.22) — 인앱 브라우저 → 외부 브라우저 자동 전환 버튼:
+  - 로그인 안내에 "브라우저 앱으로 열기" 버튼 추가.
+    · 카카오톡: kakaotalk://web/openExternal 스킴으로 외부 브라우저 강제.
+    · 그 외 Android 웹뷰: 크롬 인텐트(intent://…com.android.chrome)로 전환.
+    · iOS 기타 인앱: 자동 전환 불가 → 주소 복사로 대체.
   변경점 (v1.13.20 → v1.13.21) — 인앱 브라우저 로그인 안내 추가:
   - 카톡 등 인앱 브라우저(웹뷰)에서 열면 구글 OAuth가 막힘 → 감지해서 로그인 화면에
     "Chrome/인터넷 브라우저 앱에서 접속하세요" 경고 표시(#inAppWarn).
@@ -1190,19 +1195,56 @@
   <div id="authGateMsg" style="font-size:12px; color:#B45309; margin-top:16px; min-height:18px;"></div>
   <div id="inAppWarn" style="display:none; max-width:340px; margin-top:18px; padding:12px 14px; background:#FEF3C7; border:1px solid #F59E0B; border-radius:10px; font-size:13px; line-height:1.65; color:#92400E; text-align:center;">
     <b>카카오톡 등 인앱 브라우저에서는 구글 로그인이 되지 않습니다.</b><br>
-    링크를 여기서 바로 클릭하지 마시고,<br>Chrome 앱이나 기본 인터넷 브라우저 앱에서 접속해 주세요.
+    아래 버튼으로 브라우저 앱에서 열어 주세요.<br>
+    (안 되면 Chrome 앱이나 기본 인터넷 브라우저 앱에서 직접 접속)
+    <div style="margin-top:12px;">
+      <button id="openExternalBtn" style="padding:10px 18px; background:#F59E0B; color:#3D2900; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer;">브라우저 앱으로 열기</button>
+    </div>
+    <div id="openExternalHint" style="margin-top:8px; font-size:11px; color:#B45309; word-break:break-all;"></div>
   </div>
   <div style="font-size:11px; color:#94A3B8; margin-top:30px;">Developed by dororok AI Lab · © 2026 dororok AI Lab</div>
 </div>
 <script>
-  /* v1.13.21: 인앱 브라우저(카톡·인스타·페북·라인·네이버·다음·안드로이드 웹뷰) 감지 →
-     구글 OAuth가 차단되므로 외부 브라우저 접속 안내 표시. */
+  /* v1.13.22: 인앱 브라우저(카톡·인스타·페북·라인·네이버·다음·안드로이드 웹뷰) 감지 →
+     구글 OAuth가 차단되므로 안내 표시 + 버튼 한 번으로 외부 브라우저 전환.
+       · 카카오톡: kakaotalk://web/openExternal 스킴(iOS·Android 공통)
+       · 그 외 Android 웹뷰: 크롬 인텐트(intent://…package=com.android.chrome)
+       · iOS 기타 인앱: 자동 전환 불가 → 주소 복사 */
   (function(){
     var ua = navigator.userAgent || '';
-    if (/KAKAOTALK|Instagram|FBAN|FBAV|FB_IAB|Line\/|NAVER|DaumApps|; wv\)/i.test(ua)) {
-      var el = document.getElementById('inAppWarn');
-      if (el) el.style.display = 'block';
-    }
+    if (!/KAKAOTALK|Instagram|FBAN|FBAV|FB_IAB|Line\/|NAVER|DaumApps|; wv\)/i.test(ua)) return;
+    var warn = document.getElementById('inAppWarn');
+    if (warn) warn.style.display = 'block';
+
+    var isKakao = /KAKAOTALK/i.test(ua);
+    var isAndroid = /Android/i.test(ua);
+    var url = window.location.href;
+    var btn = document.getElementById('openExternalBtn');
+    var hint = document.getElementById('openExternalHint');
+    if (!btn) return;
+
+    var canBounce = isKakao || isAndroid;
+    btn.textContent = canBounce ? '브라우저 앱으로 열기' : '주소 복사 (브라우저에 붙여넣기)';
+
+    btn.addEventListener('click', function(){
+      if (isKakao) {
+        window.location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(url);
+        return;
+      }
+      if (isAndroid) {
+        var noScheme = url.replace(/^https?:\/\//, '');
+        window.location.href = 'intent://' + noScheme + '#Intent;scheme=https;package=com.android.chrome;end';
+        return;
+      }
+      /* iOS 등 자동 전환 불가 → 주소 복사 */
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(function(){
+          if (hint) hint.textContent = '주소가 복사됐습니다. Safari 등 브라우저에 붙여넣어 접속하세요.';
+        }, function(){ if (hint) hint.textContent = url; });
+      } else if (hint) {
+        hint.textContent = url;
+      }
+    });
   })();
 </script>
 
@@ -1304,7 +1346,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.21 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.22 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

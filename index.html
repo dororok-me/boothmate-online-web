@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.22 → v1.13.23) — 용어집·설정 패널 배경 구별(교수님 요청):
+  - 패널 배경(--t-panel-bg)이 페이지 배경(--t-bg)과 거의 같아 안 도드라지던 문제 수정.
+    · 라이트: 패널 #ffffff→#EDF1F8 (흰 배경 위 옅은 회청색으로 분리).
+    · 다크: 패널 #12161F→#1B2332 (배경보다 확실히 밝게).
+    · 페이퍼: 패널 #fdfbf6→#ece1cc (크림 배경보다 깊게).
+  - 패널에 그림자(box-shadow) + 테두리 강화로 "떠 있는 패널"처럼 보이게.
   변경점 (v1.13.21 → v1.13.22) — 인앱 브라우저 → 외부 브라우저 자동 전환 버튼:
   - 로그인 안내에 "브라우저 앱으로 열기" 버튼 추가.
     · 카카오톡: kakaotalk://web/openExternal 스킴으로 외부 브라우저 강제.
@@ -994,7 +1000,7 @@
   .srcline.pending { color: var(--mc-src-color); opacity: 0.7; }
   .transline.pending { color: var(--mc-trans-color); opacity: 0.65; font-weight: var(--mc-trans-weight); }
   .hint { color: var(--t-muted); }
-  #mcPanel, #glossaryPanel { background: var(--t-panel-bg); border-color: var(--t-border); color: var(--t-text); }
+  #mcPanel, #glossaryPanel { background: var(--t-panel-bg); border: 1px solid var(--t-border); color: var(--t-text); box-shadow: 0 10px 30px rgba(2,6,23,0.18); }
   #mcPanel .grp-ttl { color: var(--t-accent); }
   #editArea { background: var(--t-input-bg); border-color: var(--t-border); }
   #editHint { color: var(--t-muted); }
@@ -1023,8 +1029,8 @@
   /* ── 테마 3: 페이퍼 (따뜻한 종이, 눈 편안) ── */
   body.theme-paper {
     --t-bg: #f5f1e8; --t-text: #3a3226; --t-muted: #8a7d68; --t-accent: #b45309;
-    --t-border: #ddd0bb; --t-input-bg: #fdfbf6; --t-area-bg: #fdfbf6;
-    --t-card-bg: #efe7d6; --t-panel-bg: #fdfbf6;
+    --t-border: #d3c3a6; --t-input-bg: #fdfbf6; --t-area-bg: #fdfbf6;
+    --t-card-bg: #efe7d6; --t-panel-bg: #ece1cc;
     --t-btn-bg: #e8dfcc; --t-btn-text: #7a6d56;
     --t-btn2-bg: #f0e4cc; --t-btn2-text: #92580a;
     --t-word-hover: rgba(180,83,9,0.14);
@@ -1048,8 +1054,8 @@
      ════════════════════════════════════════════ */
   body.theme-light {
     --t-bg: #ffffff; --t-text: #0F172A; --t-muted: #64748B; --t-accent: #4F46E5;
-    --t-border: #ECEEF3; --t-input-bg: #ffffff; --t-area-bg: #F7F8FB;
-    --t-card-bg: transparent; --t-panel-bg: #ffffff;
+    --t-border: #DCE1EC; --t-input-bg: #ffffff; --t-area-bg: #F7F8FB;
+    --t-card-bg: transparent; --t-panel-bg: #EDF1F8;
     --t-btn-bg: #EEF0F4; --t-btn-text: #475569;
     --t-btn2-bg: #F2F4FA; --t-btn2-text: #475569;
     --t-word-hover: rgba(79,70,229,0.12);
@@ -1057,8 +1063,8 @@
   }
   body.theme-dark {
     --t-bg: #0B0E14; --t-text: #EAF0F8; --t-muted: #7C8699; --t-accent: #818CF8;
-    --t-border: #1C222D; --t-input-bg: #161B24; --t-area-bg: #0A0D12;
-    --t-card-bg: transparent; --t-panel-bg: #12161F;
+    --t-border: #2B3444; --t-input-bg: #161B24; --t-area-bg: #0A0D12;
+    --t-card-bg: transparent; --t-panel-bg: #1B2332;
     --t-btn-bg: #20262F; --t-btn-text: #AEB8CA;
     --t-btn2-bg: #1B212C; --t-btn2-text: #C7CFDD;
     --t-word-hover: rgba(129,140,248,0.22);
@@ -1346,7 +1352,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.22 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.23 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

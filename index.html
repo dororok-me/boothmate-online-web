@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.24 → v1.13.25) — 플레이 버튼에 언어쌍 이니셜 표기(교수님 요청):
+  - 재생 버튼(▶) 아래에 현재 언어쌍 이니셜 표시(예: 한영=K/E, 영일=E/J). 방향 무관.
+  - 영어명 첫 글자 기준(langLetter), 번체 중국어는 C로 override. 언어쌍 변경 시 자동 갱신.
   변경점 (v1.13.23 → v1.13.24) — 입력 사운드 레벨미터(카운터 아래 5칸) 추가(교수님 요청):
   - 재생 전에도 마이크로 소리가 들어오는지 5칸 바로 확인. 마지막 칸은 과입력(빨강) 경고.
   - ⚠️ BoothmateG에서 레벨바가 재생 시 충돌하던 문제 재발 방지 설계(LevelMeter):
@@ -1104,11 +1107,14 @@
   /* 시작·정지 — 동그란 단순 버튼 */
   #toggleBtn, #toggleBtn:not(.running) {
     width: 46px; height: 46px; padding: 0; border-radius: 50%; gap: 0;
-    display: inline-flex; flex-direction: row; align-items: center; justify-content: center;
+    display: inline-flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
     background: #4F46E5; color: #fff; box-shadow: 0 2px 10px rgba(79,70,229,0.28);
   }
   #toggleBtn:not(.running):hover { background: #4338CA; transform: translateY(-1px); }
-  #toggleBtn #toggleLabel { font-size: 15px; font-weight: 700; }
+  #toggleBtn #toggleLabel { font-size: 14px; font-weight: 700; }
+  /* 언어쌍 이니셜(예: K/E) — 아이콘 아래 작게. 방향 무관 표기. */
+  #toggleBtn #pairBadge { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; margin-top: 2px; opacity: 0.95; }
+  #toggleBtn #pairBadge:empty { display: none; }
   #toggleBtn.running { background: #DC2626; color: #fff; box-shadow: 0 2px 10px rgba(220,38,38,0.40); }
   .hdr-sep { width: 1px; height: 24px; background: var(--t-border); display: inline-block; }
   .icon-btn, #mcOptBtn, #glossaryBtn {
@@ -1297,7 +1303,7 @@
         <span></span><span></span><span></span><span></span><span></span>
       </div>
     </div>
-    <button id="toggleBtn" title="시작 / 정지"><span id="toggleLabel">▶</span></button>
+    <button id="toggleBtn" title="시작 / 정지"><span id="toggleLabel">▶</span><span id="pairBadge"></span></button>
     <span class="hdr-sep"></span>
     <button id="resetSubBtn" class="icon-btn" title="자막 리셋 (화면 자막 전체 지우기)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
     <button id="openOverlayBtn" class="icon-btn" title="오버레이"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg></button>
@@ -1375,7 +1381,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.24 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.25 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1438,6 +1444,20 @@ function langName(code) {
 function langLabel(code) {
   const row = LANGUAGES.find(l => l[0] === code);
   return row ? row[1] : code;
+}
+/* 언어 코드 → 한 글자 이니셜 (플레이 버튼 표기용, 방향 무관). 영어명 첫 글자 기준. */
+const LANG_LETTER_OVERRIDE = { 'zh-TW': 'C' };   // 번체 중국어도 C로
+function langLetter(code) {
+  if (LANG_LETTER_OVERRIDE[code]) return LANG_LETTER_OVERRIDE[code];
+  const eng = langName(code) || code;
+  return (eng[0] || '?').toUpperCase();
+}
+/* 플레이 버튼의 언어쌍 이니셜(예: K/E) 갱신 */
+function updatePairBadge() {
+  const badge = document.getElementById('pairBadge');
+  if (!badge) return;
+  const { a, b } = getPair();
+  badge.textContent = langLetter(a) + '/' + langLetter(b);
 }
 /* targetLang select를 언어 목록으로 채움 */
 function fillTargetLangOptions() {
@@ -1621,6 +1641,7 @@ fillPairLangOptions();
   $('langB').value = savedPair[1] || 'en';
   if (!$('langA').value) $('langA').value = 'ko';
   if (!$('langB').value || $('langB').value === $('langA').value) $('langB').value = ($('langA').value === 'en' ? 'ko' : 'en');
+  updatePairBadge();   // 플레이 버튼에 언어쌍 이니셜 표시
 }
 function persistPair() { localStorage.setItem('lang_pair', $('langA').value + '|' + $('langB').value); }
 function onPairChange() {
@@ -1628,6 +1649,7 @@ function onPairChange() {
     $('langB').value = ($('langA').value === 'en' ? 'ko' : 'en');
   }
   persistPair();
+  updatePairBadge();                               // 언어쌍 이니셜 갱신
   const { b } = getPair();
   curTarget = b;                                   // 기본 방향: A → B
   if ($('targetLang')) $('targetLang').value = b;

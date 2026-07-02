@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.31 → v1.13.32) — 카운터를 헤더 바 안으로(별도 행 제거, 교수님 요청):
+  - 메뉴 바 아래 별도 행을 차지하던 카운터를 헤더 바 안(설정 아이콘 아래·우측)에 겹쳐 배치.
+    #timerBar를 #appHeader 안으로 옮기고 position:absolute(right/bottom)로 오버레이 → 자막 영역이 위로 올라옴.
+  - 클릭 가로채지 않게 pointer-events:none(표시 전용). 우측 정렬은 설정 아이콘과 동일.
   변경점 (v1.13.30 → v1.13.31) — 카운터 가로화 + 메뉴 바 아래 이동(교수님 요청):
   - 경과 카운터를 헤더 안 세로 3박스 → 메뉴 바 아래 가로 텍스트(HH:MM:SS)로 이동(#timerBar).
   - 설정(⚙) 아이콘 우측에 맞춰 우측 정렬. 박스 제거(배경·그림자 없음), 진한 회색(#4b5563).
@@ -738,8 +742,8 @@
   #levelMeter span:nth-child(5){ height: 15px; }
   #levelMeter span.on { background: #22c55e; }
   #levelMeter span.on.hot { background: #ef4444; }
-  /* 경과 카운터 — 메뉴 바 아래, 설정 아이콘에 맞춰 우측 정렬. 박스 없이 진한 회색 가로 텍스트. */
-  #timerBar { display: flex; justify-content: flex-end; padding: 3px 2px 0; flex: 0 0 auto; }
+  /* 경과 카운터 — 헤더 바 안(설정 아이콘 아래·우측)에 겹쳐 배치. 별도 행을 차지하지 않음. 박스 없이 진한 회색 가로 텍스트. */
+  #timerBar { position: absolute; right: 2px; bottom: 3px; display: flex; z-index: 4; pointer-events: none; }
   #timerStack { display: inline-flex; flex-direction: row; align-items: baseline; gap: 1px; }
   .tbox {
     background: none; box-shadow: none; border-radius: 0; padding: 0;
@@ -1348,15 +1352,15 @@
     <button id="glossaryBtn" class="icon-btn" title="용어집"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2C10.4 5 7.8 4.5 4 4.5V18c3.8 0 6.4.5 8 1.8 1.6-1.3 4.2-1.8 8-1.8V4.5c-3.8 0-6.4.5-8 1.7z"></path><path d="M12 6.2V19.8"></path></svg></button>
     <button id="mcOptBtn" class="icon-btn" title="설정"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h7M16 7h4M4 12h12M19 12h1M4 17h3M11 17h9"></path><circle cx="13" cy="7" r="2"></circle><circle cx="14" cy="12" r="2"></circle><circle cx="9" cy="17" r="2"></circle></svg></button>
   </div>
-</div>
-<!-- 경과 카운터: 메뉴 바 아래, 설정 아이콘에 맞춰 우측 정렬. 박스 없이 진한 회색 텍스트. -->
-<div id="timerBar">
-  <div id="timerStack" aria-label="경과 시간" title="경과 시간">
-    <span class="tbox" id="tHH"><span class="tdig">00</span></span>
-    <span class="tsep">:</span>
-    <span class="tbox" id="tMM"><span class="tdig">00</span></span>
-    <span class="tsep">:</span>
-    <span class="tbox" id="tSS"><span class="tdig">00</span></span>
+  <!-- 경과 카운터: 헤더 바 안(설정 아이콘 아래·우측)에 겹쳐 배치 → 별도 행 차지 안 함. 박스 없이 진한 회색. -->
+  <div id="timerBar">
+    <div id="timerStack" aria-label="경과 시간" title="경과 시간">
+      <span class="tbox" id="tHH"><span class="tdig">00</span></span>
+      <span class="tsep">:</span>
+      <span class="tbox" id="tMM"><span class="tdig">00</span></span>
+      <span class="tsep">:</span>
+      <span class="tbox" id="tSS"><span class="tdig">00</span></span>
+    </div>
   </div>
 </div>
 <!-- 설정/용어집 패널 영역(열면 펼쳐지며 스크롤, 닫으면 0높이) — 고정 레이아웃을 깨지 않음 (v1.7.0) -->
@@ -1436,7 +1440,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.31 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.32 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

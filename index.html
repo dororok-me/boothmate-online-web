@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.19 → v1.13.20) — 특정 계정 시간 부여 기능 + jigojisn 20시간 지급:
+  - TIME_GRANTS 테이블 도입. 이메일별 잔여시간을 코드에서 1회 부여(무제한과 별개).
+  - jigojisn@gmail.com 에 20시간(72,000초) 지급. 해당 계정 다음 접속 시 브라우저에 자동 반영.
+  - grantId로 중복 지급 방지. 같은 계정 재지급은 grantId 변경으로.
   변경점 (v1.13.18 → v1.13.19) — 한 세션 5분 제한 해제(교수님 요청):
   - SESSION_LIMIT_ENABLED=false 도입. 5분 자동 정지 로직은 보존, 플래그로만 비활성화.
   - 무음 자동정지(설정 1·3·5분)와 잔여시간 소진 차단은 그대로 유지.
@@ -1281,7 +1285,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.19 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.20 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1597,20 +1601,41 @@ const FREE_QUOTA_SECONDS = 3 * 3600;   // 무료 체험 3시간 = 10800초 (첫 
 /* 시간 제한 완전 면제(무제한) 계정 — 5분 세션 제한 + 쿼터 모두 적용 안 함 */
 const UNLIMITED_EMAILS = ['dororok@gmail.com'];
 
+/* 특정 계정에 잔여시간 부여(1회 적용). 무제한이 아니라 정해진 시간만 지급.
+   사용자가 다음 접속(로드)할 때 브라우저 localStorage에 1회 반영되며,
+   grantId가 같으면 재적용 안 됨(중복 지급 방지). 같은 계정에 또 주려면 grantId를 바꾼다. */
+const TIME_GRANTS = {
+  'jigojisn@gmail.com': { seconds: 20 * 3600, grantId: 'jigojisn-20h-20260702' }
+};
+
 const Ent = (function(){
   function curEmail(){ const u = window.__boothmateUser; return (u && u.email) ? u.email : 'anon'; }
   function isUnlimited(){ const u = window.__boothmateUser; return !!(u && u.email && UNLIMITED_EMAILS.indexOf(u.email) !== -1); }
   function key(){ return 'boothmate_ent_' + curEmail(); }
   function defaults(){ return { remainingSeconds: FREE_QUOTA_SECONDS, grade: 'free_trial_active', trialUsed: false }; }
+  /* 코드에 등록된 시간 부여를 1회 적용. 이미 적용된 grantId면 건너뜀. 변경 시 true 반환. */
+  function applyGrant(s){
+    const g = TIME_GRANTS[curEmail()];
+    if (!g || s.appliedGrant === g.grantId) return false;
+    s.remainingSeconds = Math.max(0, Math.floor(g.seconds));
+    s.appliedGrant = g.grantId;
+    if (s.grade === 'free') s.grade = 'free_trial_active';   // 체험 만료였으면 다시 활성화
+    return true;
+  }
   function load(){
     try {
       const raw = localStorage.getItem(key());
-      if (raw) return Object.assign(defaults(), JSON.parse(raw));
-      // 신규 사용자 → 무료 체험 부여. 단, 구버전(boothmate_quota_<이메일>)이 있으면 잔여시간 이관.
-      const d = defaults();
-      const oldQ = localStorage.getItem('boothmate_quota_' + curEmail());
-      if (oldQ !== null) d.remainingSeconds = Math.max(0, parseInt(oldQ, 10) || 0);
-      save(d);
+      let d, isNew = false;
+      if (raw) {
+        d = Object.assign(defaults(), JSON.parse(raw));
+      } else {
+        // 신규 사용자 → 무료 체험 부여. 단, 구버전(boothmate_quota_<이메일>)이 있으면 잔여시간 이관.
+        isNew = true;
+        d = defaults();
+        const oldQ = localStorage.getItem('boothmate_quota_' + curEmail());
+        if (oldQ !== null) d.remainingSeconds = Math.max(0, parseInt(oldQ, 10) || 0);
+      }
+      if (applyGrant(d) || isNew) save(d);
       return d;
     } catch(e){ return defaults(); }
   }

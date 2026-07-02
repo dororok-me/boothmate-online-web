@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.23 → v1.13.24) — 입력 사운드 레벨미터(카운터 아래 5칸) 추가(교수님 요청):
+  - 재생 전에도 마이크로 소리가 들어오는지 5칸 바로 확인. 마지막 칸은 과입력(빨강) 경고.
+  - ⚠️ BoothmateG에서 레벨바가 재생 시 충돌하던 문제 재발 방지 설계(LevelMeter):
+    · 동시에 AudioContext 2개·마이크 스트림 2개를 절대 만들지 않음.
+    · 대기 중엔 자체 스트림으로 표시 → '시작' 시 startMic 첫 줄에서 stop()으로 완전 해제 후
+      통역이 마이크를 잡음(순차 점유). 통역 중엔 같은 컨텍스트/소스에 AnalyserNode만 부착(새 자원 0).
+    · 시작/정지/페이지 이탈/장치 변경 전이에서 항상 먼저 해제.
+  - 화면 소리 모드는 사전 체크 불가 → 대기 미터는 마이크 모드에서만 동작.
   변경점 (v1.13.22 → v1.13.23) — 용어집·설정 패널 배경 구별(교수님 요청):
   - 패널 배경(--t-panel-bg)이 페이지 배경(--t-bg)과 거의 같아 안 도드라지던 문제 수정.
     · 라이트: 패널 #ffffff→#EDF1F8 (흰 배경 위 옅은 회청색으로 분리).
@@ -686,6 +694,16 @@
   }
   #toggleBtn #toggleLabel { font-size: 16px; font-weight: 700; }
   #toggleBtn #elapsed { font-family: monospace; font-size: 11px; font-weight: 600; letter-spacing: 1px; color: inherit; opacity: 0.78; }
+  /* 입력 사운드 레벨 미터 (카운터 아래 5칸) */
+  #elapsedWrap { display: inline-flex; flex-direction: column; align-items: center; gap: 3px; line-height: 1; }
+  #levelMeter { display: flex; align-items: flex-end; gap: 2px; height: 13px; }
+  #levelMeter span { width: 3px; height: 5px; border-radius: 1px; background: rgba(127,140,160,0.35); transition: background .05s linear; }
+  #levelMeter span:nth-child(2){ height: 7px; }
+  #levelMeter span:nth-child(3){ height: 9px; }
+  #levelMeter span:nth-child(4){ height: 11px; }
+  #levelMeter span:nth-child(5){ height: 13px; }
+  #levelMeter span.on { background: #22c55e; }
+  #levelMeter span.on.hot { background: #ef4444; }
   /* 설정/용어집 패널 영역: 닫히면 0높이, 열리면 최대 58dvh까지 펼쳐지고 내부 스크롤 */
   #panelArea { flex: 0 0 auto; max-height: 58dvh; overflow-y: auto; }
   #toggleBtn:hover { background: #5b6573; transform: translateY(-1px); }
@@ -1273,7 +1291,12 @@
 <div id="appHeader">
   <div id="topLogo"><img src="logo.png" alt="Boothmate"><span class="logo-sub">online</span></div>
   <div id="headerActions">
-    <span id="elapsed">00:00:00</span>
+    <div id="elapsedWrap">
+      <span id="elapsed">00:00:00</span>
+      <div id="levelMeter" title="입력 사운드 레벨 (재생 전에도 소리가 들어오는지 확인)" aria-label="입력 사운드 레벨">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+    </div>
     <button id="toggleBtn" title="시작 / 정지"><span id="toggleLabel">▶</span></button>
     <span class="hdr-sep"></span>
     <button id="resetSubBtn" class="icon-btn" title="자막 리셋 (화면 자막 전체 지우기)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
@@ -1352,7 +1375,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.23 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.24 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1838,7 +1861,7 @@ async function loadMicList() {
     if (saved) sel.value = saved;
   } catch (e) { showErr('마이크 목록 오류: ' + e.message); }
 }
-$('micSelect').addEventListener('change', () => localStorage.setItem('mic_device_id', $('micSelect').value));
+$('micSelect').addEventListener('change', () => { localStorage.setItem('mic_device_id', $('micSelect').value); try { LevelMeter.stop(); refreshMeter(); } catch(e){} });
 // 시스템 사운드 모드 저장/복원
 if (localStorage.getItem('sys_audio_mode') === '1') $('sysAudioToggle').checked = true;
 $('sysAudioToggle').addEventListener('change', () => localStorage.setItem('sys_audio_mode', $('sysAudioToggle').checked ? '1' : '0'));
@@ -1854,7 +1877,7 @@ function applyInputMode() {
   localStorage.setItem('input_mode', mode);
 }
 if (localStorage.getItem('input_mode')) $('inputMode').value = localStorage.getItem('input_mode');
-$('inputMode').addEventListener('change', applyInputMode);
+$('inputMode').addEventListener('change', () => { applyInputMode(); try { LevelMeter.stop(); refreshMeter(); } catch(e){} });
 applyInputMode();
 
 /* ── 기능 표시 토글 (v1.10.2) ──
@@ -2711,6 +2734,100 @@ function speechInstruction(level, targetLang) {
    Gemini Live 연결 + 세션 자동 재연결
    ════════════════════════════════════════════ */
 let ws = null, audioContext = null, micStream = null, workletNode = null, running = false;
+
+/* ── 입력 사운드 레벨 미터 (카운터 아래 5칸) ──────────────────────────────
+   ⚠️ BoothmateG에서 레벨바가 재생 시 충돌했던 원인 = 레벨바가 별도 스트림/컨텍스트를
+   잡아 통역용과 '동시 점유'된 것. 이 앱은 AudioContext가 쌓이면 렌더러가 죽으므로 특히 위험.
+   충돌 방지 3원칙:
+     1) 동시에 AudioContext 2개·마이크 스트림 2개를 절대 만들지 않는다.
+     2) 대기(재생 전): 자체 스트림+컨텍스트로 레벨 표시. '시작' 누르면 startMic 첫 줄에서
+        stop()으로 자체 자원을 완전히 해제한 뒤에야 통역이 마이크를 잡는다(순차 점유).
+     3) 통역 중: 통역이 만든 '같은' AudioContext/소스에 AnalyserNode만 붙인다(새 자원 0개). */
+const LevelMeter = (function(){
+  let analyser = null, data = null, raf = null;
+  let ownCtx = null, ownStream = null;
+  let gen = 0;   // 진행 중이던 startStandalone 비동기를 무효화하기 위한 세대 카운터
+  function el(){ return document.getElementById('levelMeter'); }
+  function paint(level){
+    const box = el(); if (!box) return;
+    const bars = box.children, n = bars.length;
+    const lit = Math.max(0, Math.min(n, Math.round(level * n)));
+    for (let i = 0; i < n; i++){
+      const on = i < lit;
+      bars[i].classList.toggle('on', on);
+      bars[i].classList.toggle('hot', on && i >= n - 1);   // 마지막 칸 = 과입력 경고(빨강)
+    }
+    box.classList.toggle('active', lit > 0);
+  }
+  function frame(){
+    if (!analyser) return;
+    analyser.getByteTimeDomainData(data);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++){ const v = (data[i] - 128) / 128; sum += v * v; }
+    const rms = Math.sqrt(sum / data.length);
+    paint(Math.min(1, rms * 3.4));
+    raf = requestAnimationFrame(frame);
+  }
+  function attach(ctx, sourceNode){
+    const a = ctx.createAnalyser();
+    a.fftSize = 512; a.smoothingTimeConstant = 0.65;
+    data = new Uint8Array(a.fftSize);
+    sourceNode.connect(a);           // analyser는 destination에 연결하지 않음 → 소리 안 나감
+    analyser = a;
+    if (raf) cancelAnimationFrame(raf);
+    frame();
+  }
+  function teardownOwn(){
+    if (ownStream){ try { ownStream.getTracks().forEach(t => t.stop()); } catch(e){} ownStream = null; }
+    if (ownCtx){ try { ownCtx.close(); } catch(e){} ownCtx = null; }
+  }
+  return {
+    /* 통역 파이프라인의 기존 컨텍스트/소스에 붙임 (원칙 3) */
+    attachShared(ctx, sourceNode){
+      this.stop();                   // 혹시 남은 자체 스트림/컨텍스트 완전 해제(동시 점유 방지)
+      try { attach(ctx, sourceNode); } catch(e){ console.log('[meter] attachShared 실패', e); }
+    },
+    /* 대기 중 자체 스트림으로 레벨 표시 (재생 전 확인용, 마이크 모드 전용) */
+    async startStandalone(){
+      if (analyser) return;          // 이미 동작 중
+      if (running) return;           // 통역 중이면 자체 스트림 금지(원칙 1)
+      const myGen = ++gen;
+      let stream;
+      try {
+        const micId = localStorage.getItem('mic_device_id') || '';
+        const base = { channelCount: 1, echoCancellation: true, noiseSuppression: true };
+        const c = micId ? { ...base, deviceId: { exact: micId } } : base;
+        stream = await navigator.mediaDevices.getUserMedia({ audio: c });
+      } catch(e){ console.log('[meter] standalone getUserMedia 실패', e && e.name); return; }
+      // 열리는 사이 통역이 시작됐거나 다시 stop됐으면 취소하고 방금 연 스트림을 닫음(충돌 방지)
+      if (myGen !== gen || running){ try { stream.getTracks().forEach(t => t.stop()); } catch(e){} return; }
+      try {
+        ownStream = stream;
+        ownCtx = new AudioContext();
+        attach(ownCtx, ownCtx.createMediaStreamSource(ownStream));
+      } catch(e){ console.log('[meter] standalone 컨텍스트 실패', e); teardownOwn(); }
+    },
+    /* 완전 정지: RAF·analyser 해제 + 자체 자원 해제. 통역 시작 전/정지 시 반드시 호출 */
+    stop(){
+      gen++;                         // 진행 중이던 startStandalone을 무효화
+      if (raf){ cancelAnimationFrame(raf); raf = null; }
+      analyser = null; data = null;
+      teardownOwn();
+      paint(0);
+    }
+  };
+})();
+
+/* 대기 상태에서만 자체 레벨미터를 켠다(통역 중엔 startMic이 shared로 관리).
+   ※ 초기 동기 실행 구간에서 호출하지 말 것 — running 등 전역이 아직 TDZ일 수 있음. */
+function refreshMeter(){
+  try {
+    if (running) return;                                   // 통역 중: startMic이 관리
+    const mode = ($('inputMode') && $('inputMode').value) || 'mic';
+    if (mode === 'mic') LevelMeter.startStandalone();
+    else LevelMeter.stop();                                // 화면 소리 모드: 사전 체크 불가 → 끔
+  } catch(e){}
+}
 let sessionLimitTimer = null;   // 한 세션 최대 5분 제한 타이머
 const SESSION_LIMIT_MS = 5 * 60 * 1000;   // 5분
 const SESSION_LIMIT_ENABLED = false;   // v1.13.19: 한 세션 5분 제한 해제(교수님 요청). true로 되돌리면 재적용.
@@ -3006,6 +3123,9 @@ async function startMic() {
     //   걸려 렌더러가 다운된다(탭/창 사운드 시작을 몇 번 취소·재시도하면 종종 발생).
     // ⚠️ 재진입 방어(v1.9.6): startMic이 다시 호출될 때 이전 오디오 자원이 남아 있으면
     //   먼저 정리한다. 안 그러면 AudioContext가 계속 쌓여 Chrome 한계 도달 → 렌더러 다운.
+    // ⚠️ 레벨미터의 자체 스트림/컨텍스트를 '먼저' 완전히 해제한다 — 통역이 마이크를 잡기 전에.
+    //   (동시 점유·AudioContext 누적으로 인한 렌더러 다운 방지. BoothmateG 레벨바 충돌 재발 방지.)
+    try { LevelMeter.stop(); } catch (e) {}
     if (workletNode) { try { workletNode.disconnect(); } catch (e) {} workletNode = null; }
     if (audioContext) { try { audioContext.close(); } catch (e) {} audioContext = null; }
     if (micStream) { try { micStream.getTracks().forEach(t => t.stop()); } catch (e) {} micStream = null; }
@@ -3084,6 +3204,8 @@ async function startMic() {
 
     const source = audioContext.createMediaStreamSource(micStream);
     console.log('[start] 4) MediaStreamSource 생성됨');
+    // 레벨미터를 '같은' 컨텍스트/소스에 붙임 — 새 스트림·컨텍스트 없음(원칙 3). 통역 중에도 바 유지.
+    try { LevelMeter.attachShared(audioContext, source); } catch (e) {}
     // ScriptProcessorNode (버퍼 4096, mono in/out)
     workletNode = audioContext.createScriptProcessor(4096, 1, 1);
     let __frac = 0;          // 다운샘플 보간 잔여 위치
@@ -3148,6 +3270,7 @@ function stop() {
   if (workletNode) { workletNode.disconnect(); workletNode = null; }
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
   if (audioContext) { audioContext.close(); audioContext = null; }
+  try { LevelMeter.stop(); } catch (e) {}   // 공유 analyser 해제(통역 컨텍스트가 닫힘)
   if (ws) { ws.close(); ws = null; }
   if (typeof stopPlayback === "function") stopPlayback();
   stopElapsed();
@@ -3157,6 +3280,7 @@ function stop() {
   setStatus('정지됨', false);
   finishSegment();
   autoSaveSession();   // 정지 시 현재 세션 자동 저장
+  try { refreshMeter(); } catch (e) {}   // 정지 후 대기 레벨미터로 복귀(마이크 모드일 때)
 }
 $('toggleBtn').onclick = () => { if (uiRunning) stop(); else start(); };
 
@@ -3166,6 +3290,7 @@ $('toggleBtn').onclick = () => { if (uiRunning) stop(); else start(); };
    pagehide: 탭 닫기/새로고침/뒤로가기 등 페이지가 사라질 때 (모바일 포함 가장 신뢰성 높음)
 */
 window.addEventListener('pagehide', () => {
+  try { LevelMeter.stop(); } catch(e){}   // 페이지 이탈: 대기 레벨미터도 마이크 해제
   if (running) {
     try {
       if (workletNode) { workletNode.disconnect(); workletNode = null; }
@@ -3829,6 +3954,7 @@ window.addEventListener('pagehide', () => {
     if (emailEl) emailEl.textContent = user.email || user.name || '로그인됨';
     window.__boothmateUser = user;   // 다른 코드에서 참조 가능
     if (typeof renderQuota === 'function') renderQuota();   // 남은 무료 시간 표시
+    if (typeof refreshMeter === 'function') refreshMeter();   // 로그인 후 입력 레벨미터 켜기(마이크 모드)
   }
 
   function showGate(message){

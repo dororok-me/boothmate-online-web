@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.29 → v1.13.30) — 입력 장치 자동 탐색(교수님 요청, "TV처럼 알아서"):
+  - 재생 시 "선택한 음성 소스를 열 수 없어…" 팝업 제거. 대신 acquireMicAuto로 자동 폴백.
+  - 순서: 유저가 설정한 입력 → 브라우저 기본 → 사용 가능한 모든 오디오 입력 순차 시도.
+    하나라도 열리면 바로 시작(중간 실패는 조용히 넘김). 전부 실패할 때만 안내.
+  - mock 검증: SAVED→DEFAULT→mic-A→mic-B 순으로 시도, 비디오·중복 건너뛰고 첫 성공 장치 사용.
   변경점 (v1.13.28 → v1.13.29) — twoamari 5시간 지급 + 카운터 위치 이동(교수님 요청):
   - twoamari@gmail.com 에 5시간(18,000초) 지급(TIME_GRANTS). 다음 접속 시 자동 반영.
   - 경과 카운터를 재생 버튼 오른쪽에서 우측 아이콘 그룹의 세로 구분바(hdr-sep) 옆으로 이동,
@@ -1422,7 +1427,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.29 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.30 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -3187,6 +3192,36 @@ function connectWS() {
     reconnectTimer = setTimeout(() => { if (running && !userStopped) connectWS(); }, delay);
   };
 }
+/* 입력 장치 자동 확보 — 저장된 선택 → 브라우저 기본 → 사용 가능한 모든 오디오 입력을 차례로 시도.
+   중간 실패는 팝업 없이 조용히 넘기고, 하나라도 열리면 그 스트림을 반환한다(= TV 신호 자동 감지 느낌).
+   전부 실패할 때만 throw → startMic의 바깥 catch가 안내한다.
+   ⚠️ 여기서는 스트림만 확보한다(getUserMedia 여러 번 가능). AudioContext는 호출부에서 스트림 확보 후 1회만 생성. */
+async function acquireMicAuto(baseConstraints) {
+  const open = (c) => navigator.mediaDevices.getUserMedia({ audio: c });
+  const savedId = localStorage.getItem('mic_device_id') || '';
+  const tried = new Set();
+  let lastErr = null;
+  // 1) 저장된 장치 우선(있을 때만)
+  if (savedId) {
+    tried.add(savedId);
+    try { return await open({ ...baseConstraints, deviceId: { exact: savedId } }); }
+    catch (e) { lastErr = e; console.log('[auto-input] 저장 장치 실패 → 다른 입력 자동 탐색 (' + (e && e.name) + ')'); }
+  }
+  // 2) 브라우저 기본 장치
+  try { return await open(baseConstraints); }
+  catch (e) { lastErr = e; }
+  // 3) 사용 가능한 모든 오디오 입력을 하나씩 시도(권한 부여 후 목록 접근 가능)
+  try {
+    const devs = await navigator.mediaDevices.enumerateDevices();
+    for (const d of devs) {
+      if (d.kind !== 'audioinput' || !d.deviceId || tried.has(d.deviceId)) continue;
+      tried.add(d.deviceId);
+      try { return await open({ ...baseConstraints, deviceId: { exact: d.deviceId } }); }
+      catch (e) { lastErr = e; }
+    }
+  } catch (e) { lastErr = e; }
+  throw lastErr || new DOMException('사용 가능한 입력 장치를 찾지 못했습니다.', 'NotFoundError');
+}
 async function startMic() {
   try {
     // v0.9.8: AudioWorklet이 이 Chrome(149)에서 마이크 연결 시 렌더러를 죽임.
@@ -3241,19 +3276,14 @@ async function startMic() {
       const at = micStream.getAudioTracks()[0];
       if (at) at.addEventListener('ended', () => { if (running) stop(); });
     } else {
-      // ── 마이크 / 오디오 장치 (기존 방식) ──
-      const micId = localStorage.getItem('mic_device_id') || '';
+      // ── 마이크 / 오디오 장치 ──
+      // "TV처럼 알아서": 장치를 일일이 고르지 않아도 열리는 입력을 자동으로 찾아 바로 시작.
+      //   중간 실패는 조용히 넘어가고(팝업 없음), 정말 아무 입력도 못 열 때만 안내.
       const sysMode = $('sysAudioToggle') && $('sysAudioToggle').checked;
       const baseConstraints = sysMode
         ? { channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false }
         : { channelCount: 1, echoCancellation: true, noiseSuppression: true };
-      try {
-        const c = micId ? { ...baseConstraints, deviceId: { exact: micId } } : baseConstraints;
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: c });
-      } catch (devErr) {
-        showErr('선택한 음성 소스를 열 수 없어 기본 장치로 재시도합니다. (' + devErr.name + ')');
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: baseConstraints });
-      }
+      micStream = await acquireMicAuto(baseConstraints);
     }
     console.log('[start] 2) 스트림 확보 완료 — audioTracks=' + (micStream.getAudioTracks ? micStream.getAudioTracks().length : '?'));
     // 스트림 확보 완료 → 이제서야 AudioContext 생성 (취소/실패 경로에서는 만들지 않음 → 누수 0)

@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.28 → v1.13.29) — twoamari 5시간 지급 + 카운터 위치 이동(교수님 요청):
+  - twoamari@gmail.com 에 5시간(18,000초) 지급(TIME_GRANTS). 다음 접속 시 자동 반영.
+  - 경과 카운터를 재생 버튼 오른쪽에서 우측 아이콘 그룹의 세로 구분바(hdr-sep) 옆으로 이동,
+    오른쪽 정렬(align flex-end) + 바짝 붙임(margin-right -8px). Play 버튼은 그대로 창 중앙 고정.
   변경점 (v1.13.27 → v1.13.28) — 타이머 색/크기 + Play 버튼 중앙 고정(교수님 요청):
   - 타이머 박스 회색(#c9ced7), 숫자 진회색(#3a414f)으로 변경. 폰트 7.2px→7.9px(+10%).
   - Play 버튼(#toggleBtn)을 창(헤더) 가로 중앙에 항상 고정(반응형). 타이머는 버튼 오른쪽에 절대배치.
@@ -711,15 +715,12 @@
   #toggleBtn #toggleLabel { font-size: 16px; font-weight: 700; }
   #toggleBtn #elapsed { font-family: monospace; font-size: 11px; font-weight: 600; letter-spacing: 1px; color: inherit; opacity: 0.78; }
   /* 재생 클러스터: [레벨미터][재생버튼][타이머]를 한 덩어리로 붙이고 수직 중앙 정렬 */
-  /* Play 버튼을 창(헤더) 가로 중앙에 항상 고정. 반응형(50% 기준) — 창 크기 바뀌어도 중앙 유지.
-     타이머는 버튼 오른쪽에 절대배치해 버튼 자체가 정확히 중앙에 오게 함. */
+  /* Play 버튼을 창(헤더) 가로 중앙에 항상 고정. 반응형(50% 기준) — 창 크기 바뀌어도 중앙 유지. */
   #playCluster {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
     display: inline-flex; align-items: center; z-index: 5;
   }
-  #playCluster #timerStack {
-    position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%);
-  }
+  /* 타이머는 우측 아이콘 그룹의 세로 구분바(hdr-sep) 옆에 오른쪽 정렬로 배치(일반 흐름) */
   /* 입력 사운드 레벨 미터 (재생 버튼 옆, 세로 5칸) */
   #levelMeter { display: flex; align-items: flex-end; gap: 2px; height: 15px; }
   #levelMeter span { width: 3px; height: 6px; border-radius: 1px; background: rgba(127,140,160,0.35); transition: background .05s linear; }
@@ -730,7 +731,7 @@
   #levelMeter span.on { background: #22c55e; }
   #levelMeter span.on.hot { background: #ef4444; }
   /* 경과 타이머 — HH/MM/SS 세로 3박스. 플립 없이 숫자만 은은하게 갱신. 폰트 60% 축소. */
-  #timerStack { display: inline-flex; flex-direction: column; gap: 2px; align-items: center; }
+  #timerStack { display: inline-flex; flex-direction: column; gap: 2px; align-items: flex-end; margin-right: -8px; }   /* 세로바(hdr-sep) 옆에 바짝, 오른쪽 정렬 */
   .tbox {
     width: 16px; height: 11px;
     background: #c9ced7; color: #3a414f; border-radius: 2px;
@@ -1331,11 +1332,11 @@
   <div id="headerActions">
     <div id="playCluster">
       <button id="toggleBtn" title="시작 / 정지"><span id="toggleLabel">▶</span></button>
-      <div id="timerStack" aria-label="경과 시간" title="경과 시간">
-        <span class="tbox" id="tHH"><span class="tdig">00</span></span>
-        <span class="tbox" id="tMM"><span class="tdig">00</span></span>
-        <span class="tbox" id="tSS"><span class="tdig">00</span></span>
-      </div>
+    </div>
+    <div id="timerStack" aria-label="경과 시간" title="경과 시간">
+      <span class="tbox" id="tHH"><span class="tdig">00</span></span>
+      <span class="tbox" id="tMM"><span class="tdig">00</span></span>
+      <span class="tbox" id="tSS"><span class="tdig">00</span></span>
     </div>
     <span class="hdr-sep"></span>
     <button id="resetSubBtn" class="icon-btn" title="자막 리셋 (화면 자막 전체 지우기)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
@@ -1421,7 +1422,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.28 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.29 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1767,7 +1768,8 @@ const UNLIMITED_EMAILS = ['dororok@gmail.com'];
    사용자가 다음 접속(로드)할 때 브라우저 localStorage에 1회 반영되며,
    grantId가 같으면 재적용 안 됨(중복 지급 방지). 같은 계정에 또 주려면 grantId를 바꾼다. */
 const TIME_GRANTS = {
-  'jigojisn@gmail.com': { seconds: 20 * 3600, grantId: 'jigojisn-20h-20260702' }
+  'jigojisn@gmail.com': { seconds: 20 * 3600, grantId: 'jigojisn-20h-20260702' },
+  'twoamari@gmail.com': { seconds: 5 * 3600, grantId: 'twoamari-5h-20260702' }
 };
 
 const Ent = (function(){

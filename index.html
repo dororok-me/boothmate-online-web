@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.32 → v1.13.33) — 카운터 색·폰트·정렬 다듬기(교수님 요청):
+  - 카운터 글자색을 헤더 아이콘과 동일한 회색(var(--t-muted))으로.
+  - 모노스페이스 → 부드러운 라운드 폰트(ui-rounded…), 굵기 600.
+  - 우측 끝을 설정 아이콘 '글리프'(버튼 박스가 아니라 보이는 아이콘) 오른쪽에 정렬(right 2px→12px).
   변경점 (v1.13.31 → v1.13.32) — 카운터를 헤더 바 안으로(별도 행 제거, 교수님 요청):
   - 메뉴 바 아래 별도 행을 차지하던 카운터를 헤더 바 안(설정 아이콘 아래·우측)에 겹쳐 배치.
     #timerBar를 #appHeader 안으로 옮기고 position:absolute(right/bottom)로 오버레이 → 자막 영역이 위로 올라옴.
@@ -743,15 +747,16 @@
   #levelMeter span.on { background: #22c55e; }
   #levelMeter span.on.hot { background: #ef4444; }
   /* 경과 카운터 — 헤더 바 안(설정 아이콘 아래·우측)에 겹쳐 배치. 별도 행을 차지하지 않음. 박스 없이 진한 회색 가로 텍스트. */
-  #timerBar { position: absolute; right: 2px; bottom: 3px; display: flex; z-index: 4; pointer-events: none; }
-  #timerStack { display: inline-flex; flex-direction: row; align-items: baseline; gap: 1px; }
+  #timerBar { position: absolute; right: 12px; bottom: 3px; display: flex; z-index: 4; pointer-events: none; }   /* right:12px → 카운터 우측 끝을 설정 아이콘 글리프 우측에 정렬 */
+  #timerStack { display: inline-flex; flex-direction: row; align-items: baseline; gap: 1px;
+    font-family: ui-rounded, "Segoe UI Variable Display", "Segoe UI", Pretendard, system-ui, sans-serif; }   /* 부드러운(라운드) 폰트 */
   .tbox {
     background: none; box-shadow: none; border-radius: 0; padding: 0;
-    color: #4b5563; font-family: ui-monospace, "SFMono-Regular", monospace;
-    font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+    color: var(--t-muted); font-family: inherit;
+    font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
     font-variant-numeric: tabular-nums;
   }
-  .tsep { color: #4b5563; font-family: ui-monospace, "SFMono-Regular", monospace; font-size: 12px; font-weight: 700; }
+  .tsep { color: var(--t-muted); font-family: inherit; font-size: 12px; font-weight: 600; }
   .tbox .tdig { display: inline; }
   .tbox .tdig.tick { animation: tickFade 0.25s ease-out; }
   @keyframes tickFade { from { opacity: 0.45; } to { opacity: 1; } }
@@ -1440,7 +1445,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.32 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.33 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

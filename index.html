@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.47 → v1.13.48) — 패널 열어도 자막 계속 표시(교수님 보고):
+  - v1.13.40에서 패널 열면 자막 박스를 무조건 숨기게 한 뒤로, 자막이 있어도 사라지고
+    푸터(버전 문구)가 패널 바로 아래로 올라붙던 문제. 설정·용어집을 열고 자막 변화를
+    보면서 수정하던 기존 사용 방식이 막혔음.
+  - __syncPanelLayout을 조건부로: 자막(.pair)·반영로그가 "비어 있을 때만" 숨김(빈 사각형
+    제거라는 v1.13.40 원래 목적 유지), 내용이 있으면 패널 아래에 계속 표시.
+  - 첫 자막 묶음 생성/자막 리셋/첫 반영로그/로그 지우기 시점에 재동기화 호출 추가
+    → 패널 열어둔 채 통역을 시작해도 자막이 나타나면 즉시 다시 보임.
   변경점 (v1.13.46 → v1.13.47) — 단방향 번역 모드 추가(교수님 요청):
   - 언어쌍 옆에 방향 선택(🔄 양방향 자동 / A→B 단방향 / B→A 단방향) 추가. 단방향이면
     입력 언어 감지에 의한 방향 자동 전환(maybeFlipDirection)을 끔 — 강연처럼 한 사람만
@@ -1506,7 +1514,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.47 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.48 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2172,8 +2180,10 @@ function reflogAdd(kind, text) {
   reflogEntries.push({ kind: kind, text: text });
   if (reflogEntries.length > REFLOG_MAX) reflogEntries = reflogEntries.slice(-REFLOG_MAX);
   renderReflog();
+  // 첫 로그 → 패널이 열려 숨겨둔 로그 줄이 있으면 다시 표시 (v1.13.48)
+  if (window.__syncPanelLayout && reflogEntries.length === 1) window.__syncPanelLayout();
 }
-function reflogClear() { reflogEntries = []; renderReflog(); }
+function reflogClear() { reflogEntries = []; renderReflog(); if (window.__syncPanelLayout) window.__syncPanelLayout(); }
 /* 문장 확정 시 호출: AI 원본 번역에 용어집 강제 치환을 적용해 실제 교체 내역(별칭 → 표준)을 기록 */
 function collectReflections(source, rawTrans) {
   if (!rawTrans || !rawTrans.trim()) return;
@@ -2236,6 +2246,8 @@ function getCurrentPair() {
   combinedEl.appendChild(el);
   curPair = { el, srcLine: null, transLine: null };
   trimPairs();
+  // 첫 자막 묶음 생성 → 패널이 열려 숨겨둔 자막 박스가 있으면 다시 표시 (v1.13.48)
+  if (window.__syncPanelLayout && combinedEl.querySelectorAll('.pair').length === 1) window.__syncPanelLayout();
   return curPair;
 }
 /* 묶음이 너무 많으면 오래된 것부터 제거 */
@@ -2322,6 +2334,7 @@ function resetSubtitles() {
   curPair = null;
   bmReset();   // 네이티브 오버레이도 리셋
   if (typeof pushMirror === 'function') pushMirror();
+  if (window.__syncPanelLayout) window.__syncPanelLayout();   // 자막 비워짐 → 패널 열린 상태면 빈 박스 숨김
 }
 
 /* 마침표 단위 문장 분리.
@@ -3597,16 +3610,19 @@ window.addEventListener('pagehide', () => {
   }
 });
 
-/* 설정·용어집 패널이 열려 있으면 아래 자막 박스(#mcWrap)와 반영 로그 줄(#reflogBox)을
-   숨김 — 패널 아래 빈 사각형/직각 박스 제거. 닫으면 원래대로 복원. */
+/* 설정·용어집 패널이 열려 있을 때: 자막·반영로그가 "비어 있으면" 숨김(빈 사각형 제거,
+   v1.13.40 원래 목적), "내용이 있으면" 패널 아래에 계속 표시 — 패널 열고 자막 변화를
+   보면서 설정·용어를 수정할 수 있게(v1.13.48, 교수님 요청). 닫으면 원래대로 복원. */
 window.__syncPanelLayout = function() {
   const mp = $('mcPanel'), gp = $('glossaryPanel'), mw = $('mcWrap'), rf = $('reflogBox');
   const anyOpen = (mp && mp.classList.contains('open')) || (gp && gp.classList.contains('open'));
-  if (mw) mw.style.display = anyOpen ? 'none' : '';
+  const hasSubs = !!(combinedEl && combinedEl.querySelector('.pair:not(.offpair)'));
+  if (mw) mw.style.display = (anyOpen && !hasSubs) ? 'none' : '';
   if (rf) {
     // 반영 로그는 사용자 설정(reflog_visible, 기본 표시)에 따라 복원
     const vis = localStorage.getItem('reflog_visible') !== '0';
-    rf.style.display = anyOpen ? 'none' : (vis ? 'flex' : 'none');
+    const hasLog = (typeof reflogEntries !== 'undefined') && reflogEntries.length > 0;
+    rf.style.display = (anyOpen && !hasLog) ? 'none' : (vis ? 'flex' : 'none');
   }
 };
 

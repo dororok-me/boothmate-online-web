@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.42 → v1.13.43) — 환율 변환 중복 표기 수정(교수님 보고):
+  - 원화를 영어 단위로 표기한 결과(예 "₩600 million($388,800)")가 스트리밍 중 다시 변환
+    로직을 타면 "₩600($0) million($388,800)"처럼 중복되던 문제. currency.js의 ₩숫자 매처가
+    뒤에 영어 단위(million/billion…)가 오면 건너뛰도록 해 변환을 멱등화. (currency.js v1.10.6)
   변경점 (v1.13.41 → v1.13.42) — 패널 뒤 직각 박스(그림자 잘림) 제거(교수님 요청):
   - 설정·용어집 패널의 box-shadow가 스크롤 컨테이너(#panelArea, overflow:auto)에
     직각으로 잘려 "둥근 박스 밖 직각 레이어"처럼 보이던 문제. box-shadow 제거로 해결.
@@ -1478,7 +1482,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.42 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.43 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1494,7 +1498,7 @@
 </div>
 
 <script src="postprocess.js?v=1.12.7"></script>
-<script src="currency.js?v=1.10.5"></script>
+<script src="currency.js?v=1.10.6"></script>
 <script src="unitConvert.js"></script>
 <script src="audio.js"></script>
 <script>

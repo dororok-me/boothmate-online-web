@@ -211,7 +211,12 @@
     krwUnit("₩?\\s*" + NUM + "\\s*만\\s*원", 1e4);
     krwUnit("₩?\\s*" + NUM + "\\s*천\\s*원", 1e3);
     // ₩ + 숫자 → 원본 그대로 + 달러 환산
-    out = replaceMatches(out, new RegExp("₩\\s*" + NUM, "g"), function (m) {
+    // 멱등 가드: 뒤에 영어 단위(million/billion…)가 오면 이미 원화 영어 표기(formatWonEnglish)의
+    // 일부이므로 건너뜀. 안 그러면 "₩600 million($…)" 재처리 시 "₩600($0) million($…)"로 중복됨.
+    out = replaceMatches(out, new RegExp("₩\\s*" + NUM, "g"), function (m, fullOut, end) {
+      var after = fullOut.slice(end, end + 13).toLowerCase();
+      if (after.indexOf(" million") === 0 || after.indexOf(" billion") === 0 ||
+          after.indexOf(" trillion") === 0 || after.indexOf(" quadrillion") === 0) return null;
       var krw = parseFloat(stripComma(m[1])); if (isNaN(krw)) return null;
       return m[0] + "(" + formatUSDsimple(krw / usdRate) + ")";
     });

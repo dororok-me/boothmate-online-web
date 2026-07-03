@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.45 → v1.13.46) — 버전 업데이트 안내 토스트(교수님 요청):
+  - 페이지 열 때 푸터 버전이 지난 방문과 다르면 "이전→현재 업데이트되었습니다" 토스트 표시.
+    localStorage(bm_seen_version)에 마지막 확인 버전 기록. 첫 방문/동일 버전엔 안내 없음.
+    버전은 #appFooter에서 읽어 단일 출처(푸터만 올리면 자동 동작). 7초 후/✕ 클릭 시 사라짐.
   변경점 (v1.13.44 → v1.13.45) — 쪼개진 숫자 환율 오변환 방지(교수님 보고, currency.js v1.10.8):
   - STT가 긴 숫자를 "6,820 7만"·"6,820 ₩70,000"처럼 공백으로 쪼개면, 뒤 조각(7만/₩70,000)만
     환산돼 68백만원이 $45처럼 엉뚱하게 표시되던 문제. 매치 바로 앞이 "숫자 "로 끝나는(=떨어진
@@ -1491,7 +1495,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.45 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.46 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -4272,6 +4276,49 @@ window.__syncPanelLayout = function() {
     showGate('');
   }
   initGoogle();
+})();
+</script>
+<script>
+/* ───────── 버전 업데이트 안내 (v1.13.46) ─────────
+   페이지 열 때 푸터 버전이 지난 방문 때와 다르면 "이전→현재 업데이트" 토스트 표시.
+   버전은 #appFooter 텍스트에서 읽어 단일 출처 유지(푸터만 올리면 자동 동작).
+   첫 방문(저장된 버전 없음)에는 안내 없이 현재 버전만 기록. */
+(function(){
+  try {
+    var ft = document.getElementById('appFooter');
+    var m = ft && ft.textContent.match(/v\d+(?:\.\d+)+/);
+    if (!m) return;
+    var cur = m[0];
+    var KEY = 'bm_seen_version';
+    var prev = localStorage.getItem(KEY);
+    localStorage.setItem(KEY, cur);            // 항상 현재 버전 기록
+    if (!prev || prev === cur) return;          // 첫 방문/동일 버전이면 안내 없음
+    var box = document.createElement('div');
+    box.setAttribute('role', 'status');
+    box.style.cssText =
+      'position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(12px);' +
+      'z-index:10001; max-width:90vw; display:flex; align-items:center; gap:10px;' +
+      'padding:11px 14px 11px 16px; border-radius:12px; background:#4F46E5; color:#fff;' +
+      'font-size:13px; font-weight:600; line-height:1.4; box-shadow:0 8px 24px rgba(2,6,23,0.28);' +
+      'opacity:0; transition:opacity .25s ease, transform .25s ease; cursor:default;';
+    box.innerHTML =
+      '<span>🎉 ' + prev + '에서 <b>' + cur + '</b>(으)로 업데이트되었습니다</span>' +
+      '<button type="button" aria-label="닫기" style="flex:0 0 auto; margin-left:2px; width:22px; height:22px;' +
+      'display:inline-flex; align-items:center; justify-content:center; padding:0; border:none; border-radius:6px;' +
+      'background:rgba(255,255,255,0.18); color:#fff; font-size:14px; line-height:1; cursor:pointer;">✕</button>';
+    var close = function(){
+      box.style.opacity = '0';
+      box.style.transform = 'translateX(-50%) translateY(12px)';
+      setTimeout(function(){ if (box.parentNode) box.parentNode.removeChild(box); }, 300);
+    };
+    box.querySelector('button').onclick = close;
+    document.body.appendChild(box);
+    requestAnimationFrame(function(){
+      box.style.opacity = '1';
+      box.style.transform = 'translateX(-50%) translateY(0)';
+    });
+    setTimeout(close, 7000);                     // 7초 후 자동 사라짐
+  } catch (e) {}
 })();
 </script>
 </body>

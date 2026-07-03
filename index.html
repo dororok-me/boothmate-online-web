@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.33 → v1.13.34) — 입력 레벨미터를 카운터 왼쪽 가로 점으로(교수님 요청):
+  - 세로 5바 → 가로 점 7개(3×3px, 작고 촘촘)로 재디자인. 사운드 설정 박스 → 헤더 카운터 왼쪽으로 이동.
+  - 회색 계열: 꺼짐 옅은 회색 / 켜짐 var(--t-muted)(아이콘색) / 과입력 마지막 점 #334155.
+  - #timerBar를 [미터][카운터] 가로 배치(gap 6px). 카운터 우측 정렬(설정 아이콘)은 유지.
   변경점 (v1.13.32 → v1.13.33) — 카운터 색·폰트·정렬 다듬기(교수님 요청):
   - 카운터 글자색을 헤더 아이콘과 동일한 회색(var(--t-muted))으로.
   - 모노스페이스 → 부드러운 라운드 폰트(ui-rounded…), 굵기 600.
@@ -737,17 +741,13 @@
     display: inline-flex; align-items: center; z-index: 5;
   }
   /* 타이머는 우측 아이콘 그룹의 세로 구분바(hdr-sep) 옆에 오른쪽 정렬로 배치(일반 흐름) */
-  /* 입력 사운드 레벨 미터 (재생 버튼 옆, 세로 5칸) */
-  #levelMeter { display: flex; align-items: flex-end; gap: 2px; height: 15px; }
-  #levelMeter span { width: 3px; height: 6px; border-radius: 1px; background: rgba(127,140,160,0.35); transition: background .05s linear; }
-  #levelMeter span:nth-child(2){ height: 8px; }
-  #levelMeter span:nth-child(3){ height: 11px; }
-  #levelMeter span:nth-child(4){ height: 13px; }
-  #levelMeter span:nth-child(5){ height: 15px; }
-  #levelMeter span.on { background: #22c55e; }
-  #levelMeter span.on.hot { background: #ef4444; }
+  /* 입력 사운드 레벨 미터 — 카운터 왼쪽, 가로 점 7개(작고 촘촘), 회색 계열. 소리 들어오면 왼쪽부터 진해짐. */
+  #levelMeter { display: inline-flex; align-items: center; gap: 2px; }
+  #levelMeter span { width: 3px; height: 3px; border-radius: 50%; background: rgba(127,140,160,0.30); transition: background .06s linear; }
+  #levelMeter span.on { background: var(--t-muted); }
+  #levelMeter span.on.hot { background: #334155; }   /* 과입력 시 마지막 점만 진한 회색(회색 계열 유지) */
   /* 경과 카운터 — 헤더 바 안(설정 아이콘 아래·우측)에 겹쳐 배치. 별도 행을 차지하지 않음. 박스 없이 진한 회색 가로 텍스트. */
-  #timerBar { position: absolute; right: 12px; bottom: 3px; display: flex; z-index: 4; pointer-events: none; }   /* right:12px → 카운터 우측 끝을 설정 아이콘 글리프 우측에 정렬 */
+  #timerBar { position: absolute; right: 12px; bottom: 3px; display: flex; align-items: center; gap: 6px; z-index: 4; pointer-events: none; }   /* right:12px → 카운터 우측 끝을 설정 아이콘 글리프 우측에 정렬. 미터는 카운터 왼쪽. */
   #timerStack { display: inline-flex; flex-direction: row; align-items: baseline; gap: 1px;
     font-family: ui-rounded, "Segoe UI Variable Display", "Segoe UI", Pretendard, system-ui, sans-serif; }   /* 부드러운(라운드) 폰트 */
   .tbox {
@@ -1357,8 +1357,11 @@
     <button id="glossaryBtn" class="icon-btn" title="용어집"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2C10.4 5 7.8 4.5 4 4.5V18c3.8 0 6.4.5 8 1.8 1.6-1.3 4.2-1.8 8-1.8V4.5c-3.8 0-6.4.5-8 1.7z"></path><path d="M12 6.2V19.8"></path></svg></button>
     <button id="mcOptBtn" class="icon-btn" title="설정"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h7M16 7h4M4 12h12M19 12h1M4 17h3M11 17h9"></path><circle cx="13" cy="7" r="2"></circle><circle cx="14" cy="12" r="2"></circle><circle cx="9" cy="17" r="2"></circle></svg></button>
   </div>
-  <!-- 경과 카운터: 헤더 바 안(설정 아이콘 아래·우측)에 겹쳐 배치 → 별도 행 차지 안 함. 박스 없이 진한 회색. -->
+  <!-- 경과 카운터 + 입력 레벨미터(가로 점 7개, 회색): 헤더 바 안 우측에 겹쳐 배치. 카운터 왼쪽에 미터. -->
   <div id="timerBar">
+    <span id="levelMeter" title="입력 사운드 레벨 (재생 전에도 소리가 들어오는지 확인)" aria-label="입력 사운드 레벨">
+      <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+    </span>
     <div id="timerStack" aria-label="경과 시간" title="경과 시간">
       <span class="tbox" id="tHH"><span class="tdig">00</span></span>
       <span class="tsep">:</span>
@@ -1391,13 +1394,6 @@
   <button id="refreshMicBtn" style="background:#2a3a55;color:#cfe0ff;font-size:12px;padding:6px 12px;">목록 새로고침</button></span>
   <!-- 시스템 사운드 모드: 화면공유 방식이 주력이 되어 UI에서 제거. 코드 참조용 숨김 유지. -->
   <label style="display:none;"><input type="checkbox" id="sysAudioToggle"> 시스템 사운드 모드</label>
-</div>
-<div class="opts" style="margin-top:2px;">
-  <label style="display:flex; align-items:center; gap:8px;">입력 레벨:
-    <span id="levelMeter" title="입력 사운드 레벨 (재생 전에도 소리가 들어오는지 확인)" aria-label="입력 사운드 레벨">
-      <span></span><span></span><span></span><span></span><span></span>
-    </span>
-  </label>
 </div>
 <div class="opts" id="screenAudioHintRow" style="display:none; margin-top:0;">
   <span id="screenAudioHint" style="font-size:12px; color:#fbbf24; font-weight:600;">⚠️ 시작을 누르면 뜨는 공유 창에서 <u>"시스템 오디오 공유"</u>를 꼭 체크하세요!</span>
@@ -1445,7 +1441,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.33 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.34 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

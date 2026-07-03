@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.41 → v1.13.42) — 패널 뒤 직각 박스(그림자 잘림) 제거(교수님 요청):
+  - 설정·용어집 패널의 box-shadow가 스크롤 컨테이너(#panelArea, overflow:auto)에
+    직각으로 잘려 "둥근 박스 밖 직각 레이어"처럼 보이던 문제. box-shadow 제거로 해결.
+    (고해상도 화면에서 특히 뚜렷하게 보였음.)
   변경점 (v1.13.40 → v1.13.41) — 패널 아래 반영 로그 빈 박스도 숨김(교수님 요청):
   - __syncPanelLayout에서 #mcWrap뿐 아니라 #reflogBox(반영 로그 줄)도 함께 숨김.
     패널 닫으면 reflog_visible 설정에 따라 복원.
@@ -1108,7 +1112,7 @@
   .srcline.pending { color: var(--mc-src-color); opacity: 0.7; }
   .transline.pending { color: var(--mc-trans-color); opacity: 0.65; font-weight: var(--mc-trans-weight); }
   .hint { color: var(--t-muted); }
-  #mcPanel, #glossaryPanel { background: var(--t-panel-bg); border: 1px solid var(--t-border); color: var(--t-text); box-shadow: 0 10px 30px rgba(2,6,23,0.18); }
+  #mcPanel, #glossaryPanel { background: var(--t-panel-bg); border: 1px solid var(--t-border); color: var(--t-text); }
   #mcPanel .grp-ttl { color: var(--t-accent); }
   #editArea { background: var(--t-input-bg); border-color: var(--t-border); }
   #editHint { color: var(--t-muted); }
@@ -1474,7 +1478,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.41 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.42 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

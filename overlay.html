@@ -66,6 +66,8 @@
     word-break: break-word;
   }
   .transline.pending { opacity: 1; }
+  /* 용어집 표준표기 하이라이트 — 어두운 배경 대비용 밝은 인디고(메인은 진한 인디고) */
+  .transline .gword { color: #A5B4FC; }
 
   /* ── 대기 메시지 ── */
   #hint {
@@ -339,7 +341,9 @@ function renderSubtitles(srcLines, transLines) {
     const tl  = transLines[i] || { text: '', pending: false };
     sEl.textContent = sl.text;
     sEl.classList.toggle('pending', !!sl.pending);
-    tEl.textContent = tl.text;
+    // 번역 줄: 메인에서 온 하이라이트 HTML(용어집 표준표기 .gword)을 그대로 표시. 없으면 텍스트.
+    if (typeof tl.html === 'string') tEl.innerHTML = tl.html;
+    else tEl.textContent = tl.text;
     tEl.classList.toggle('pending', !!tl.pending);
   }
 

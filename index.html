@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.36 → v1.13.37) — 오버레이에도 용어집 색 하이라이트 적용(교수님 요청):
+  - pushMirror가 번역 줄의 innerHTML(.gword 하이라이트 포함)도 함께 전송.
+  - overlay.html이 tl.html을 innerHTML로 렌더 → 오버레이/OBS에도 표준표기 색 표시.
+  - 어두운 배경 대비를 위해 오버레이는 밝은 인디고(#A5B4FC), 메인은 진한 인디고(#4338CA).
   변경점 (v1.13.35 → v1.13.36) — 용어집 괄호 병기 → 색 하이라이트로 변경(교수님 요청):
   - 표준표기 뒤 "(반대언어)" 괄호 병기 제거 → 자막 줄이 짧고 깔끔해짐(annotateGlossary는 로그 기록만).
   - 대신 변환된 표준표기 단어를 반영 로그의 '용어' 색(인디고 #4338CA)으로 하이라이트(tokenize+.gword).
@@ -1451,7 +1455,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.36 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.37 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1662,7 +1666,7 @@ function pushMirror() {
     text: el.textContent, pending: el.classList.contains('pending')
   }));
   const transLines = Array.from(combinedEl.querySelectorAll('.pair:not(.offpair) .transline')).map(el => ({
-    text: el.textContent, pending: el.classList.contains('pending')
+    text: el.textContent, html: el.innerHTML, pending: el.classList.contains('pending')
   }));
   broadcast('mirror', { srcLines, transLines });
   // Boothmate 네이티브 오버레이에도 전송 (연결돼 있을 때만)

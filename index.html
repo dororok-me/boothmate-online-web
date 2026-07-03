@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.35 → v1.13.36) — 용어집 괄호 병기 → 색 하이라이트로 변경(교수님 요청):
+  - 표준표기 뒤 "(반대언어)" 괄호 병기 제거 → 자막 줄이 짧고 깔끔해짐(annotateGlossary는 로그 기록만).
+  - 대신 변환된 표준표기 단어를 반영 로그의 '용어' 색(인디고 #4338CA)으로 하이라이트(tokenize+.gword).
+    한국어 조사 분리·영어 복수형·부분매칭 방지는 기존 flexRegexP 재사용.
+  - 환율·도량형 환산은 요청대로 괄호 병기 그대로 유지.
   변경점 (v1.13.34 → v1.13.35) — min.interpreter@gmail.com에 5시간 부여:
   - TIME_GRANTS에 min.interpreter@gmail.com = 5시간(grantId min-interpreter-5h-20260703) 추가.
   변경점 (v1.13.33 → v1.13.34) — 입력 레벨미터를 카운터 왼쪽 가로 점으로(교수님 요청):
@@ -1006,6 +1011,9 @@
   /* 클릭 가능한 단어 토큰 (수정 기능) */
   .transline .w { cursor: pointer; border-radius: 3px; padding: 0 1px; }
   .transline .w:hover { background: rgba(125,211,252,0.22); }
+  /* 용어집 표준표기 하이라이트 — 반영 로그의 '용어' 색(인디고)과 동일. 괄호 병기 대체 */
+  .transline .gword { color: #4338CA; font-weight: 700; }
+  .transline.pending .gword { color: #6366F1; }
   /* 실시간 수정 기능 숨김 시: 단어가 클릭 가능한 것처럼 보이지 않게 */
   body.no-live-edit .transline .w { cursor: text; }
   body.no-live-edit .transline .w:hover { background: none; }
@@ -1443,7 +1451,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.35 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.36 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2244,13 +2252,61 @@ function splitToSentences(text) {
   return { done: out, rest: rest };   // done=완성문장들, rest=미완성 나머지
 }
 function tokenize(text) {
+  const res = glossaryHlRegexes();
   const parts = text.split(/(\s+)/);
   let html = '';
   for (const p of parts) {
     if (p.trim() === '') html += p;
-    else html += '<span class="w">' + escapeHtml(p) + '</span>';
+    else html += '<span class="w">' + (res.length ? hlWord(p, res) : escapeHtml(p)) + '</span>';
   }
   return html;
+}
+/* 현재 출력 방향의 용어집 표준표기 → 매칭 정규식 목록(긴 표제어 우선). glossary+방향 캐시. */
+let _glossaryHlCache = { key: null, list: null };
+function glossaryHlRegexes() {
+  const outCode = curTarget || ($('targetLang') && $('targetLang').value) || '';
+  const raw = localStorage.getItem('glossary') || '[]';
+  const key = outCode + '|' + raw;
+  if (_glossaryHlCache.key === key) return _glossaryHlCache.list;
+  const outP = (/ko/.test(String(outCode))) ? 'ko' : 'x';
+  const terms = [];
+  for (const it of loadGlossary()) {
+    if (!it) continue;
+    let canon;
+    if (it.nat) {
+      canon = it.nat[outP] && it.nat[outP][0];
+    } else {
+      const aHead = splitAliases(it.a)[0] || it.a;
+      const bHead = splitAliases(it.b)[0] || it.b;
+      const aKo = (gKey(aHead) === 'ko');
+      canon = (outP === 'ko') ? (aKo ? aHead : bHead) : (aKo ? bHead : aHead);
+    }
+    if (canon && !/\s/.test(canon)) terms.push(canon);   // 공백 없는 단일 토큰만(단어 단위 하이라이트)
+  }
+  terms.sort(function (a, b) { return b.length - a.length; });   // 긴 표제어 우선
+  const seen = {}, list = [];
+  for (const t of terms) {
+    const k = t.toLowerCase();
+    if (seen[k]) continue;
+    seen[k] = 1;
+    try { list.push(flexRegexP(t)); } catch (e) { /* 잘못된 표제어는 건너뜀 */ }
+  }
+  _glossaryHlCache = { key: key, list: list };
+  return list;
+}
+/* 단어 토큰에서 첫 매칭 용어집 표준표기를 .gword로 감싸 하이라이트. 나머지는 escape만. */
+function hlWord(word, res) {
+  for (const re of res) {
+    re.lastIndex = 0;
+    const m = re.exec(word);
+    if (m && m[0]) {
+      const i = m.index, s = m[0];
+      return escapeHtml(word.slice(0, i)) +
+        '<span class="gword">' + escapeHtml(s) + '</span>' +
+        escapeHtml(word.slice(i + s.length));
+    }
+  }
+  return escapeHtml(word);
 }
 function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -2491,8 +2547,8 @@ function applyGlossaryReplace(text, outCode) {
   }
   return { text: out, corrections: corrections };
 }
-/* 표준표기 뒤에 반대언어 용어를 괄호로 병기 (양방향 일관): 출력 한국어면 "댕댕이(dog)",
-   출력 영어면 "dog(댕댕이)". 이미 "표준표기(" 형태면 중복 병기 안 함. 반영 로그에도 기록. */
+/* 용어집 표준표기 감지 → 반영 로그에 기록만 한다(괄호 병기 없음).
+   표시 단계(tokenize)에서 표준표기 단어를 로그와 같은 색(인디고)으로 하이라이트한다. */
 function annotateGlossary(text, outCode) {
   const outP = (/ko/.test(String(outCode))) ? 'ko' : 'x';
   const otherP = (outP === 'ko') ? 'x' : 'ko';
@@ -2525,11 +2581,7 @@ function annotateGlossary(text, outCode) {
         if (typeof reflogAdd === 'function') reflogAdd('glossary', other + ' → ' + canon);
       }
     }
-    // 아직 "표준표기(" 형태가 아니면만 병기 추가 (이미 있으면 중복 방지)
-    const doneRe = new RegExp(re.source + '\\s*\\(', 'gi');
-    if (doneRe.test(out)) continue;
-    re.lastIndex = 0;
-    out = replaceSafe(out, re, function (m) { return m + '(' + other + ')'; });
+    // 괄호 병기(표준표기(반대언어))는 제거 — 대신 표시 단계(tokenize)에서 표준표기를 색으로 하이라이트.
   }
   return out;
 }
@@ -2624,7 +2676,7 @@ function shownTrans(raw) {
       if (!turnLogged.has(_k)) { turnLogged.add(_k); if (typeof reflogAdd === 'function') reflogAdd('unit', _c.from + ' → ' + _c.to); }
     }
   }
-  // 용어집 병기 (양방향 일관): 표준표기 뒤에 반대언어 용어를 괄호로 — "댕댕이(dog)" / "dog(댕댕이)"
+  // 용어집: 표준표기 감지 → 반영 로그 기록(괄호 병기 없음). 표시 색 하이라이트는 tokenize에서.
   result = annotateGlossary(result, curTarget || targetLang);
   return result;
 }

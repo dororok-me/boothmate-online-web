@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.37 → v1.13.38) — 용어집 하이라이트 형광펜 스타일 + AI 괄호 제거(교수님 요청):
+  - .gword를 굵은 글씨 → 형광펜(배경 색칠, 단어 감쌈)으로 변경. 메인=인디고(#C7D2FE),
+    오버레이=반투명 인디고. box-decoration-break로 줄바꿈에도 유지.
+  - AI(Gemini)가 스스로 "표준표기(반대언어)" 괄호를 붙이면 annotateGlossary에서 제거
+    → 자막엔 "그리고"만 남음(예: "그리고(and)" → "그리고"). 환율 괄호는 안 건드림.
   변경점 (v1.13.36 → v1.13.37) — 오버레이에도 용어집 색 하이라이트 적용(교수님 요청):
   - pushMirror가 번역 줄의 innerHTML(.gword 하이라이트 포함)도 함께 전송.
   - overlay.html이 tl.html을 innerHTML로 렌더 → 오버레이/OBS에도 표준표기 색 표시.
@@ -1015,9 +1020,15 @@
   /* 클릭 가능한 단어 토큰 (수정 기능) */
   .transline .w { cursor: pointer; border-radius: 3px; padding: 0 1px; }
   .transline .w:hover { background: rgba(125,211,252,0.22); }
-  /* 용어집 표준표기 하이라이트 — 반영 로그의 '용어' 색(인디고)과 동일. 괄호 병기 대체 */
-  .transline .gword { color: #4338CA; font-weight: 700; }
-  .transline.pending .gword { color: #6366F1; }
+  /* 용어집 표준표기 하이라이트 — 형광펜처럼 단어를 색으로 감쌈(굵기 변화 없음) */
+  .transline .gword {
+    background: #C7D2FE;              /* 인디고 형광펜 */
+    border-radius: 4px;
+    padding: 0 3px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .transline.pending .gword { background: #E0E7FF; }
   /* 실시간 수정 기능 숨김 시: 단어가 클릭 가능한 것처럼 보이지 않게 */
   body.no-live-edit .transline .w { cursor: text; }
   body.no-live-edit .transline .w:hover { background: none; }
@@ -1455,7 +1466,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.37 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.38 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2585,7 +2596,11 @@ function annotateGlossary(text, outCode) {
         if (typeof reflogAdd === 'function') reflogAdd('glossary', other + ' → ' + canon);
       }
     }
-    // 괄호 병기(표준표기(반대언어))는 제거 — 대신 표시 단계(tokenize)에서 표준표기를 색으로 하이라이트.
+    // 괄호 병기는 하지 않는다(색 하이라이트로 대체). 단, AI(Gemini)가 스스로 붙인
+    // "표준표기(반대언어)" 괄호가 있으면 제거 → 자막엔 표준표기만 남는다.
+    const otherEsc = other.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const stripRe = new RegExp('(' + re.source + ')\\s*[\\(（]\\s*' + otherEsc + '(?:es|s)?\\s*[\\)）]', 'gi');
+    out = out.replace(stripRe, '$1');
   }
   return out;
 }

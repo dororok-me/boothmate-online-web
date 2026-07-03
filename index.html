@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.40 → v1.13.41) — 패널 아래 반영 로그 빈 박스도 숨김(교수님 요청):
+  - __syncPanelLayout에서 #mcWrap뿐 아니라 #reflogBox(반영 로그 줄)도 함께 숨김.
+    패널 닫으면 reflog_visible 설정에 따라 복원.
   변경점 (v1.13.39 → v1.13.40) — 설정·용어집 패널 열 때 아래 빈 자막 박스 숨김(교수님 요청):
   - 설정 또는 용어집 패널이 열려 있으면 그 아래 자막 영역(#mcWrap)을 display:none 처리.
     패널을 닫으면 다시 표시. window.__syncPanelLayout()을 각 열기/닫기 버튼에서 호출.
@@ -1471,7 +1474,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.40 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.41 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -3500,11 +3503,17 @@ window.addEventListener('pagehide', () => {
   }
 });
 
-/* 설정·용어집 패널이 열려 있으면 아래 자막 박스(#mcWrap)를 숨김 — 빈 사각형 박스 제거 */
+/* 설정·용어집 패널이 열려 있으면 아래 자막 박스(#mcWrap)와 반영 로그 줄(#reflogBox)을
+   숨김 — 패널 아래 빈 사각형/직각 박스 제거. 닫으면 원래대로 복원. */
 window.__syncPanelLayout = function() {
-  const mp = $('mcPanel'), gp = $('glossaryPanel'), mw = $('mcWrap');
+  const mp = $('mcPanel'), gp = $('glossaryPanel'), mw = $('mcWrap'), rf = $('reflogBox');
   const anyOpen = (mp && mp.classList.contains('open')) || (gp && gp.classList.contains('open'));
   if (mw) mw.style.display = anyOpen ? 'none' : '';
+  if (rf) {
+    // 반영 로그는 사용자 설정(reflog_visible, 기본 표시)에 따라 복원
+    const vis = localStorage.getItem('reflog_visible') !== '0';
+    rf.style.display = anyOpen ? 'none' : (vis ? 'flex' : 'none');
+  }
 };
 
 /* ── 메인 콘솔 자막 설정 패널 (테마 + 폰트 크기·색상) ── */

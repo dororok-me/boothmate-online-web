@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.43 → v1.13.44) — 반영 로그 환율 표기 정리(교수님 보고):
+  - 원화 영어표기 변환("36 million won → ₩36 million($23,328)")이 로그에서
+    "36 million won → ₩36 million($23,328"(원금액 중복 + 닫는 괄호 잘림)로 나오던 문제.
+    환산값은 항상 맨 끝 괄호 안이므로 그 안쪽만 추출("→ $23,328")하도록 수정.
   변경점 (v1.13.42 → v1.13.43) — 환율 변환 중복 표기 수정(교수님 보고):
   - 원화를 영어 단위로 표기한 결과(예 "₩600 million($388,800)")가 스트리밍 중 다시 변환
     로직을 타면 "₩600($0) million($388,800)"처럼 중복되던 문제. currency.js의 ₩숫자 매처가
@@ -1482,7 +1486,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.43 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.44 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2695,10 +2699,17 @@ function shownTrans(raw) {
     result = _cc.result;
     for (const _c of _cc.changes) {
       const _k = 'cur:' + _c.from + '→' + _c.to;
-      // _c.to는 "원금액(환산)" 형태라 화살표 뒤에 원금액이 중복됨 → 괄호 안 환산값만 추출해 표시
+      // 환산값은 항상 맨 끝 괄호 (…) 안에 있음 → 그 안쪽만 추출해 로그에 표시.
+      //  · 원본유지형: "43,200 달러(₩6,635만원)" → "₩6,635만원"
+      //  · 원본대체형(원화 영어표기): "₩36 million($23,328)" → "$23,328"
       let _conv = _c.to;
-      if (_conv.indexOf(_c.from) === 0) _conv = _conv.slice(_c.from.length);
-      _conv = _conv.replace(/^\s*\(/, '').replace(/\)\s*$/, '').trim();
+      const _pm = _conv.match(/\(([^()]*)\)\s*$/);
+      if (_pm) {
+        _conv = _pm[1].trim();
+      } else {
+        if (_conv.indexOf(_c.from) === 0) _conv = _conv.slice(_c.from.length);
+        _conv = _conv.replace(/^\s*\(/, '').replace(/\)\s*$/, '').trim();
+      }
       if (!_conv) _conv = _c.to;
       if (!turnLogged.has(_k)) { turnLogged.add(_k); if (typeof reflogAdd === 'function') reflogAdd('currency', _c.from + ' → ' + _conv); }
     }

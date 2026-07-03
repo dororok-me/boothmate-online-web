@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.50 → v1.13.51) — 파비콘을 'B' 모노그램으로 변경(교수님 요청):
+  - favicon.svg를 전체 워드마크 → 로고의 'B'만 크게 크롭(작은 탭에서 가독성↑). 흰 라운드 사각형 유지.
+    로고 픽셀 측정으로 B 경계(x0–175,y0–229) 잡고 clipPath로 옆글자 제거. <head> 링크는 그대로.
   변경점 (v1.13.49 → v1.13.50) — 브라우저 탭 파비콘 추가(교수님 요청):
   - favicon.svg 추가 — 흰 라운드 사각형에 Boothmate 로고 중앙 배치(로고 aspect 유지, base64 임베드).
     어떤 탭 배경(라이트/다크)에서도 또렷. <head>에 SVG 우선 + logo.png 폴백 + apple-touch-icon.
@@ -1522,7 +1525,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.50 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.51 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

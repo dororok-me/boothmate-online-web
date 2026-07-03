@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.39 → v1.13.40) — 설정·용어집 패널 열 때 아래 빈 자막 박스 숨김(교수님 요청):
+  - 설정 또는 용어집 패널이 열려 있으면 그 아래 자막 영역(#mcWrap)을 display:none 처리.
+    패널을 닫으면 다시 표시. window.__syncPanelLayout()을 각 열기/닫기 버튼에서 호출.
   변경점 (v1.13.38 → v1.13.39) — strangermisa10@gmail.com에 3시간 부여:
   - TIME_GRANTS에 strangermisa10@gmail.com = 3시간(grantId strangermisa10-3h-20260703) 추가.
   변경점 (v1.13.37 → v1.13.38) — 용어집 하이라이트 형광펜 스타일 + AI 괄호 제거(교수님 요청):
@@ -1468,7 +1471,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.39 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.40 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -3497,6 +3500,13 @@ window.addEventListener('pagehide', () => {
   }
 });
 
+/* 설정·용어집 패널이 열려 있으면 아래 자막 박스(#mcWrap)를 숨김 — 빈 사각형 박스 제거 */
+window.__syncPanelLayout = function() {
+  const mp = $('mcPanel'), gp = $('glossaryPanel'), mw = $('mcWrap');
+  const anyOpen = (mp && mp.classList.contains('open')) || (gp && gp.classList.contains('open'));
+  if (mw) mw.style.display = anyOpen ? 'none' : '';
+};
+
 /* ── 메인 콘솔 자막 설정 패널 (테마 + 폰트 크기·색상) ── */
 (function initMcPanel() {
   const panel = $('mcPanel');
@@ -3790,6 +3800,7 @@ window.addEventListener('pagehide', () => {
       $('mcOptBtn').style.background = '';
       $('mcOptBtn').style.color = '';
     }
+    window.__syncPanelLayout();
   };
   // 패널 안 닫기 버튼(있을 경우): 설정 버튼과 동일하게 처리
   if ($('mcPanelClose')) {
@@ -3797,6 +3808,7 @@ window.addEventListener('pagehide', () => {
       panel.classList.remove('open');
       const oc = document.getElementById('optsCollapse');
       if (oc) oc.style.display = 'none';
+      window.__syncPanelLayout();
     };
   }
 })();
@@ -3830,7 +3842,7 @@ window.addEventListener('pagehide', () => {
     '<input type="text" id="gSearch" class="g-search" placeholder="🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다">' +
     '<div class="g-list" id="gList"></div>';
 
-  if ($('gCloseBtn')) $('gCloseBtn').onclick = () => panel.classList.remove('open');
+  if ($('gCloseBtn')) $('gCloseBtn').onclick = () => { panel.classList.remove('open'); window.__syncPanelLayout(); };
 
   const listEl = $('gList');
   // 보기 모드: 용어1 ⇄ 용어2(동일폭) + 수정/삭제, 그 아래 유사어(치환 변이형) 목록
@@ -4104,7 +4116,7 @@ window.addEventListener('pagehide', () => {
   // mergeGlossary/render 이후에도 누락분 학습되도록 노출
   window.__glossaryLearnMissing = learnMissing;
 
-  $('glossaryBtn').onclick = () => { panel.classList.toggle('open'); if (panel.classList.contains('open')) { render(); learnMissing(); } };
+  $('glossaryBtn').onclick = () => { panel.classList.toggle('open'); if (panel.classList.contains('open')) { render(); learnMissing(); } window.__syncPanelLayout(); };
   render();
   learnMissing();
 })();

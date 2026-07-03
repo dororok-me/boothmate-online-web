@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.34 → v1.13.35) — min.interpreter@gmail.com에 5시간 부여:
+  - TIME_GRANTS에 min.interpreter@gmail.com = 5시간(grantId min-interpreter-5h-20260703) 추가.
   변경점 (v1.13.33 → v1.13.34) — 입력 레벨미터를 카운터 왼쪽 가로 점으로(교수님 요청):
   - 세로 5바 → 가로 점 7개(3×3px, 작고 촘촘)로 재디자인. 사운드 설정 박스 → 헤더 카운터 왼쪽으로 이동.
   - 회색 계열: 꺼짐 옅은 회색 / 켜짐 var(--t-muted)(아이콘색) / 과입력 마지막 점 #334155.
@@ -1441,7 +1443,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.34 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.35 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1788,7 +1790,8 @@ const UNLIMITED_EMAILS = ['dororok@gmail.com'];
    grantId가 같으면 재적용 안 됨(중복 지급 방지). 같은 계정에 또 주려면 grantId를 바꾼다. */
 const TIME_GRANTS = {
   'jigojisn@gmail.com': { seconds: 20 * 3600, grantId: 'jigojisn-20h-20260702' },
-  'twoamari@gmail.com': { seconds: 5 * 3600, grantId: 'twoamari-5h-20260702' }
+  'twoamari@gmail.com': { seconds: 5 * 3600, grantId: 'twoamari-5h-20260702' },
+  'min.interpreter@gmail.com': { seconds: 5 * 3600, grantId: 'min-interpreter-5h-20260703' }
 };
 
 const Ent = (function(){

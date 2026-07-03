@@ -51,6 +51,15 @@
   }
 
   function countChar(s, c) { var n = 0; for (var i = 0; i < s.length; i++) if (s.charAt(i) === c) n++; return n; }
+  // STT가 긴 숫자를 "6,820 7만" / "6,820 ₩70,000"처럼 공백으로 쪼갠 조각인지 판별.
+  // 매치 바로 앞이 "숫자 "(+공백)로 끝나면 떨어진 조각으로 보고 환산을 건너뛴다
+  // (조각의 뒷부분만 환산하면 68백만원이 $45처럼 엉뚱하게 표시돼 신뢰도가 떨어짐).
+  function isNumFragmentBefore(fullOut, m) {
+    var before = String(fullOut).slice(0, m.index);
+    var lead = /^\s+/.exec(m[0]);          // 매치가 삼킨 앞 공백(₩?\s* 등)까지 포함해 판정
+    if (lead) before += lead[0];
+    return /\d[\d,]*(?:\.\d+)?\s+$/.test(before);
+  }
   function stripComma(s) { return String(s).replace(/,/g, ""); }
   function fmtComma(v) { return Math.round(v).toLocaleString("en-US"); }
 
@@ -195,12 +204,14 @@
     if (!usdRate || usdRate <= 0) return text;
     var out = text;
     // 복합 한국어 수사("5억 3천만", "23조 3,486억") + 원 → 달러 (런 전체 합산)
-    out = replaceMatches(out, new RegExp("₩?\\s*" + KRUN + "\\s*원", "g"), function (m) {
+    out = replaceMatches(out, new RegExp("₩?\\s*" + KRUN + "\\s*원", "g"), function (m, fullOut) {
+      if (isNumFragmentBefore(fullOut, m)) return null;
       var a = parseKoreanAmount(m[1]); if (isNaN(a)) return null;
       return m[0] + "(" + formatUSDsimple(a / usdRate) + ")";
     });
     var krwUnit = function (pattern, multiplier) {
-      out = replaceMatches(out, new RegExp(pattern, "g"), function (m) {
+      out = replaceMatches(out, new RegExp(pattern, "g"), function (m, fullOut) {
+        if (isNumFragmentBefore(fullOut, m)) return null;
         var a = parseFloat(stripComma(m[1])); if (isNaN(a)) return null;
         var usd = (a * multiplier) / usdRate;
         return m[0] + "(" + formatUSDsimple(usd) + ")";
@@ -214,6 +225,7 @@
     // 멱등 가드: 뒤에 영어 단위(million/billion…)가 오면 이미 원화 영어 표기(formatWonEnglish)의
     // 일부이므로 건너뜀. 안 그러면 "₩600 million($…)" 재처리 시 "₩600($0) million($…)"로 중복됨.
     out = replaceMatches(out, new RegExp("₩\\s*" + NUM, "g"), function (m, fullOut, end) {
+      if (isNumFragmentBefore(fullOut, m)) return null;
       var after = fullOut.slice(end, end + 13).toLowerCase();
       if (after.indexOf(" million") === 0 || after.indexOf(" billion") === 0 ||
           after.indexOf(" trillion") === 0 || after.indexOf(" quadrillion") === 0) return null;
@@ -221,7 +233,8 @@
       return m[0] + "(" + formatUSDsimple(krw / usdRate) + ")";
     });
     // 큰 숫자(쉼표 포함) + 원 → 원본 그대로 + 달러
-    out = replaceMatches(out, /(\d{1,3}(?:,\d{3})+)\s*원/g, function (m) {
+    out = replaceMatches(out, /(\d{1,3}(?:,\d{3})+)\s*원/g, function (m, fullOut) {
+      if (isNumFragmentBefore(fullOut, m)) return null;
       var krw = parseFloat(stripComma(m[1])); if (isNaN(krw)) return null;
       return m[0] + "(" + formatUSDsimple(krw / usdRate) + ")";
     });

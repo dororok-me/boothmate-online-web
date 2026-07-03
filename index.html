@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.38 → v1.13.39) — strangermisa10@gmail.com에 3시간 부여:
+  - TIME_GRANTS에 strangermisa10@gmail.com = 3시간(grantId strangermisa10-3h-20260703) 추가.
   변경점 (v1.13.37 → v1.13.38) — 용어집 하이라이트 형광펜 스타일 + AI 괄호 제거(교수님 요청):
   - .gword를 굵은 글씨 → 형광펜(배경 색칠, 단어 감쌈)으로 변경. 메인=인디고(#C7D2FE),
     오버레이=반투명 인디고. box-decoration-break로 줄바꿈에도 유지.
@@ -1466,7 +1468,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.38 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.39 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1814,7 +1816,8 @@ const UNLIMITED_EMAILS = ['dororok@gmail.com'];
 const TIME_GRANTS = {
   'jigojisn@gmail.com': { seconds: 20 * 3600, grantId: 'jigojisn-20h-20260702' },
   'twoamari@gmail.com': { seconds: 5 * 3600, grantId: 'twoamari-5h-20260702' },
-  'min.interpreter@gmail.com': { seconds: 5 * 3600, grantId: 'min-interpreter-5h-20260703' }
+  'min.interpreter@gmail.com': { seconds: 5 * 3600, grantId: 'min-interpreter-5h-20260703' },
+  'strangermisa10@gmail.com': { seconds: 3 * 3600, grantId: 'strangermisa10-3h-20260703' }
 };
 
 const Ent = (function(){

@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.65 → v1.13.66) — 여러 단어 하이라이트의 띄어쓰기 틈 메움(교수님 요청):
+  - 단어 토큰(.w)의 좌우 1px 패딩 때문에 여러 단어 형광펜 조각 사이에 1px 빈 줄이 보이던 것.
+  - gword-joinl/joinr에 padding 2px + margin -2px를 줘 배경만 늘려 틈을 메움(글자 간격 불변).
   변경점 (v1.13.64 → v1.13.65) — 용어집 패널 탭 시인성 개선(교수님 요청):
   - '용어 추가 / ☁️ 클라우드 용어집' 탭을 밑줄형 → 세그먼트(알약)형으로 변경.
     활성 탭은 보라색(#4F46E5)으로 채워지고, 두 탭이 패널 폭을 반씩 차지해 눈에 잘 띔.
@@ -1216,9 +1219,11 @@
     box-decoration-break: clone;
   }
   .transline.pending .gword { background: #E0E7FF; }
-  /* 여러 단어 표제어("눈에 띄다") — 이어지는 조각의 안쪽 모서리·패딩을 없애 한 덩어리 형광펜으로 (v1.13.61) */
-  .transline .gword-joinl { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 0; }
-  .transline .gword-joinr { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 0; }
+  /* 여러 단어 표제어("눈에 띄다") — 이어지는 조각의 안쪽 모서리·패딩을 없애 한 덩어리 형광펜으로 (v1.13.61)
+     .w 토큰의 좌우 1px 패딩이 조각 사이 빈 틈으로 보여서, 이어지는 쪽 배경을 2px 늘리고
+     같은 크기 음수 마진으로 되당겨 틈을 색으로 메움 — 글자 간격은 그대로 (v1.13.66) */
+  .transline .gword-joinl { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 2px; margin-left: -2px; }
+  .transline .gword-joinr { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 2px; margin-right: -2px; }
   /* 실시간 수정 기능 숨김 시: 단어가 클릭 가능한 것처럼 보이지 않게 */
   body.no-live-edit .transline .w { cursor: text; }
   body.no-live-edit .transline .w:hover { background: none; }
@@ -1659,7 +1664,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.65 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.66 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

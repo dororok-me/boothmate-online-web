@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.54 → v1.13.55) — 용어집 굴절형(동사·형용사·부사) 반영 강화(교수님 보고):
+  - "심사할 환자" → "reviewed"로 새던 문제: AI 지침이 한국어 활용형을 트리거로 명시하지 않았음.
+    glossaryInstruction을 강화 — 한국어 조사·활용(심사할·심사를·심사하는), 영어 굴절·파생
+    (screens·screened·screening, gradual→gradually)도 등록어 등장으로 간주, 반드시 우측 표준어를
+    어근으로 굴절해 쓰도록 명시 + 반례 예시("patients to be screened, NOT reviewed") 포함.
+  - 감지·하이라이트도 굴절형 대응: annotateGlossary 표준표기 감지와 자막 형광펜(glossaryHlRegexes)을
+    flexRegexP(복수만) → flexRegexInfl(-ed/-ing/-ly/-er/-est, e탈락형 excluded/excluding 포함)로 확대
+    → AI가 screened로 잘 냈을 때 로그·하이라이트 누락 방지. (치환은 복수 보존만 — 보수적 유지)
   변경점 (v1.13.53 → v1.13.54) — 용어집 용어1 색 대비 강화 + 별칭을 박스로(교수님 요청):
   - 용어1 계열(#gInA·g-ea·g-a·별칭칸)이 흰 배경과 구별이 안 되던 문제 → 선명한 파랑 톤
     (#d9e6f8/#9dbde6)으로 진하게. 별칭칸은 그 연한 톤(#e9f1fc)으로 열 소속 표시.
@@ -1560,7 +1568,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.54 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.55 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2490,7 +2498,8 @@ function glossaryHlRegexes() {
     const k = t.toLowerCase();
     if (seen[k]) continue;
     seen[k] = 1;
-    try { list.push(flexRegexP(t)); } catch (e) { /* 잘못된 표제어는 건너뜀 */ }
+    // 굴절형(screened/screening 등)도 형광펜 하이라이트되도록 감지용 정규식 사용 (v1.13.55)
+    try { list.push(flexRegexInfl(t)); } catch (e) { /* 잘못된 표제어는 건너뜀 */ }
   }
   _glossaryHlCache = { key: key, list: list };
   return list;
@@ -2577,7 +2586,8 @@ function flexRegexP(term) {
   const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp('(?<![A-Za-z0-9])' + esc + '(?:es|s)?(?![A-Za-z0-9])', 'gi');
 }
-/* 감지(로그)용 정규식 — 영어 등록어의 규칙 굴절(-s/-es/-ed/-d/-ing/-ly/-er/-est)까지 매치.
+/* 감지(로그·하이라이트)용 정규식 — 영어 등록어의 규칙 굴절(-s/-es/-ed/-ing/-ly/-er/-est)까지 매치.
+   e로 끝나는 단어는 e 탈락형도 커버(exclude → excluded/excluding, screen → screened/screening).
    치환에는 쓰지 않는다(AI가 이미 올바르게 굴절해 낸 번역을 후처리가 깎지 않도록). */
 function flexRegexInfl(term) {
   const hasKo = /[가-힣]/.test(term);
@@ -2586,7 +2596,10 @@ function flexRegexInfl(term) {
     return new RegExp(escaped.join('\\s*'), 'g');
   }
   const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp('(?<![A-Za-z0-9])' + esc + '(?:es|s|ed|d|ing|ly|er|est)?(?![A-Za-z0-9])', 'gi');
+  let core;
+  if (/e$/i.test(term)) core = esc.slice(0, -1) + '(?:e|es|ed|ing|ely)';   // exclude→excluded/excluding
+  else core = esc + '(?:es|s|ed|d|ing|ly|er|est)?';
+  return new RegExp('(?<![A-Za-z0-9])' + core + '(?![A-Za-z0-9])', 'gi');
 }
 /* 프롬프트용 글로서리 지시문 — 괄호 주석 방식으로 전환하여 프롬프트 주입 사용 안 함 */
 /* 용어집 프롬프트 주입 — 현재 출력 언어 방향의 (트리거어 → 표준표기) 매핑을 systemInstruction에 실어
@@ -2616,7 +2629,15 @@ function glossaryInstruction(targetCode) {
     for (const src of srcs) if (src && !eqTerm(tgt, src)) pairs.push('"' + src + '" → "' + tgt + '"');
   }
   if (!pairs.length) return null;
-  return 'Glossary (MANDATORY): when the input contains the left term in ANY inflected form (plural, tense, derived part of speech), translate it using the right term as the root word — keep that root word exactly, never paraphrase it and never use a synonym, but DO inflect it naturally (plural, tense, adverb form, etc.) to fit the grammar of the sentence: ' + pairs.join('; ') + '.';
+  return 'Glossary (MANDATORY): the following term mappings OVERRIDE your default word choice. ' +
+    'A left term counts as present even when inflected or conjugated — Korean particles and verb/adjective conjugations ' +
+    '(e.g., 심사 covers 심사할·심사를·심사하는·심사받다) and English inflections/derivations ' +
+    '(e.g., screen covers screens·screened·screening; gradual covers gradually). ' +
+    'Whenever a left term appears in the input in ANY such form, the translation MUST use the right term as the ROOT word — ' +
+    'never a synonym, never a paraphrase — and you inflect that root naturally to fit the sentence grammar ' +
+    '(plural, tense, participle, adverb form, Korean conjugation). ' +
+    'Example: with "심사" → "screen", translate "심사할 환자" as "patients to be screened", NOT "patients to be reviewed". Mappings: ' +
+    pairs.join('; ') + '.';
 }
 /* 쌍에서 해당 언어처럼 보이는 항목 고르기 (한글 포함 여부로 판단) */
 function pickByLang(pair, lang) {
@@ -2804,7 +2825,8 @@ function annotateGlossary(text, outCode) {
     }
     if (!canon || !other || eqTerm(canon, other)) continue;
     let re;
-    try { re = flexRegexP(canon); } catch (e) { continue; }   // 영어 표준표기 복수형(cats/dogs)도 병기
+    // 영어 표준표기의 굴절형(screens/screened/screening/excluded 등)도 감지 — 로그 누락 방지 (v1.13.55)
+    try { re = flexRegexInfl(canon); } catch (e) { continue; }
     // 표준표기가 출력에 등장하면(누가 병기했든) 로그 기록 — AI가 직접 괄호를 붙인 경우도 누락 안 함
     re.lastIndex = 0;
     const present = re.test(out);

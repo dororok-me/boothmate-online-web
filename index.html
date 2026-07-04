@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.56 → v1.13.57) — '내 용어집' 이름 붙여 저장·불러오기(교수님 요청, 리텐션 전략):
+  - 용어집 패널에 '💾 내 용어집 저장'(원하는 이름 입력, 같은 이름은 덮어쓰기 확인)과
+    '📂 내 용어집'(저장 목록 토글 — 이름·용어 수·저장일, 불러오기/삭제) 추가.
+  - 불러오기는 현재 용어집을 통째로 교체(확인창). 저장 직후 목록 자동 펼침.
+  - 저장소는 localStorage 'glossary_sets'(계정별 분리 키 등록) — 서버·DB 사용 없음.
+    유저가 수백 명이어도 각자 브라우저에 저장되므로 서버 성능 영향 0. 기기 간 동기화는
+    출시 시 Firebase 이전 계획(POLICY_SPEC users/{uid}/glossaries 구조) 그대로.
   변경점 (v1.13.55 → v1.13.56) — 한국어 활용형도 로그·하이라이트(교수님 보고):
   - prominent → "눈에 띄었습니다"처럼 AI가 한국어 표준어를 활용형으로 잘 냈는데 로그·형광펜이
     안 뜨던 문제. 두 원인: ① 감지 정규식이 기본형("눈에 띄다") 그대로만 매치 ② 하이라이트가
@@ -1102,6 +1109,21 @@
   #glossaryPanel .g-tool:hover { background: #34507a; }
   #glossaryPanel .g-tool.g-danger { background: #3a2230; color: #f0a0b0; }
   #glossaryPanel .g-tool.g-danger:hover { background: #5a2a3a; }
+  /* 내 용어집(세트) — 저장 버튼 강조 + 저장 목록 박스 (v1.13.57) */
+  #glossaryPanel .g-tool.g-primary { background: #4F46E5; color: #fff; }
+  #glossaryPanel .g-tool.g-primary:hover { background: #4338CA; }
+  #glossaryPanel .g-sets {
+    margin-bottom: 10px; padding: 8px 12px;
+    background: var(--t-area-bg, #0f1626); border: 1px solid var(--t-border, #2a3a55); border-radius: 8px;
+  }
+  #glossaryPanel .g-sets-ttl { font-size: 12px; font-weight: 700; color: var(--t-accent, #7dd3fc); margin-bottom: 6px; }
+  #glossaryPanel .g-set-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  #glossaryPanel .g-set-name {
+    flex: 1 1 0; min-width: 0; font-size: 13px; font-weight: 600; color: var(--t-text, #e2e8f0);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #glossaryPanel .g-set-meta { flex: 0 0 auto; font-size: 11px; color: var(--t-muted, #7a8ba8); }
+  #glossaryPanel .g-sets-empty { font-size: 12px; color: var(--t-muted, #7a8ba8); font-style: italic; padding: 2px 0; }
   #glossaryPanel .g-count { color: #7a8ba8; font-size: 12px; margin-left: 4px; }
   #glossaryPanel .g-explabel { color: #9fb0cc; font-size: 12px; }
   #glossaryPanel .g-sel { padding: 6px 12px; background: #2a3a55; border: none; border-radius: 6px; color: #cfe0ff; font-size: 12px; cursor: pointer; }
@@ -1376,7 +1398,7 @@
       mc_theme:1, mc_src_color:1, mc_trans_color:1, mc_src_size:1, mc_trans_size:1,
       mc_src_weight:1, mc_trans_weight:1, mc_wrap_h:1, speech_level:1, lang_pair:1,
       mic_device_id:1, sys_audio_mode:1, input_mode:1, reflog_visible:1, reflog_collapsed:1,
-      sessions:1, glossary:1, conn_mode:1, gemini_api_key:1, auto_stop_min:1,
+      sessions:1, glossary:1, glossary_sets:1, conn_mode:1, gemini_api_key:1, auto_stop_min:1,
       relay_url:1, relay_ticket:1, bm_native_overlay:1, dir_mode:1
     };
     var email = null;
@@ -1578,7 +1600,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.56 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.57 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2081,7 +2103,7 @@ function applyEntitlementUI() {
   const canG = Ent.canUseGlossary();
   const canX = Ent.canExport();
   // 용어집 추가 (체험중·5h+ 가능, 1h 잠금)
-  ['gAddBtn', 'gInA', 'gInB', 'gInSynA', 'gInSynB'].forEach(id => {
+  ['gAddBtn', 'gInA', 'gInB', 'gInSynA', 'gInSynB', 'gSaveSetBtn', 'gMySetsBtn'].forEach(id => {
     const el = document.getElementById(id); if (!el) return;
     el.disabled = !canG;
     el.style.opacity = canG ? '' : '0.5';
@@ -2575,6 +2597,16 @@ function loadSheetJS(cb) {
 }
 function saveGlossary(list) {
   localStorage.setItem('glossary', JSON.stringify(list));
+}
+/* ── 내 용어집(이름 붙여 저장한 세트) — [{name, savedAt, list:[entries]}] ──
+   localStorage(계정별 분리 키 glossary_sets)에만 저장 — 서버·DB 사용 없음.
+   행사별로 용어집을 만들어 두고 골라 불러오는 용도(유저 리텐션). (v1.13.57) */
+function loadGlossarySets() {
+  try { return JSON.parse(localStorage.getItem('glossary_sets') || '[]'); }
+  catch (e) { return []; }
+}
+function saveGlossarySets(sets) {
+  localStorage.setItem('glossary_sets', JSON.stringify(sets));
 }
 /* 번역 방향에 따라 [찾을말, 바꿀말] 쌍 목록.
    양방향: 등록쌍 {a,b}에서 — 번역 결과 언어로 '바꿀말'이 가게.
@@ -4154,6 +4186,8 @@ window.__syncPanelLayout = function() {
       '</div>' +
     '</div>' +
     '<div class="g-tools">' +
+      '<button id="gSaveSetBtn" class="g-tool g-primary">💾 내 용어집 저장</button>' +
+      '<button id="gMySetsBtn" class="g-tool">📂 내 용어집</button>' +
       '<span class="g-explabel">내보내기:</span>' +
       '<select id="gExportFmt" class="g-sel"><option value="csv">CSV</option><option value="txt">TXT</option><option value="xlsx">Excel</option></select>' +
       '<button id="gExportBtn" class="g-tool">저장</button>' +
@@ -4161,6 +4195,10 @@ window.__syncPanelLayout = function() {
       '<button id="gResetBtn" class="g-tool g-danger">전체 삭제</button>' +
       '<input type="file" id="gFileInput" accept=".txt,.csv,.xlsx,.xls,text/plain,text/csv" style="display:none;">' +
       '<span id="gCount" class="g-count"></span>' +
+    '</div>' +
+    '<div id="gSetsBox" class="g-sets" style="display:none;">' +
+      '<div class="g-sets-ttl">📂 내 용어집 — 클릭해 불러오면 현재 용어집이 교체됩니다</div>' +
+      '<div id="gSetsList"></div>' +
     '</div>' +
     '<input type="text" id="gSearch" class="g-search" placeholder="🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다">' +
     '<div class="g-list" id="gList"></div>';
@@ -4438,6 +4476,78 @@ window.__syncPanelLayout = function() {
       render();
     }
   };
+
+  // ── 내 용어집(세트) 저장·보기 — localStorage(계정별)만 사용, 서버 부하 없음 (v1.13.57) ──
+  function fmtDate(ts) {
+    const d = new Date(ts);
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  function renderSets() {
+    const sets = loadGlossarySets();
+    const btn = $('gMySetsBtn');
+    if (btn) btn.textContent = '📂 내 용어집' + (sets.length ? ' (' + sets.length + ')' : '');
+    const box = $('gSetsList');
+    if (!box) return;
+    box.innerHTML = '';
+    if (!sets.length) {
+      box.innerHTML = '<div class="g-sets-empty">저장된 용어집이 없습니다. 현재 용어집을 \'내 용어집 저장\'으로 이름 붙여 보관하세요.</div>';
+      return;
+    }
+    sets.forEach(function (st, i) {
+      const row = document.createElement('div');
+      row.className = 'g-set-row';
+      row.innerHTML =
+        '<span class="g-set-name"></span>' +
+        '<span class="g-set-meta"></span>' +
+        '<button class="g-tool g-set-load">불러오기</button>' +
+        '<button class="g-tool g-danger g-set-del">삭제</button>';
+      row.querySelector('.g-set-name').textContent = st.name;
+      row.querySelector('.g-set-meta').textContent = (st.list ? st.list.length : 0) + '개 · ' + fmtDate(st.savedAt);
+      row.querySelector('.g-set-load').onclick = function () {
+        const cur = loadGlossary();
+        const msg = cur.length
+          ? '현재 용어집(' + cur.length + '개)을 "' + st.name + '"(' + st.list.length + '개)로 교체할까요?\n(현재 용어집을 따로 저장하지 않았다면 사라집니다)'
+          : '"' + st.name + '"(' + st.list.length + '개)를 불러올까요?';
+        if (!confirm(msg)) return;
+        saveGlossary(JSON.parse(JSON.stringify(st.list || [])));
+        render();
+        learnMissing();   // nat 보정(구형 세트 호환)
+      };
+      row.querySelector('.g-set-del').onclick = function () {
+        if (!confirm('저장된 용어집 "' + st.name + '"을 삭제할까요?')) return;
+        const cur2 = loadGlossarySets();
+        cur2.splice(i, 1);
+        saveGlossarySets(cur2);
+        renderSets();
+      };
+      box.appendChild(row);
+    });
+  }
+  $('gSaveSetBtn').onclick = () => {
+    const list = loadGlossary();
+    if (!list.length) { alert('저장할 용어가 없습니다. 먼저 용어를 등록하세요.'); return; }
+    const defName = '용어집 ' + fmtDate(Date.now());
+    let name = prompt('저장할 용어집 이름을 입력하세요.', defName);
+    if (name === null) return;
+    name = name.trim() || defName;
+    const sets = loadGlossarySets();
+    const idx = sets.findIndex(function (s) { return s.name === name; });
+    if (idx >= 0) {
+      if (!confirm('"' + name + '"이(가) 이미 있습니다. 현재 용어집(' + list.length + '개)으로 덮어쓸까요?')) return;
+      sets[idx] = { name: name, savedAt: Date.now(), list: JSON.parse(JSON.stringify(list)) };
+    } else {
+      sets.push({ name: name, savedAt: Date.now(), list: JSON.parse(JSON.stringify(list)) });
+    }
+    saveGlossarySets(sets);
+    $('gSetsBox').style.display = '';   // 저장 직후 목록을 펼쳐 보여줌
+    renderSets();
+  };
+  $('gMySetsBtn').onclick = () => {
+    const box = $('gSetsBox');
+    box.style.display = (box.style.display === 'none') ? '' : 'none';
+    renderSets();
+  };
+  renderSets();
 
   // nat 보정 + 구버전 별칭(단일 syn 또는 AI 학습 nat)을 언어별 박스(synA/synB)로 1회 이관 (AI 호출 없음, 동기)
   function learnMissing() {

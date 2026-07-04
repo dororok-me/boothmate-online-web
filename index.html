@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.53 → v1.13.54) — 용어집 용어1 색 대비 강화 + 별칭을 박스로(교수님 요청):
+  - 용어1 계열(#gInA·g-ea·g-a·별칭칸)이 흰 배경과 구별이 안 되던 문제 → 선명한 파랑 톤
+    (#d9e6f8/#9dbde6)으로 진하게. 별칭칸은 그 연한 톤(#e9f1fc)으로 열 소속 표시.
+  - 목록의 별칭을 "patient 별칭: …" 텍스트 줄 → 각 용어 칩 바로 아래 같은 폭의 별칭 박스로.
+    유령 화살표·버튼(g-ghost)으로 위 줄과 폭을 맞춰 정렬. 없으면 "별칭 없음"(이탤릭).
   변경점 (v1.13.52 → v1.13.53) — 용어 로그 좌측 = 실제 말한 원문 단어(교수님 보고):
   - "참가자"라고 말했는데 로그가 "participant → patient"(출력쪽 별칭)나 "피험자 → patient"(표제어)로
     나오던 문제. 치환·감지 로그 모두 이번 턴 원문(turnSrcText)에서 실제 말한 트리거어를 찾아
@@ -988,12 +993,12 @@
     color: #e2e8f0; font-size: 13px; flex: 1 1 0; min-width: 0; width: auto;
   }
   /* 용어1 = 흰색 계열, 용어2 = 앰버(노랑) 계열로 칸 색을 확실히 구별 */
-  #glossaryPanel #gInA { background: #eef2f8; border-color: #cdd8e8; color: #1c2842; }
+  #glossaryPanel #gInA { background: #d9e6f8; border-color: #9dbde6; color: #14294d; }
   #glossaryPanel #gInB { background: #f4e2b2; border-color: #dcc079; color: #4d3a12; }
   #glossaryPanel #gInA::placeholder { color: #7a869b; }
   #glossaryPanel #gInB::placeholder { color: #9a824d; }
-  /* 별칭 입력칸 — 각 용어 칸의 연한 톤(용어1=연회청, 용어2=연앰버)으로 열 소속을 표시 */
-  #glossaryPanel #gInSynA { background: #f3f5f9; border-color: #d7deea; color: #1c2842; font-weight: 500; }
+  /* 별칭 입력칸 — 각 용어 칸의 연한 톤(용어1=연파랑, 용어2=연앰버)으로 열 소속을 표시 */
+  #glossaryPanel #gInSynA { background: #e9f1fc; border-color: #c2d7f0; color: #1c2842; font-weight: 500; }
   #glossaryPanel #gInSynB { background: #faf3df; border-color: #e6d5a8; color: #4d3a12; font-weight: 500; }
   #glossaryPanel #gInSynA::placeholder { color: #8a95a8; font-weight: 400; }
   #glossaryPanel #gInSynB::placeholder { color: #ab9668; font-weight: 400; }
@@ -1016,17 +1021,24 @@
     background: #0f1626; border: 1px solid #1e2b40; border-radius: 6px;
   }
   #glossaryPanel .g-item .g-main { display: flex; align-items: center; gap: 10px; }
-  #glossaryPanel .g-item .g-syn { font-size: 12px; color: var(--t-muted); padding-left: 2px; word-break: break-word; }
-  #glossaryPanel .g-item .g-syn-empty { opacity: 0.55; font-style: italic; }
+  /* 별칭 박스(보기 모드) — 각 용어 칩 바로 아래, 같은 폭으로 정렬 (v1.13.54) */
+  #glossaryPanel .g-item .g-syn-row { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+  #glossaryPanel .g-item .g-syn-box {
+    flex: 1 1 0; min-width: 0; font-size: 12px; padding: 3px 8px; border-radius: 5px;
+    word-break: break-word;
+  }
+  #glossaryPanel .g-item .g-syn-boxa { background: #e9f1fc; border: 1px solid #c2d7f0; color: #2a4267; }
+  #glossaryPanel .g-item .g-syn-boxb { background: #faf3df; border: 1px solid #e6d5a8; color: #6b5423; }
+  #glossaryPanel .g-item .g-syn-none { opacity: 0.55; font-style: italic; }
   #glossaryPanel .g-item .g-syn-edit { display: flex; gap: 8px; align-items: center; }
-  #glossaryPanel .g-item .g-esyna { flex: 1 1 0; min-width: 0; background: #f3f5f9 !important; border-color: #d7deea !important; color: #1c2842 !important; font-weight: 500; }
+  #glossaryPanel .g-item .g-esyna { flex: 1 1 0; min-width: 0; background: #e9f1fc !important; border-color: #c2d7f0 !important; color: #1c2842 !important; font-weight: 500; }
   #glossaryPanel .g-item .g-esynb { flex: 1 1 0; min-width: 0; background: #faf3df !important; border-color: #e6d5a8 !important; color: #4d3a12 !important; font-weight: 500; }
   /* 리스트 행 교차 색(zebra) */
   #glossaryPanel .g-item:nth-child(even) { background: #131d33; }
   /* 열(용어1/용어2) 구별: 용어1=파랑 칩, 용어2=초록 칩 */
   #glossaryPanel .g-item .g-a {
-    color: #1c2842; font-weight: 600; flex: 1 1 0; min-width: 0;
-    background: #eef2f8; border: 1px solid #cdd8e8;
+    color: #14294d; font-weight: 600; flex: 1 1 0; min-width: 0;
+    background: #d9e6f8; border: 1px solid #9dbde6;
     padding: 3px 8px; border-radius: 5px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
@@ -1052,7 +1064,7 @@
     border: 1px solid #2a3a55; border-radius: 5px; color: #e2e8f0;
   }
   /* 편집 입력칸도 용어1=흰색 / 용어2=앰버 */
-  #glossaryPanel .g-item .g-ea { background: #eef2f8; border-color: #cdd8e8; color: #1c2842; }
+  #glossaryPanel .g-item .g-ea { background: #d9e6f8; border-color: #9dbde6; color: #14294d; }
   #glossaryPanel .g-item .g-eb { background: #f4e2b2; border-color: #dcc079; color: #4d3a12; }
   #glossaryPanel .g-item .g-save {
     background: #1e3a2f; color: #9fe6b0; border: none; border-radius: 5px;
@@ -1548,7 +1560,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.53 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.54 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -4090,7 +4102,7 @@ window.__syncPanelLayout = function() {
   if ($('gCloseBtn')) $('gCloseBtn').onclick = () => { panel.classList.remove('open'); window.__syncPanelLayout(); };
 
   const listEl = $('gList');
-  // 보기 모드: 용어1 ⇄ 용어2(동일폭) + 수정/삭제, 그 아래 언어별 별칭 두 줄
+  // 보기 모드: 용어1 ⇄ 용어2(동일폭) + 수정/삭제, 각 용어 칩 바로 아래 별칭 박스(같은 폭 정렬)
   function viewRow(row, it, idx) {
     row.innerHTML =
       '<div class="g-main">' +
@@ -4098,20 +4110,20 @@ window.__syncPanelLayout = function() {
         '<button class="g-edit" title="별칭 추가·수정">수정</button>' +
         '<button class="g-del">삭제</button>' +
       '</div>' +
-      '<div class="g-syn g-syn-la"></div>' +
-      '<div class="g-syn g-syn-lb"></div>';
+      // 별칭 박스 줄 — 유령 화살표·버튼으로 위 줄과 폭을 맞춰 각 용어 아래 정렬
+      '<div class="g-syn-row">' +
+        '<span class="g-syn-box g-syn-boxa"></span><span class="g-mid g-ghost">⇄</span><span class="g-syn-box g-syn-boxb"></span>' +
+        '<button class="g-edit g-ghost" tabindex="-1">수정</button>' +
+        '<button class="g-del g-ghost" tabindex="-1">삭제</button>' +
+      '</div>';
     row.querySelector('.g-a').textContent = it.a;
     row.querySelector('.g-b').textContent = it.b;
-    const saEl = row.querySelector('.g-syn-la'), sbEl = row.querySelector('.g-syn-lb');
+    const boxA = row.querySelector('.g-syn-boxa'), boxB = row.querySelector('.g-syn-boxb');
     const sa = splitAliases(it.synA || ''), sb = splitAliases(it.synB || '');
-    const aHead = splitAliases(it.a)[0] || it.a, bHead = splitAliases(it.b)[0] || it.b;
-    if (!sa.length && !sb.length) {
-      saEl.textContent = '별칭 없음'; saEl.classList.add('g-syn-empty');
-      sbEl.style.display = 'none';
-    } else {
-      if (sa.length) saEl.textContent = aHead + ' 별칭: ' + sa.join(', '); else saEl.style.display = 'none';
-      if (sb.length) sbEl.textContent = bHead + ' 별칭: ' + sb.join(', '); else sbEl.style.display = 'none';
-    }
+    if (sa.length) boxA.textContent = sa.join(', ');
+    else { boxA.textContent = '별칭 없음'; boxA.classList.add('g-syn-none'); }
+    if (sb.length) boxB.textContent = sb.join(', ');
+    else { boxB.textContent = '별칭 없음'; boxB.classList.add('g-syn-none'); }
     row.querySelector('.g-edit').onclick = () => editRow(row, idx);
     row.querySelector('.g-del').onclick = () => {
       const cur = loadGlossary();
@@ -4133,6 +4145,7 @@ window.__syncPanelLayout = function() {
         '<input class="g-ein g-esyna" type="text" placeholder="용어 1 별칭 — 쉼표 구분">' +
         '<span class="g-mid g-ghost">⇄</span>' +
         '<input class="g-ein g-esynb" type="text" placeholder="용어 2 별칭 — 쉼표 구분">' +
+        '<button class="g-save g-ghost" tabindex="-1">저장</button><button class="g-cancel g-ghost" tabindex="-1">취소</button>' +
       '</div>';
     const ea = row.querySelector('.g-ea'), eb = row.querySelector('.g-eb');
     const esa = row.querySelector('.g-esyna'), esb = row.querySelector('.g-esynb');

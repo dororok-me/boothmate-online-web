@@ -75,7 +75,7 @@ users/{uid}/
 users/{uid}/glossaries/{gid}/       // 단어장 — 행사별
   eventName:        "ABC 컨퍼런스"
   date:             "2026-07-01"
-  entries:          [{source, target, aliases}, ...]
+  entries:          [{a, b, synA, synB}, ...]   // synA/synB = 언어별 별칭 (v1.13.52)
   locked:           false           // 무료 종료 후 true → 5h+ 사야 해제
 
 users/{uid}/purchases/{pid}/        // 구매 내역

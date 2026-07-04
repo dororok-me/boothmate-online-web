@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.59 → v1.13.60) — 용어집 패널 탭 분리 + 내보내기 형식 드롭다운 통합(교수님 요청):
+  - '내 용어집' 관련 UI(저장 버튼·목록)를 별도 탭으로 분리: 상단 [용어 목록]/[📂 내 용어집]
+    탭 버튼(gTabBtnMain/gTabBtnSets)으로 전환. 저장하면 자동으로 '내 용어집' 탭으로 이동해
+    바로 보여줌(gSwitchTab). 탭 배지에 저장된 개수 표시("📂 내 용어집 (3)").
+  - 내보내기 버튼 제거, 드롭다운에서 형식(CSV/TXT/Excel)을 고르면 바로 다운로드되도록 변경
+    ("내보낼 형식 선택" 플레이스홀더 → change 이벤트로 즉시 실행 → 선택값 초기화).
   변경점 (v1.13.58 → v1.13.59) — 스페인어·포르투갈어 지역 변형 추가(교수님 요청):
   - 언어 목록에 Español (México)/(Argentina)/(Latinoamérica), Português (Brasil) 추가.
     '아르헨티나어·멕시코어'는 별도 언어가 아니라 스페인어 지역 변형 — 선택 시 그 지역
@@ -1125,6 +1131,16 @@
   #glossaryPanel .g-tool:hover { background: #34507a; }
   #glossaryPanel .g-tool.g-danger { background: #3a2230; color: #f0a0b0; }
   #glossaryPanel .g-tool.g-danger:hover { background: #5a2a3a; }
+  /* 용어집 패널 탭 — 용어 목록 / 내 용어집 (v1.13.60) */
+  #glossaryPanel .g-tabs {
+    display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--t-border, #2a3a55);
+  }
+  #glossaryPanel .g-tab {
+    padding: 8px 14px; font-size: 13px; font-weight: 600; background: transparent; color: var(--t-muted, #7a8ba8);
+    border: none; border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px;
+  }
+  #glossaryPanel .g-tab:hover { color: var(--t-text, #e2e8f0); }
+  #glossaryPanel .g-tab.active { color: var(--t-accent, #7dd3fc); border-bottom-color: #4F46E5; }
   /* 내 용어집(세트) — 저장 버튼 강조 + 저장 목록 박스 (v1.13.57) */
   #glossaryPanel .g-tool.g-primary { background: #4F46E5; color: #fff; }
   #glossaryPanel .g-tool.g-primary:hover { background: #4338CA; }
@@ -1616,7 +1632,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.59 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.60 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2131,14 +2147,14 @@ function applyEntitlementUI() {
   const canG = Ent.canUseGlossary();
   const canX = Ent.canExport();
   // 용어집 추가 (체험중·5h+ 가능, 1h 잠금)
-  ['gAddBtn', 'gInA', 'gInB', 'gInSynA', 'gInSynB', 'gSaveSetBtn', 'gMySetsBtn'].forEach(id => {
+  ['gAddBtn', 'gInA', 'gInB', 'gInSynA', 'gInSynB', 'gSaveSetBtn'].forEach(id => {
     const el = document.getElementById(id); if (!el) return;
     el.disabled = !canG;
     el.style.opacity = canG ? '' : '0.5';
     el.title = canG ? '' : '용어집은 무료 체험 또는 5시간권 이상에서 사용할 수 있습니다.';
   });
   // 내보내기/불러오기 (5h+ 만)
-  ['gExportBtn', 'gImportBtn'].forEach(id => {
+  ['gExportFmt', 'gImportBtn'].forEach(id => {
     const el = document.getElementById(id); if (!el) return;
     el.disabled = !canX;
     el.style.opacity = canX ? '' : '0.5';
@@ -4272,6 +4288,11 @@ window.__syncPanelLayout = function() {
   const panel = $('glossaryPanel');
   panel.innerHTML =
     '<div class="g-head"><div class="g-ttl">📖 용어집 (양방향 — 한국어 ⇄ 모든 외국어)</div><button type="button" id="gCloseBtn" class="g-close" title="용어집 닫기">✕ 닫기</button></div>' +
+    '<div class="g-tabs">' +
+      '<button type="button" id="gTabBtnMain" class="g-tab active">용어 목록</button>' +
+      '<button type="button" id="gTabBtnSets" class="g-tab">📂 내 용어집</button>' +
+    '</div>' +
+    '<div id="gTabMain">' +
     '<div class="g-add">' +
       '<div class="g-add-terms">' +
         '<input type="text" id="gInA" placeholder="용어 1 (예: patient)">' +
@@ -4288,23 +4309,30 @@ window.__syncPanelLayout = function() {
         '<button id="gAddBtn">추가</button>' +
       '</div>' +
     '</div>' +
-    '<div class="g-tools">' +
-      '<button id="gSaveSetBtn" class="g-tool g-primary">💾 내 용어집 저장</button>' +
-      '<button id="gMySetsBtn" class="g-tool">📂 내 용어집</button>' +
-      '<select id="gExportFmt" class="g-sel"><option value="csv">CSV</option><option value="txt">TXT</option><option value="xlsx">Excel</option></select>' +
-      '<button id="gExportBtn" class="g-tool">내보내기</button>' +
-      '<button id="gImportBtn" class="g-tool">불러오기</button>' +
-      '<button id="gResetBtn" class="g-tool g-danger">전체 삭제</button>' +
-      '<input type="file" id="gFileInput" accept=".txt,.csv,.xlsx,.xls,text/plain,text/csv" style="display:none;">' +
-      '<span id="gCount" class="g-count"></span>' +
-      '<span id="gCloudStat" class="g-count"></span>' +
+      '<div class="g-tools">' +
+        '<select id="gExportFmt" class="g-sel">' +
+          '<option value="" selected>내보낼 형식 선택</option>' +
+          '<option value="csv">CSV</option><option value="txt">TXT</option><option value="xlsx">Excel (.xlsx)</option>' +
+        '</select>' +
+        '<button id="gImportBtn" class="g-tool">불러오기</button>' +
+        '<button id="gResetBtn" class="g-tool g-danger">전체 삭제</button>' +
+        '<input type="file" id="gFileInput" accept=".txt,.csv,.xlsx,.xls,text/plain,text/csv" style="display:none;">' +
+        '<span id="gCount" class="g-count"></span>' +
+        '<span id="gCloudStat" class="g-count"></span>' +
+      '</div>' +
+      '<input type="text" id="gSearch" class="g-search" placeholder="🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다">' +
+      '<div class="g-list" id="gList"></div>' +
     '</div>' +
-    '<div id="gSetsBox" class="g-sets" style="display:none;">' +
-      '<div class="g-sets-ttl">📂 내 용어집 — 불러올 때 \'삭제 후 불러오기 / 이어 붙이기\'를 선택합니다</div>' +
-      '<div id="gSetsList"></div>' +
-    '</div>' +
-    '<input type="text" id="gSearch" class="g-search" placeholder="🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다">' +
-    '<div class="g-list" id="gList"></div>';
+    '<div id="gTabSets" style="display:none;">' +
+      '<div class="g-tools">' +
+        '<button id="gSaveSetBtn" class="g-tool g-primary">💾 현재 용어집을 내 용어집으로 저장</button>' +
+        '<span class="g-count">이름을 붙여 보관하고, 행사마다 골라 불러옵니다</span>' +
+      '</div>' +
+      '<div id="gSetsBox" class="g-sets">' +
+        '<div class="g-sets-ttl">📂 저장된 용어집 — 불러올 때 \'삭제 후 불러오기 / 이어 붙이기\'를 선택합니다</div>' +
+        '<div id="gSetsList"></div>' +
+      '</div>' +
+    '</div>';
 
   if ($('gCloseBtn')) $('gCloseBtn').onclick = () => { panel.classList.remove('open'); window.__syncPanelLayout(); };
 
@@ -4441,10 +4469,12 @@ window.__syncPanelLayout = function() {
     const d = new Date();
     return d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2);
   }
-  $('gExportBtn').onclick = () => {
-    const list = loadGlossary();
-    if (!list.length) { alert('내보낼 용어가 없습니다.'); return; }
+  // 내보내기: 별도 버튼 없이 드롭다운에서 형식을 고르면 바로 실행 (v1.13.60)
+  $('gExportFmt').addEventListener('change', () => {
     const fmt = $('gExportFmt').value;
+    if (!fmt) return;
+    const list = loadGlossary();
+    if (!list.length) { alert('내보낼 용어가 없습니다.'); $('gExportFmt').value = ''; return; }
     if (fmt === 'xlsx') {
       loadSheetJS(function(err){
         if (err) { alert('엑셀 라이브러리 로드 실패. 인터넷 연결을 확인하세요.'); return; }
@@ -4454,6 +4484,7 @@ window.__syncPanelLayout = function() {
         XLSX.utils.book_append_sheet(wb, ws, 'glossary');
         XLSX.writeFile(wb, 'glossary_' + stamp() + '.xlsx');
       });
+      $('gExportFmt').value = '';
       return;
     }
     // csv / txt — "용어1, 용어2, 별칭, 별칭..." 쉼표 구분 (3번째 칸부터 별칭 — 양쪽 언어 합침,
@@ -4461,7 +4492,8 @@ window.__syncPanelLayout = function() {
     const lines = list.map(function(it){ return [it.a, it.b].concat(splitAliases(it.synA || ''), splitAliases(it.synB || ''), splitAliases(it.syn || '')).join(', '); }).join('\n');
     if (fmt === 'txt') downloadBlob(lines, 'glossary_' + stamp() + '.txt', 'text/plain;charset=utf-8');
     else downloadBlob('\uFEFF' + lines, 'glossary_' + stamp() + '.csv', 'text/csv;charset=utf-8'); // CSV는 BOM(엑셀 한글)
-  };
+    $('gExportFmt').value = '';
+  });
   // 불러오기 방식 선택 다이얼로그: '삭제하고 불러오기' / '이어 붙이기' / 취소 (v1.13.58)
   function gAskLoadMode(curCount, incomingDesc) {
     return new Promise(function (resolve) {
@@ -4622,8 +4654,8 @@ window.__syncPanelLayout = function() {
   }
   function renderSets() {
     const sets = loadGlossarySets();
-    const btn = $('gMySetsBtn');
-    if (btn) btn.textContent = '📂 내 용어집' + (sets.length ? ' (' + sets.length + ')' : '');
+    const tabBtn = $('gTabBtnSets');
+    if (tabBtn) tabBtn.textContent = '📂 내 용어집' + (sets.length ? ' (' + sets.length + ')' : '');
     const box = $('gSetsList');
     if (!box) return;
     box.innerHTML = '';
@@ -4686,14 +4718,20 @@ window.__syncPanelLayout = function() {
       sets.push({ name: name, savedAt: Date.now(), list: JSON.parse(JSON.stringify(list)) });
     }
     saveGlossarySets(sets);
-    $('gSetsBox').style.display = '';   // 저장 직후 목록을 펼쳐 보여줌
+    gSwitchTab('sets');   // 저장 직후 '내 용어집' 탭으로 전환해 바로 보여줌
     renderSets();
   };
-  $('gMySetsBtn').onclick = () => {
-    const box = $('gSetsBox');
-    box.style.display = (box.style.display === 'none') ? '' : 'none';
-    renderSets();
-  };
+  // 탭 전환: 용어 목록 ⇄ 내 용어집 (v1.13.60)
+  function gSwitchTab(tab) {
+    const isMain = tab !== 'sets';
+    $('gTabMain').style.display = isMain ? '' : 'none';
+    $('gTabSets').style.display = isMain ? 'none' : '';
+    $('gTabBtnMain').classList.toggle('active', isMain);
+    $('gTabBtnSets').classList.toggle('active', !isMain);
+    if (!isMain) renderSets();
+  }
+  $('gTabBtnMain').onclick = () => gSwitchTab('main');
+  $('gTabBtnSets').onclick = () => gSwitchTab('sets');
   renderSets();
 
   // nat 보정 + 구버전 별칭(단일 syn 또는 AI 학습 nat)을 언어별 박스(synA/synB)로 1회 이관 (AI 호출 없음, 동기)

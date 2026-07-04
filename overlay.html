@@ -75,6 +75,9 @@
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
   }
+  /* 여러 단어 표제어("눈에 띄다") — 이어지는 조각의 안쪽 모서리·패딩을 없애 한 덩어리 형광펜으로 (v1.13.61) */
+  .transline .gword-joinl { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 0; }
+  .transline .gword-joinr { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 0; }
 
   /* ── 대기 메시지 ── */
   #hint {

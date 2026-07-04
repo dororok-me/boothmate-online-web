@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.61 → v1.13.62) — 용어집 패널 문구·배치 정리(교수님 요청):
+  - 패널 제목 '📖 용어집 (양방향 — 한국어 ⇄ 모든 외국어)' → '📖 Glossary(양방향)'.
+  - 탭 '용어 목록' → '용어 추가', '📂 내 용어집' → '☁️ 클라우드 용어집'(저장 버튼·목록 제목·
+    빈 목록 안내도 동일 표현으로). 세트는 localStorage+클라우드 동기화 대상이라 이름과 실제 일치.
+  - 내보내기 드롭다운 문구 '내보낼 형식 선택' → '이 리스트 내보내기', 도구줄(내보내기·불러오기·
+    전체 삭제·개수)을 검색창·용어 리스트 아래(패널 스크롤 최하단)로 이동.
   변경점 (v1.13.60 → v1.13.61) — 여러 단어 표제어 하이라이트를 한 덩어리로(교수님 요청):
   - "눈에 띄다"처럼 공백 포함 표제어가 단어마다 따로 형광펜이 칠해져 공백에서 끊기던 것을,
     매치 범위 안의 공백도 .gword로 감싸 끊김 없이 이어지게 함(tokenize 공백 분기 → hlSlice).
@@ -1640,7 +1646,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.61 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.62 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -4303,10 +4309,10 @@ window.__syncPanelLayout = function() {
 (function initGlossaryPanel() {
   const panel = $('glossaryPanel');
   panel.innerHTML =
-    '<div class="g-head"><div class="g-ttl">📖 용어집 (양방향 — 한국어 ⇄ 모든 외국어)</div><button type="button" id="gCloseBtn" class="g-close" title="용어집 닫기">✕ 닫기</button></div>' +
+    '<div class="g-head"><div class="g-ttl">📖 Glossary(양방향)</div><button type="button" id="gCloseBtn" class="g-close" title="용어집 닫기">✕ 닫기</button></div>' +
     '<div class="g-tabs">' +
-      '<button type="button" id="gTabBtnMain" class="g-tab active">용어 목록</button>' +
-      '<button type="button" id="gTabBtnSets" class="g-tab">📂 내 용어집</button>' +
+      '<button type="button" id="gTabBtnMain" class="g-tab active">용어 추가</button>' +
+      '<button type="button" id="gTabBtnSets" class="g-tab">☁️ 클라우드 용어집</button>' +
     '</div>' +
     '<div id="gTabMain">' +
     '<div class="g-add">' +
@@ -4325,9 +4331,12 @@ window.__syncPanelLayout = function() {
         '<button id="gAddBtn">추가</button>' +
       '</div>' +
     '</div>' +
-      '<div class="g-tools">' +
+      '<input type="text" id="gSearch" class="g-search" placeholder="🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다">' +
+      '<div class="g-list" id="gList"></div>' +
+      // 도구줄은 용어 리스트 맨 아래(스크롤 최하단)에 배치 (v1.13.62)
+      '<div class="g-tools" style="margin-top:10px; margin-bottom:0;">' +
         '<select id="gExportFmt" class="g-sel">' +
-          '<option value="" selected>내보낼 형식 선택</option>' +
+          '<option value="" selected>이 리스트 내보내기</option>' +
           '<option value="csv">CSV</option><option value="txt">TXT</option><option value="xlsx">Excel (.xlsx)</option>' +
         '</select>' +
         '<button id="gImportBtn" class="g-tool">불러오기</button>' +
@@ -4336,16 +4345,14 @@ window.__syncPanelLayout = function() {
         '<span id="gCount" class="g-count"></span>' +
         '<span id="gCloudStat" class="g-count"></span>' +
       '</div>' +
-      '<input type="text" id="gSearch" class="g-search" placeholder="🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다">' +
-      '<div class="g-list" id="gList"></div>' +
     '</div>' +
     '<div id="gTabSets" style="display:none;">' +
       '<div class="g-tools">' +
-        '<button id="gSaveSetBtn" class="g-tool g-primary">💾 현재 용어집을 내 용어집으로 저장</button>' +
+        '<button id="gSaveSetBtn" class="g-tool g-primary">💾 현재 용어집을 클라우드 용어집으로 저장</button>' +
         '<span class="g-count">이름을 붙여 보관하고, 행사마다 골라 불러옵니다</span>' +
       '</div>' +
       '<div id="gSetsBox" class="g-sets">' +
-        '<div class="g-sets-ttl">📂 저장된 용어집 — 불러올 때 \'삭제 후 불러오기 / 이어 붙이기\'를 선택합니다</div>' +
+        '<div class="g-sets-ttl">☁️ 저장된 클라우드 용어집 — 불러올 때 \'삭제 후 불러오기 / 이어 붙이기\'를 선택합니다</div>' +
         '<div id="gSetsList"></div>' +
       '</div>' +
     '</div>';
@@ -4671,12 +4678,12 @@ window.__syncPanelLayout = function() {
   function renderSets() {
     const sets = loadGlossarySets();
     const tabBtn = $('gTabBtnSets');
-    if (tabBtn) tabBtn.textContent = '📂 내 용어집' + (sets.length ? ' (' + sets.length + ')' : '');
+    if (tabBtn) tabBtn.textContent = '☁️ 클라우드 용어집' + (sets.length ? ' (' + sets.length + ')' : '');
     const box = $('gSetsList');
     if (!box) return;
     box.innerHTML = '';
     if (!sets.length) {
-      box.innerHTML = '<div class="g-sets-empty">저장된 용어집이 없습니다. 현재 용어집을 \'내 용어집 저장\'으로 이름 붙여 보관하세요.</div>';
+      box.innerHTML = '<div class="g-sets-empty">저장된 용어집이 없습니다. 위 버튼으로 현재 용어집을 이름 붙여 보관하세요.</div>';
       return;
     }
     sets.forEach(function (st, i) {

@@ -1,5 +1,15 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.55 → v1.13.56) — 한국어 활용형도 로그·하이라이트(교수님 보고):
+  - prominent → "눈에 띄었습니다"처럼 AI가 한국어 표준어를 활용형으로 잘 냈는데 로그·형광펜이
+    안 뜨던 문제. 두 원인: ① 감지 정규식이 기본형("눈에 띄다") 그대로만 매치 ② 하이라이트가
+    공백 포함 표제어를 아예 제외("공백 없는 단일 토큰만").
+  - flexRegexInfl 한국어 확장: '~하다' 동사는 하/했/해/합/되/됐/됩/된/될 활용까지(제외했습니다·
+    제외되어야), 일반 '~다' 기본형은 어간(2자 이상)+어미 매치(눈에 띄다 → 눈에 띄었습니다).
+    공백 유무 무관("눈에띄다"도 매치). 로그 표기는 등록형 기준("prominet → 눈에 띄다").
+  - tokenize를 범위 기반으로 재구성: 문장 전체에서 매치 범위를 수집한 뒤 단어 토큰(.w, 클릭
+    수정용) 구조는 유지하며 걸친 부분만 .gword로 감쌈 → 여러 단어 표제어("눈에 띄다")와
+    활용형("띄었습니다")도 형광펜. hlWord(단일 토큰 방식) 제거. 오버레이는 이 HTML을 그대로 미러.
   변경점 (v1.13.54 → v1.13.55) — 용어집 굴절형(동사·형용사·부사) 반영 강화(교수님 보고):
   - "심사할 환자" → "reviewed"로 새던 문제: AI 지침이 한국어 활용형을 트리거로 명시하지 않았음.
     glossaryInstruction을 강화 — 한국어 조사·활용(심사할·심사를·심사하는), 영어 굴절·파생
@@ -1568,7 +1578,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.55 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.56 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2462,13 +2472,47 @@ function splitToSentences(text) {
 }
 function tokenize(text) {
   const res = glossaryHlRegexes();
+  // 문장 전체에서 매치 범위를 먼저 수집 — 공백 포함 표제어("눈에 띄다")·활용형도 하이라이트 (v1.13.56)
+  const ranges = [];
+  for (const re of res) {
+    re.lastIndex = 0;
+    let m, guard = 0;
+    while ((m = re.exec(text)) !== null) {
+      if (m[0] === '') { re.lastIndex++; if (re.lastIndex > text.length) break; continue; }
+      if (++guard > 200) break;   // 비정상 다량 매치 백스톱
+      ranges.push([m.index, m.index + m[0].length]);
+    }
+  }
+  ranges.sort(function (x, y) { return x[0] - y[0]; });
+  const merged = [];
+  for (const r of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && r[0] <= last[1]) { if (r[1] > last[1]) last[1] = r[1]; }
+    else merged.push(r.slice());
+  }
+  // 단어 토큰 구조(.w — 클릭 수정용)는 유지하고, 각 토큰 안에서 범위에 걸친 부분만 .gword로 감쌈
   const parts = text.split(/(\s+)/);
-  let html = '';
+  let html = '', pos = 0;
   for (const p of parts) {
-    if (p.trim() === '') html += p;
-    else html += '<span class="w">' + (res.length ? hlWord(p, res) : escapeHtml(p)) + '</span>';
+    if (p.trim() === '') { html += p; pos += p.length; continue; }
+    html += '<span class="w">' + hlSlice(p, pos, merged) + '</span>';
+    pos += p.length;
   }
   return html;
+}
+/* 토큰(word)이 전체 문자열 오프셋 start에서 시작할 때, merged 범위와 겹치는 부분을 .gword로 감쌈 */
+function hlSlice(word, start, merged) {
+  let out = '', i = 0;
+  const end = start + word.length;
+  for (const r of merged) {
+    if (r[1] <= start || r[0] >= end) continue;
+    const s = Math.max(r[0], start) - start, e = Math.min(r[1], end) - start;
+    if (s > i) out += escapeHtml(word.slice(i, s));
+    if (e > Math.max(s, i)) out += '<span class="gword">' + escapeHtml(word.slice(Math.max(s, i), e)) + '</span>';
+    i = Math.max(i, e);
+  }
+  out += escapeHtml(word.slice(i));
+  return out;
 }
 /* 현재 출력 방향의 용어집 표준표기 → 매칭 정규식 목록(긴 표제어 우선). glossary+방향 캐시. */
 let _glossaryHlCache = { key: null, list: null };
@@ -2490,7 +2534,7 @@ function glossaryHlRegexes() {
       const aKo = (gKey(aHead) === 'ko');
       canon = (outP === 'ko') ? (aKo ? aHead : bHead) : (aKo ? bHead : aHead);
     }
-    if (canon && !/\s/.test(canon)) terms.push(canon);   // 공백 없는 단일 토큰만(단어 단위 하이라이트)
+    if (canon) terms.push(canon);   // 공백 포함 표제어("눈에 띄다")도 하이라이트 (v1.13.56, 범위 기반 tokenize)
   }
   terms.sort(function (a, b) { return b.length - a.length; });   // 긴 표제어 우선
   const seen = {}, list = [];
@@ -2503,20 +2547,6 @@ function glossaryHlRegexes() {
   }
   _glossaryHlCache = { key: key, list: list };
   return list;
-}
-/* 단어 토큰에서 첫 매칭 용어집 표준표기를 .gword로 감싸 하이라이트. 나머지는 escape만. */
-function hlWord(word, res) {
-  for (const re of res) {
-    re.lastIndex = 0;
-    const m = re.exec(word);
-    if (m && m[0]) {
-      const i = m.index, s = m[0];
-      return escapeHtml(word.slice(0, i)) +
-        '<span class="gword">' + escapeHtml(s) + '</span>' +
-        escapeHtml(word.slice(i + s.length));
-    }
-  }
-  return escapeHtml(word);
 }
 function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -2586,14 +2616,28 @@ function flexRegexP(term) {
   const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp('(?<![A-Za-z0-9])' + esc + '(?:es|s)?(?![A-Za-z0-9])', 'gi');
 }
-/* 감지(로그·하이라이트)용 정규식 — 영어 등록어의 규칙 굴절(-s/-es/-ed/-ing/-ly/-er/-est)까지 매치.
-   e로 끝나는 단어는 e 탈락형도 커버(exclude → excluded/excluding, screen → screened/screening).
+/* 감지(로그·하이라이트)용 정규식 — 등록어의 규칙 굴절형까지 매치.
+   영어: -s/-es/-ed/-ing/-ly/-er/-est, e로 끝나면 e 탈락형(exclude → excluded/excluding)도 커버.
+   한국어: 기본형 '~다'로 등록된 동사·형용사의 활용형도 커버(v1.13.56) —
+     '눈에 띄다' → 눈에 띄었습니다/띄는, '제외하다' → 제외했습니다/제외되어야/제외합니다.
    치환에는 쓰지 않는다(AI가 이미 올바르게 굴절해 낸 번역을 후처리가 깎지 않도록). */
 function flexRegexInfl(term) {
   const hasKo = /[가-힣]/.test(term);
   if (hasKo) {
-    const escaped = term.split('').map(function (c) { return c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
-    return new RegExp(escaped.join('\\s*'), 'g');
+    const koCore = function (s) {   // 글자 사이 공백 0개 이상 허용 ("눈에 띄다" = "눈에띄다")
+      return s.split('').filter(function (c) { return !/\s/.test(c); })
+              .map(function (c) { return c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('\\s*');
+    };
+    if (/하다$/.test(term)) {
+      // '~하다' 동사: 하/했/해/합 + 피동 되/됐/됩/된/될 활용까지 (제외하다 → 제외했습니다·제외되어야)
+      return new RegExp(koCore(term.slice(0, -2)) + '\\s*(?:하|했|해|합|되|됐|됩|된|될)[가-힣]*', 'g');
+    }
+    const stem = term.slice(0, -1);
+    if (/다$/.test(term) && stem.replace(/\s+/g, '').length >= 2) {
+      // 일반 '~다' 기본형: 어간 + 임의 활용 어미 (눈에 띄다 → 눈에 띄었습니다). 어간 2자 이상만(오탐 방지).
+      return new RegExp(koCore(stem) + '[가-힣]*', 'g');
+    }
+    return new RegExp(koCore(term), 'g');
   }
   const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   let core;

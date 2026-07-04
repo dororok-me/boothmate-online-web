@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.63 → v1.13.64) — 클라우드 목록 불러오기 버튼 문구 재수정(교수님 요청):
+  - '클라우드에서 불러오기' → '이 파일을 용어집에 보내기'.
   변경점 (v1.13.62 → v1.13.63) — 클라우드 용어집 탭 문구 수정(교수님 요청):
   - 저장 버튼 '현재 용어집을 클라우드 용어집으로 저장' → '현재 리스트를 클라우드에 저장'.
   - 저장 목록 행의 '불러오기' → '클라우드에서 불러오기'. (용어 추가 탭의 파일 '불러오기'는 그대로)
@@ -1649,7 +1651,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.63 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.64 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -4695,7 +4697,7 @@ window.__syncPanelLayout = function() {
       row.innerHTML =
         '<span class="g-set-name"></span>' +
         '<span class="g-set-meta"></span>' +
-        '<button class="g-tool g-set-load">클라우드에서 불러오기</button>' +
+        '<button class="g-tool g-set-load">이 파일을 용어집에 보내기</button>' +
         '<button class="g-tool g-danger g-set-del">삭제</button>';
       row.querySelector('.g-set-name').textContent = st.name;
       row.querySelector('.g-set-meta').textContent = (st.list ? st.list.length : 0) + '개 · ' + fmtDate(st.savedAt);

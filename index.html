@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.62 → v1.13.63) — 클라우드 용어집 탭 문구 수정(교수님 요청):
+  - 저장 버튼 '현재 용어집을 클라우드 용어집으로 저장' → '현재 리스트를 클라우드에 저장'.
+  - 저장 목록 행의 '불러오기' → '클라우드에서 불러오기'. (용어 추가 탭의 파일 '불러오기'는 그대로)
   변경점 (v1.13.61 → v1.13.62) — 용어집 패널 문구·배치 정리(교수님 요청):
   - 패널 제목 '📖 용어집 (양방향 — 한국어 ⇄ 모든 외국어)' → '📖 Glossary(양방향)'.
   - 탭 '용어 목록' → '용어 추가', '📂 내 용어집' → '☁️ 클라우드 용어집'(저장 버튼·목록 제목·
@@ -1646,7 +1649,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.62 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.63 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -4348,7 +4351,7 @@ window.__syncPanelLayout = function() {
     '</div>' +
     '<div id="gTabSets" style="display:none;">' +
       '<div class="g-tools">' +
-        '<button id="gSaveSetBtn" class="g-tool g-primary">💾 현재 용어집을 클라우드 용어집으로 저장</button>' +
+        '<button id="gSaveSetBtn" class="g-tool g-primary">💾 현재 리스트를 클라우드에 저장</button>' +
         '<span class="g-count">이름을 붙여 보관하고, 행사마다 골라 불러옵니다</span>' +
       '</div>' +
       '<div id="gSetsBox" class="g-sets">' +
@@ -4692,7 +4695,7 @@ window.__syncPanelLayout = function() {
       row.innerHTML =
         '<span class="g-set-name"></span>' +
         '<span class="g-set-meta"></span>' +
-        '<button class="g-tool g-set-load">불러오기</button>' +
+        '<button class="g-tool g-set-load">클라우드에서 불러오기</button>' +
         '<button class="g-tool g-danger g-set-del">삭제</button>';
       row.querySelector('.g-set-name').textContent = st.name;
       row.querySelector('.g-set-meta').textContent = (st.list ? st.list.length : 0) + '개 · ' + fmtDate(st.savedAt);

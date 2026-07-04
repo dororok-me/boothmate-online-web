@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.58 → v1.13.59) — 스페인어·포르투갈어 지역 변형 추가(교수님 요청):
+  - 언어 목록에 Español (México)/(Argentina)/(Latinoamérica), Português (Brasil) 추가.
+    '아르헨티나어·멕시코어'는 별도 언어가 아니라 스페인어 지역 변형 — 선택 시 그 지역
+    어휘·말투로 번역하도록 시스템 지시문(langName: "Mexican Spanish" 등)에 반영.
+  - Gemini translationConfig에는 기본 코드(es/pt)를 보냄(geminiLangCode) — 미지원 지역
+    코드로 세션 설정이 실패하지 않게. 지역 말투는 지시문이 담당. zh-TW는 기존대로 직접 전달.
   변경점 (v1.13.57 → v1.13.58) — 용어집 클라우드 동기화 + 불러오기 방식 선택(교수님 요청):
   - [클라우드] 로그인만 하면 어느 기기에서든 같은 용어집: 중계서버 /glossary(GET/PUT, v3.2.0)
     ↔ Turso user_glossary. 시작 시 최신본 내려받기(updated_at 비교), 변경 시 1.5초 디바운스
@@ -1610,7 +1616,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.58 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.59 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -1648,8 +1654,11 @@ const RELAY_PASS_KEY = 'boothmate2026secure';
 const LANGUAGES = [
   ['ko','한국어','Korean'], ['en','English','English'], ['ja','日本語','Japanese'],
   ['zh','中文 (简体)','Chinese'], ['zh-TW','中文 (繁體)','Traditional Chinese'],
-  ['es','Español','Spanish'], ['fr','Français','French'], ['de','Deutsch','German'],
-  ['it','Italiano','Italian'], ['pt','Português','Portuguese'], ['ru','Русский','Russian'],
+  ['es','Español','Spanish'], ['es-MX','Español (México)','Mexican Spanish'],
+  ['es-AR','Español (Argentina)','Argentine Spanish'], ['es-419','Español (Latinoamérica)','Latin American Spanish'],
+  ['fr','Français','French'], ['de','Deutsch','German'],
+  ['it','Italiano','Italian'], ['pt','Português','Portuguese'], ['pt-BR','Português (Brasil)','Brazilian Portuguese'],
+  ['ru','Русский','Russian'],
   ['nl','Nederlands','Dutch'], ['pl','Polski','Polish'], ['tr','Türkçe','Turkish'],
   ['vi','Tiếng Việt','Vietnamese'], ['th','ไทย','Thai'], ['id','Bahasa Indonesia','Indonesian'],
   ['ms','Bahasa Melayu','Malay'], ['hi','हिन्दी','Hindi'], ['bn','বাংলা','Bengali'],
@@ -1700,6 +1709,14 @@ function getPair() {
   return { a, b };
 }
 function langPrefix(code) { return String(code || '').split('-')[0].toLowerCase(); }
+/* Gemini translationConfig용 언어 코드 (v1.13.59) — 스페인어·포르투갈어 지역 변형(es-MX 등)은
+   기본 코드(es/pt)로 보내 미지원 코드 오류를 방지하고, 지역 말투는 systemInstruction의
+   영어명(langName: "Mexican Spanish")이 담당. zh-TW는 Gemini가 직접 지원하므로 그대로. */
+function geminiLangCode(code) {
+  const c = String(code || '');
+  if (c === 'zh-TW') return c;
+  return langPrefix(c);
+}
 /* ── 번역 방향 모드 (v1.13.47) — auto=양방향 자동 / ab=A→B 단방향 / ba=B→A 단방향 ── */
 function getDirMode() {
   const m = localStorage.getItem('dir_mode');
@@ -3592,7 +3609,7 @@ function connectWS() {
         model: "models/gemini-3.5-live-translate-preview",
         generationConfig: {
           responseModalities: ["AUDIO"],
-          translationConfig: { targetLanguageCode: TARGET_LANGUAGE }
+          translationConfig: { targetLanguageCode: geminiLangCode(TARGET_LANGUAGE) }
         },
         inputAudioTranscription: {},
         outputAudioTranscription: {}

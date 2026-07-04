@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.52 → v1.13.53) — 용어 로그 좌측 = 실제 말한 원문 단어(교수님 보고):
+  - "참가자"라고 말했는데 로그가 "participant → patient"(출력쪽 별칭)나 "피험자 → patient"(표제어)로
+    나오던 문제. 치환·감지 로그 모두 이번 턴 원문(turnSrcText)에서 실제 말한 트리거어를 찾아
+    좌측에 표시(reflogAddGlossary) → "참가자 → patient", "환자 → patient" 식.
+  - Gemini Live에서 원문 전사가 번역보다 늦게 도착하는 경우 대비: 일단 기록하고 pending 표시,
+    원문 도착(appendSrc) 때 재스캔해 이미 찍힌 칩을 소급 갱신(resolvePendingReflog).
+    턴 종료 시 마지막 갱신 후 만료(expirePendingReflog) — 다음 턴 원문이 잘못 매칭되지 않게.
   변경점 (v1.13.51 → v1.13.52) — 용어집 별칭 언어별 분리(교수님 요청, 데스크톱판과 동일 설계):
   - 별칭 박스를 용어1·용어2 아래 각각 배치(synA/synB). 등록쌍이 '대표 쌍':
     patient 별칭 participant·subject가 들리면 '피험자'로, 피험자 별칭 참가자·환자가 들리면 'patient'로.
@@ -1541,7 +1548,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.52 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.53 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -2211,6 +2218,45 @@ function reflogAdd(kind, text) {
   if (window.__syncPanelLayout && reflogEntries.length === 1) window.__syncPanelLayout();
 }
 function reflogClear() { reflogEntries = []; renderReflog(); if (window.__syncPanelLayout) window.__syncPanelLayout(); }
+/* ── 용어 로그 좌측 = 실제로 말한 원문 단어 (v1.13.53) ──
+   이번 턴 원문(turnSrcText)에서 등록 트리거어(표제어·별칭, 굴절 포함)를 찾아 좌측에 표시.
+   원문 전사가 번역보다 늦게 도착하면 못 찾을 수 있음 → 일단 fallback으로 기록하고 pending 표시,
+   이후 원문 도착(appendSrc) 때 재스캔해 이미 찍힌 로그를 소급 갱신. */
+function scanSrcTrigger(srcCol) {
+  const hay = (typeof turnSrcText === 'string') ? turnSrcText : '';
+  if (!hay) return null;
+  for (const w of (srcCol || [])) {
+    if (!w) continue;
+    let r;
+    try { r = flexRegexInfl(w); } catch (e) { continue; }
+    r.lastIndex = 0;
+    if (r.test(hay)) return w;
+  }
+  return null;
+}
+function reflogAddGlossary(fallbackLeft, canon, srcCol) {
+  const found = scanSrcTrigger(srcCol);
+  const left = found || fallbackLeft;
+  reflogAdd('glossary', left + ' → ' + canon);
+  if (!found && srcCol && srcCol.length) {
+    const last = reflogEntries[reflogEntries.length - 1];
+    if (last && last.kind === 'glossary' && last.text === left + ' → ' + canon) {
+      last.pending = { srcCol: srcCol.slice(), canon: canon };
+    }
+  }
+}
+function resolvePendingReflog() {
+  let changed = false;
+  for (const e of reflogEntries) {
+    if (!e.pending) continue;
+    const found = scanSrcTrigger(e.pending.srcCol);
+    if (found) { e.text = found + ' → ' + e.pending.canon; delete e.pending; changed = true; }
+  }
+  if (changed) renderReflog();
+}
+function expirePendingReflog() {
+  for (const e of reflogEntries) delete e.pending;   // 턴 원문 확정 종료 → fallback 표기 유지
+}
 /* 문장 확정 시 호출: AI 원본 번역에 용어집 강제 치환을 적용해 실제 교체 내역(별칭 → 표준)을 기록 */
 function collectReflections(source, rawTrans) {
   if (!rawTrans || !rawTrans.trim()) return;
@@ -2357,6 +2403,7 @@ function downloadText(content, filename) {
 function resetSubtitles() {
   combinedEl.innerHTML = '';
   srcBuf = ""; transBuf = ""; turnRawTrans = ""; turnSrcText = ""; turnLogged.clear();
+  if (typeof expirePendingReflog === 'function') expirePendingReflog();
   srcTempEl = null; transTempEl = null;
   editingLineEl = null;
   curPair = null;
@@ -2695,6 +2742,7 @@ function synSplitByLang(a, b, words) {
    (participants→patients — 복수가 단수로 깎이지 않게). 로그는 실제 매치된 별칭 기준. */
 function applyGlossaryReplace(text, outCode) {
   const outP = (/ko/.test(String(outCode))) ? 'ko' : 'x';
+  const otherP = (outP === 'ko') ? 'x' : 'ko';
   let out = text;
   const corrections = [];
   for (const it of loadGlossary()) {
@@ -2703,6 +2751,8 @@ function applyGlossaryReplace(text, outCode) {
     if (!col || !col.length) continue;
     const canonical = col[0];
     const canonEn = !/[가-힣]/.test(canonical);
+    // 원문쪽 트리거어 목록(표제어+별칭) — 로그 좌측에 '실제 말한 단어'를 찾기 위한 후보
+    const srcCol = (it.nat[otherP] || []).filter(Boolean);
     for (let i = 1; i < col.length; i++) {
       const alias = col[i];
       if (!alias || eqTerm(alias, canonical)) continue;
@@ -2716,7 +2766,7 @@ function applyGlossaryReplace(text, outCode) {
         const sfx = (canonEn && aliasEn && m.length > alias.length) ? m.slice(alias.length) : '';
         return canonical + sfx;
       });
-      if (hit) corrections.push({ from: alias, to: canonical });
+      if (hit) corrections.push({ from: alias, to: canonical, srcs: srcCol });
     }
   }
   return { text: out, corrections: corrections };
@@ -2752,21 +2802,10 @@ function annotateGlossary(text, outCode) {
       const k = 'g:' + canon;
       if (typeof turnLogged !== 'undefined' && !turnLogged.has(k)) {
         turnLogged.add(k);
-        // 로그 좌측 = 이번 턴 원문에서 '실제 매치된' 등록어(표제어 또는 원문쪽 별칭, 굴절 포함).
-        // 무엇이 변해서 그 결과가 됐는지 확인하는 게 로그의 목적(v1.13.52). 못 찾으면 표제어.
-        let left = other;
-        const hay = (typeof turnSrcText === 'string') ? turnSrcText : '';
-        if (hay) {
-          const srcCol = (it.nat && it.nat[otherP]) || [other];
-          for (const w of srcCol) {
-            if (!w) continue;
-            let r;
-            try { r = flexRegexInfl(w); } catch (e) { continue; }
-            r.lastIndex = 0;
-            if (r.test(hay)) { left = w; break; }
-          }
-        }
-        if (typeof reflogAdd === 'function') reflogAdd('glossary', left + ' → ' + canon);
+        // 로그 좌측 = 이번 턴 원문에서 '실제 말한' 등록어(표제어 또는 원문쪽 별칭, 굴절 포함).
+        // 원문 전사가 아직 안 왔으면 표제어로 우선 기록 후 소급 갱신(pending, v1.13.53).
+        const srcCol = ((it.nat && it.nat[otherP]) || [other]).filter(Boolean);
+        if (typeof reflogAddGlossary === 'function') reflogAddGlossary(other, canon, srcCol);
       }
     }
     // 괄호 병기는 하지 않는다(색 하이라이트로 대체). 단, AI(Gemini)가 스스로 붙인
@@ -2835,9 +2874,9 @@ function shownTrans(raw) {
     if (!turnLogged.has(_k)) {
       turnLogged.add(_k);
       turnLogged.add('g:' + _c.to);   // 같은 표준표기는 병기 로그(annotateGlossary)에서 중복 기록 안 함 (두 번 표시 방지)
-      // 로그 좌측 = 실제 매치된 등록 별칭(환자 → patient 식). 별칭은 이제 전부 사용자가
-      // 언어별 박스에 직접 등록한 것이라, 무엇이 변했는지 그대로 보여준다(v1.13.52).
-      if (typeof reflogAdd === 'function') reflogAdd('glossary', _c.from + ' → ' + _c.to);
+      // 로그 좌측 = 원문에서 실제 말한 트리거어(참가자 → patient 식, v1.13.53).
+      // 원문 전사가 아직 안 왔으면 출력쪽 매치 별칭으로 우선 기록 후 소급 갱신(pending).
+      if (typeof reflogAddGlossary === 'function') reflogAddGlossary(_c.from, _c.to, _c.srcs);
     }
   }
   if (usePP && targetLang === "ko" && typeof koreanPostProcess === "function") {
@@ -2927,6 +2966,8 @@ function appendSrc(t) {
   // 이번 턴 원문 누적 (로그 트리거어 표시용). 과도 성장 방지로 뒤 800자만 유지.
   turnSrcText += t.replace(/\n+/g, ' ');
   if (turnSrcText.length > 800) turnSrcText = turnSrcText.slice(-800);
+  // 원문이 번역보다 늦게 도착한 경우: 대기 중인 용어 로그의 좌측을 실제 말한 단어로 소급 갱신
+  if (typeof resolvePendingReflog === 'function') resolvePendingReflog();
   // 쌍 밖 언어 차단(v1.10.0): 원문이 쌍의 두 언어가 아니면 이 묶음(원문+번역)을 숨김
   if (!p._offpair) {
     const pr = getPair();
@@ -3030,6 +3071,9 @@ function finishSegment() {
   pushMirror();
   turnLogged.clear();   // 턴 종료 → 다음 턴은 같은 치환도 다시 기록
   turnRawTrans = "";
+  // 이 턴 원문으로 마지막 소급 갱신 시도 후 pending 만료 (다음 턴 원문이 잘못 매칭되지 않게)
+  resolvePendingReflog();
+  expirePendingReflog();
   turnSrcText = "";
 }
 

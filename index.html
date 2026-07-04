@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.64 → v1.13.65) — 용어집 패널 탭 시인성 개선(교수님 요청):
+  - '용어 추가 / ☁️ 클라우드 용어집' 탭을 밑줄형 → 세그먼트(알약)형으로 변경.
+    활성 탭은 보라색(#4F46E5)으로 채워지고, 두 탭이 패널 폭을 반씩 차지해 눈에 잘 띔.
+  - '용어 추가' 탭에 ✏️ 아이콘 추가(클라우드 탭 ☁️와 대등하게 구분).
   변경점 (v1.13.63 → v1.13.64) — 클라우드 목록 불러오기 버튼 문구 재수정(교수님 요청):
   - '클라우드에서 불러오기' → '이 파일을 용어집에 보내기'.
   변경점 (v1.13.62 → v1.13.63) — 클라우드 용어집 탭 문구 수정(교수님 요청):
@@ -1147,16 +1151,20 @@
   #glossaryPanel .g-tool:hover { background: #34507a; }
   #glossaryPanel .g-tool.g-danger { background: #3a2230; color: #f0a0b0; }
   #glossaryPanel .g-tool.g-danger:hover { background: #5a2a3a; }
-  /* 용어집 패널 탭 — 용어 목록 / 내 용어집 (v1.13.60) */
+  /* 용어집 패널 탭 — 세그먼트(알약) 스타일로 활성 탭을 채워서 구분 강조 (v1.13.65) */
   #glossaryPanel .g-tabs {
-    display: flex; gap: 4px; margin-bottom: 12px; border-bottom: 1px solid var(--t-border, #2a3a55);
+    display: flex; gap: 5px; margin-bottom: 14px; padding: 5px;
+    background: var(--t-area-bg, #0f1626); border: 1px solid var(--t-border, #2a3a55); border-radius: 10px;
   }
   #glossaryPanel .g-tab {
-    padding: 8px 14px; font-size: 13px; font-weight: 600; background: transparent; color: var(--t-muted, #7a8ba8);
-    border: none; border-bottom: 2px solid transparent; cursor: pointer; margin-bottom: -1px;
+    flex: 1 1 0; padding: 9px 14px; font-size: 14px; font-weight: 700;
+    background: transparent; color: var(--t-muted, #7a8ba8);
+    border: none; border-radius: 7px; cursor: pointer;
   }
-  #glossaryPanel .g-tab:hover { color: var(--t-text, #e2e8f0); }
-  #glossaryPanel .g-tab.active { color: var(--t-accent, #7dd3fc); border-bottom-color: #4F46E5; }
+  #glossaryPanel .g-tab:hover { color: var(--t-text, #e2e8f0); background: rgba(79,70,229,0.18); }
+  #glossaryPanel .g-tab.active, #glossaryPanel .g-tab.active:hover {
+    background: #4F46E5; color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  }
   /* 내 용어집(세트) — 저장 버튼 강조 + 저장 목록 박스 (v1.13.57) */
   #glossaryPanel .g-tool.g-primary { background: #4F46E5; color: #fff; }
   #glossaryPanel .g-tool.g-primary:hover { background: #4338CA; }
@@ -1651,7 +1659,7 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.64 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.65 · © 2026 dororok AI Lab</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">
@@ -4316,7 +4324,7 @@ window.__syncPanelLayout = function() {
   panel.innerHTML =
     '<div class="g-head"><div class="g-ttl">📖 Glossary(양방향)</div><button type="button" id="gCloseBtn" class="g-close" title="용어집 닫기">✕ 닫기</button></div>' +
     '<div class="g-tabs">' +
-      '<button type="button" id="gTabBtnMain" class="g-tab active">용어 추가</button>' +
+      '<button type="button" id="gTabBtnMain" class="g-tab active">✏️ 용어 추가</button>' +
       '<button type="button" id="gTabBtnSets" class="g-tab">☁️ 클라우드 용어집</button>' +
     '</div>' +
     '<div id="gTabMain">' +

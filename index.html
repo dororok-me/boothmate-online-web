@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.66 → v1.13.67) — 사업자 정보·이용약관·개인정보처리방침 추가(교수님 요청, 토스페이먼츠 심사 대비):
+  - terms.html(이용약관, 청약철회·환불 규정 포함)·privacy.html(개인정보처리방침) 신설.
+  - 하단 푸터와 로그인 게이트에 사업자 정보(상호·대표·사업자등록번호·통신판매업신고·주소·연락처)와
+    이용약관·개인정보처리방침 링크 표시 (전자상거래법 제10조 신원정보 표시).
   변경점 (v1.13.65 → v1.13.66) — 여러 단어 하이라이트의 띄어쓰기 틈 메움(교수님 요청):
   - 단어 토큰(.w)의 좌우 1px 패딩 때문에 여러 단어 형광펜 조각 사이에 1px 빈 줄이 보이던 것.
   - gword-joinl/joinr에 padding 2px + margin -2px를 줘 배경만 늘려 틈을 메움(글자 간격 불변).
@@ -1504,6 +1508,12 @@
     <div id="openExternalHint" style="margin-top:8px; font-size:11px; color:#B45309; word-break:break-all;"></div>
   </div>
   <div style="font-size:11px; color:#94A3B8; margin-top:30px;">Developed by dororok AI Lab · © 2026 dororok AI Lab</div>
+  <div style="font-size:11px; color:#94A3B8; margin-top:6px;"><a href="terms.html" target="_blank" rel="noopener" style="color:#64748B;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:#64748B;">개인정보처리방침</a></div>
+  <div style="font-size:10px; color:#B6C2D4; margin-top:8px; line-height:1.6; max-width:520px;">
+    도로록 에이아이 랩 (dororok AI Lab) · 대표: 이성득 · 사업자등록번호: 804-04-00278<br>
+    통신판매업신고번호: 2026-부산해운대-0752 · 부산시 해운대구 우동 마린시티2로 제니스스퀘어 A타워 901, 902호<br>
+    Tel 051-703-6006 · dororok@gmail.com
+  </div>
 </div>
 <script>
   /* v1.13.22: 인앱 브라우저(카톡·인스타·페북·라인·네이버·다음·안드로이드 웹뷰) 감지 →
@@ -1664,7 +1674,10 @@
 
 
 
-<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 1px; font-size:10px; color:var(--t-muted); opacity:0.7;">Boothmate Online v1.13.66 · © 2026 dororok AI Lab</footer>
+<footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
+  Boothmate Online v1.13.67 · © 2026 dororok AI Lab · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a><br>
+  <span style="font-size:9px; opacity:0.85;">도로록 에이아이 랩 (dororok AI Lab) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산시 해운대구 우동 마린시티2로 제니스스퀘어 A타워 901, 902호 · Tel 051-703-6006 · dororok@gmail.com</span>
+</footer>
 
 <!-- 단어 수정창 -->
 <div id="editModal">

@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.71 → v1.13.72) — 설정에 줄 간격 조절 추가(교수님 요청):
+  - 설정 패널에 '줄 간격 (여백)' 그룹 추가 — ①원문↔번역 간격(.srcline 아래 여백, 기본 8px, 0~40)
+    ②묶음 사이 간격(.pair 아래 여백, 기본 28px, 0~64)을 기존 −/+ 스테퍼로 조절.
+  - CSS 변수 --mc-src-gap·--mc-block-gap로 뺀 뒤 applySizes에서 적용, localStorage 저장·복원.
   변경점 (v1.13.70 → v1.13.71) — 재배포(내용 변경 없음): Pages 배포 충돌로 v1.13.70이
     확정 실패해 CDN이 옛/새 버전을 뒤섞음 → 깨끗한 배포 사이클을 새로 트리거하기 위한 버전만 상향.
   변경점 (v1.13.69 → v1.13.70) — '© 2026 dororok AI Lab' 표기 제거(교수님 요청):
@@ -961,6 +965,8 @@
   :root {
     --mc-src-size: 18px; --mc-src-color: #94a3b8; --mc-src-weight: 400;
     --mc-trans-size: 24px; --mc-trans-color: #7dd3fc; --mc-trans-weight: 600;
+    --mc-src-gap: 8px;    /* 원문↔번역 줄 간격(묶음 안) */
+    --mc-block-gap: 28px; /* 묶음↔묶음 간격 */
   }
   /* 자막창: 헤더와 로그 사이 남는 공간을 모두 채움(flex:1). 내부(.mc-area)만 스크롤 */
   #mcWrap {
@@ -1206,14 +1212,14 @@
   /* 텔레프롬프터 줄: 마침표 단위 한 줄, 오래되면 위로 흐르며 페이드 */
   /* ── 원문+번역 묶음 박스 (한 세트로 항상 함께) ── */
   .pair {
-    margin-bottom: 16px;
+    margin-bottom: var(--mc-block-gap);
     padding-left: 10px;
     border-left: 2px solid rgba(99,102,241,0.25);
   }
   .pair:last-child { margin-bottom: 4px; }
   .srcline {
     font-size: var(--mc-src-size); color: var(--mc-src-color); font-weight: var(--mc-src-weight);
-    line-height: 1.5; margin-bottom: 4px;
+    line-height: 1.5; margin-bottom: var(--mc-src-gap);
     word-break: normal; overflow-wrap: normal;
     transition: opacity 0.4s;
   }
@@ -1414,10 +1420,10 @@
   /* ── 자막 무대 (주인공) ── */
   #mcWrap { margin-top: 10px; }
   .mc-area { background: var(--t-area-bg); border: none !important; border-radius: 16px; padding: 38px 44px; }
-  .pair { background: transparent !important; border: none !important; border-radius: 0; padding: 0 !important; margin-bottom: 28px; }
+  .pair { background: transparent !important; border: none !important; border-radius: 0; padding: 0 !important; margin-bottom: var(--mc-block-gap); }
   .pair:last-child { margin-bottom: 4px; }
   .pair.offpair { display: none !important; }   /* 쌍 밖 언어 발화 숨김 */
-  .srcline { color: var(--mc-src-color); font-weight: 500; line-height: 1.5; margin-bottom: 8px; }
+  .srcline { color: var(--mc-src-color); font-weight: 500; line-height: 1.5; margin-bottom: var(--mc-src-gap); }
   .transline { line-height: 1.4; }
   /* 번역 중(pending) 문장도 완료 문장과 동일한 색·굵기로 — 색 구별 없음 */
   .transline.pending { color: var(--mc-trans-color) !important; opacity: 1 !important; font-weight: var(--mc-trans-weight) !important; }
@@ -1688,7 +1694,7 @@
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.71 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.72 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4099,6 +4105,11 @@ window.__syncPanelLayout = function() {
       '<div class="row"><label>굵기</label><div class="stepper"><button type="button" id="mcTransWeightDec" class="stp">−</button><span class="val" id="mcTransWeightV"></span><button type="button" id="mcTransWeightInc" class="stp">+</button></div></div>' +
       '<div class="row"><label>색상</label><input type="color" id="mcTransColor"><button id="mcTransColorReset" class="mini-reset">테마색</button></div>' +
     '</div>' +
+    '<div class="grp"><div class="grp-ttl">줄 간격 (여백)</div>' +
+      '<div class="row"><label>원문↔번역</label><div class="stepper"><button type="button" id="mcSrcGapDec" class="stp">−</button><span class="val" id="mcSrcGapV"></span><button type="button" id="mcSrcGapInc" class="stp">+</button></div></div>' +
+      '<div class="row"><label>묶음 사이</label><div class="stepper"><button type="button" id="mcBlockGapDec" class="stp">−</button><span class="val" id="mcBlockGapV"></span><button type="button" id="mcBlockGapInc" class="stp">+</button></div></div>' +
+      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">원문과 번역 줄 사이, 그리고 원문·번역 묶음끼리의 세로 여백을 조절합니다.</div>' +
+    '</div>' +
     '<div class="grp"><div class="grp-ttl">Log</div>' +
       '<div class="row" style="max-width:none;"><label style="display:flex; align-items:center; gap:8px; width:auto; cursor:pointer;"><input type="checkbox" id="reflogToggle" checked> Log 표시</label></div>' +
       '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">통역 중 적용된 용어집·환산 내역을 자막 아래에 표시합니다. 끄면 반영 로그 영역이 숨겨집니다.</div>' +
@@ -4178,7 +4189,7 @@ window.__syncPanelLayout = function() {
   $('relayTicket').addEventListener('input', () => localStorage.setItem('relay_ticket', $('relayTicket').value.trim()));
 
   // 폰트 크기 기본값 (테마와 무관)
-  const D = { mc_src_size:'18', mc_trans_size:'30', mc_src_weight:'400', mc_trans_weight:'700' };
+  const D = { mc_src_size:'18', mc_trans_size:'30', mc_src_weight:'400', mc_trans_weight:'700', mc_src_gap:'8', mc_block_gap:'28' };
   const get = (k) => localStorage.getItem(k) ?? D[k];
 
   /* 색상 적용: 사용자가 직접 고른 색이 있으면 그 색, 없으면 테마 기본색
@@ -4196,6 +4207,8 @@ window.__syncPanelLayout = function() {
   function applySizes() {
     root.setProperty('--mc-src-size', get('mc_src_size') + 'px');
     root.setProperty('--mc-trans-size', get('mc_trans_size') + 'px');
+    root.setProperty('--mc-src-gap', get('mc_src_gap') + 'px');
+    root.setProperty('--mc-block-gap', get('mc_block_gap') + 'px');
     // 굵기는 테마 CSS(body.theme-*)가 --mc-trans-weight를 재정의하므로,
     // root(html)에 설정하면 덮인다. body 인라인 스타일에 설정해야 테마를 이긴다.
     bodyStyle.setProperty('--mc-src-weight', get('mc_src_weight'));
@@ -4231,6 +4244,8 @@ window.__syncPanelLayout = function() {
   bindStepper('mcTransSizeDec', 'mcTransSizeInc', 'mcTransSizeV', 'mc_trans_size', 14, 60, 1,   pxFmt);
   bindStepper('mcSrcWeightDec', 'mcSrcWeightInc', 'mcSrcWeightV', 'mc_src_weight', 300, 900, 100, weightLabel);
   bindStepper('mcTransWeightDec','mcTransWeightInc','mcTransWeightV','mc_trans_weight',300,900,100, weightLabel);
+  bindStepper('mcSrcGapDec',    'mcSrcGapInc',    'mcSrcGapV',    'mc_src_gap',    0, 40, 2, pxFmt);
+  bindStepper('mcBlockGapDec',  'mcBlockGapInc',  'mcBlockGapV',  'mc_block_gap',  0, 64, 2, pxFmt);
   // 색상 피커 바인딩 — 고르면 그 색이 우선
   function readThemeColor(varName) {
     return getComputedStyle(document.body).getPropertyValue(varName).trim() || '#888888';

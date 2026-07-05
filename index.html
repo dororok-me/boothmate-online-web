@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.78 → v1.13.79) — 한국어 번역 오역 패턴 교정(교수님 보고):
+  - 시스템 프롬프트(speechInstruction, 한국어 출력 시)에 3가지 교정 지침 추가:
+    ① '~이옵니다/~하옵니다' 등 옛말투·궁중체 종결어미 금지 → 현대 표준어만.
+    ② 목적 표현(to do / in order to / for ~ing)을 '~하기 위해서입니다'로 자연스럽게,
+       '위합니다' 같은 존재하지 않는 종결형 금지.
+    ③ 'to'·전치사 등에서 끊긴 미완성 조각을 매달린 연결어미('~위해서')로 끝내지 말 것.
+  - 세션 (재)연결 시 적용. 후처리가 아니라 생성 단계 지시라 자연스러움 유지.
   변경점 (v1.13.77 → v1.13.78) — 로그인 화이트리스트에 테스트 계정 1개 추가:
   - yujinsart@gmail.com → ALLOWED_EMAILS 등록.
   변경점 (v1.13.76 → v1.13.77) — 로그인 화이트리스트에 테스트 계정 1개 추가:
@@ -1715,7 +1722,7 @@
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.78 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.79 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3458,13 +3465,20 @@ $('editArea').addEventListener('keydown', (e) => {
   else if (e.key === 'Escape') { e.preventDefault(); closeEditor(); }
 });
 
-/* 어투 → Gemini 지시문 (v0.8.0과 동일) */
+/* 어투 → Gemini 지시문 (v0.8.0과 동일 + 한국어 오역 패턴 교정 v1.13.74) */
 function speechInstruction(level, targetLang) {
   if (targetLang !== "ko") return null;
-  if (level === "formal") return "한국어로 번역할 때 모든 문장을 합쇼체(~습니다/~입니다)로만 끝내라. 해요체(~요)를 절대 쓰지 마라.";
-  if (level === "polite") return "한국어로 번역할 때 모든 문장을 해요체(~요/~에요)로만 끝내라. 합쇼체(~습니다)를 쓰지 마라.";
-  if (level === "casual") return "한국어로 번역할 때 반말(해체)로 끝내라.";
-  return null;
+  // 어투(종결) 기본 지시
+  let base = "";
+  if (level === "formal") base = "한국어로 번역할 때 모든 문장을 합쇼체(~습니다/~입니다)로만 끝내라. 해요체(~요)를 절대 쓰지 마라.";
+  else if (level === "polite") base = "한국어로 번역할 때 모든 문장을 해요체(~요/~에요)로만 끝내라. 합쇼체(~습니다)를 쓰지 마라.";
+  else if (level === "casual") base = "한국어로 번역할 때 반말(해체)로 끝내라.";
+  // 자주 나오는 오역 패턴 교정 (교수님 보고: '위합니다', '~이옵니다', to 뒤 끊겨 '~위해서'로 끝남)
+  const fix =
+    " 반드시 현대 표준 한국어만 써라. '~이옵니다/~하옵니다/~사옵니다/~나이다' 같은 옛말투·궁중체 종결어미는 절대 쓰지 마라." +
+    " 목적을 나타내는 영어(to do, in order to, so as to, for ~ing)는 자연스러운 완결 문장으로 옮겨라('~하기 위해서입니다' 또는 문장을 재구성). '위합니다'처럼 어색하거나 존재하지 않는 종결형을 만들지 마라('위함입니다'·'위해서입니다'가 올바르다)." +
+    " 입력이 미완성 조각(예: 'to'·전치사·접속사로 끝남)이면, 매달린 연결어미('~위해서'·'~하고'·'~때문에')로 어색하게 끝내지 말고 뜻이 완결되는 부분까지만 자연스럽게 번역하라.";
+  return (base + fix).trim();
 }
 
 /* ════════════════════════════════════════════
@@ -4912,7 +4926,7 @@ window.__syncPanelLayout = function() {
   // ⚠️ 출시 전까지는 운영자(dororok)만 로그인 가능하게 잠가둠.
   //    → 나만 중계서버에 도달 가능 → 내 Gemini 비용 안전.
   // 출시할 때 이 배열을 비우면([]) 누구나 통과, 또는 일부만 받으려면 이메일 추가.
-  const ALLOWED_EMAILS = ['dororok@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com', 'alicecha0114@gmail.com', 'heira.jung@gmail.com', 'topclasstrancc@gmail.com', 'itswonsun@gmail.com', 'janeyu0114@gmail.com', 'interpreterceci@gmail.com', 'min.interpreter@gmail.com', 'skch159@gmail.com', 'luckyeunji@gmail.com', 'myfate0429@gmail.com', 'sandra.jy.lim@gmail.com', 'luvange@gmail.com', 'jigojisn@gmail.com', 'sarahkim005@gmail.com', 'strangermisa10@gmail.com', 'twoamari@gmail.com', 'chloekim2014@gmail.com', 'jkang0604@gmail.com', 'syyou128@gmail.com', 'yujinsart@gmail.com'];
+  const ALLOWED_EMAILS = ['dororok@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com', 'alicecha0114@gmail.com', 'heira.jung@gmail.com', 'topclasstrancc@gmail.com', 'itswonsun@gmail.com', 'janeyu0114@gmail.com', 'interpreterceci@gmail.com', 'min.interpreter@gmail.com', 'skch159@gmail.com', 'luckyeunji@gmail.com', 'myfate0429@gmail.com', 'sandra.jy.lim@gmail.com', 'luvange@gmail.com', 'jigojisn@gmail.com', 'sarahkim005@gmail.com', 'strangermisa10@gmail.com', 'twoamari@gmail.com', 'chloekim2014@gmail.com', 'jkang0604@gmail.com', 'syyou128@gmail.com', 'yujinsart@gmail.com', 'jessyessy.p@gmail.com', 'rcho0702@gmail.com'];
 
   const gate = document.getElementById('authGate');
   const bar = document.getElementById('authBar');   // v1.6.1: 설정 패널로 이동 → null일 수 있음(가드 처리)

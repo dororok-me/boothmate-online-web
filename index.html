@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.75 → v1.13.76) — 도량형 반영 로그 칩의 원본 중복 제거:
+  - 도량형 칩이 "64,000 pyeong → 64,000 pyeong(211,570.2 m²)"처럼 화살표 뒤에 원본을
+    통째로 반복 표시하던 문제 수정. 환율 로그처럼 끝 괄호 안 환산값만 추출.
+    → "64,000 pyeong → 211,570.2 m²"로 깔끔하게 표시.
   변경점 (v1.13.74 → v1.13.75) — 용어집 닫기 버튼을 설정과 동일한 고정 플로팅 바로 통일:
   - 기존 용어집 '✕ 닫기'는 박스 안 헤더(g-head)에 있었고 설정은 박스 위 플로팅 바(setCloseBar).
     → 스크롤해도 상단 고정되는 설정 방식으로 일치. 용어집도 박스 위 고정 바(glossCloseBar) 추가,
@@ -1707,7 +1711,7 @@
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.75 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.76 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3238,7 +3242,14 @@ function shownTrans(raw) {
     result = _uc.result;
     for (const _c of _uc.changes) {
       const _k = 'unit:' + _c.from + '→' + _c.to;
-      if (!turnLogged.has(_k)) { turnLogged.add(_k); if (typeof reflogAdd === 'function') reflogAdd('unit', _c.from + ' → ' + _c.to); }
+      // _c.to는 항상 "원본(환산값)" 형식(예: "64,000 pyeong(211,570.2 m²)") → 끝 괄호 안쪽만
+      // 추출해 원본 중복 제거. 환율 로그와 동일 처리. 결과: "64,000 pyeong → 211,570.2 m²"
+      let _conv = _c.to;
+      const _pm = _conv.match(/\(([^()]*)\)\s*$/);
+      if (_pm) _conv = _pm[1].trim();
+      else if (_conv.indexOf(_c.from) === 0) _conv = _conv.slice(_c.from.length).replace(/^\s*\(/, '').replace(/\)\s*$/, '').trim();
+      if (!_conv) _conv = _c.to;
+      if (!turnLogged.has(_k)) { turnLogged.add(_k); if (typeof reflogAdd === 'function') reflogAdd('unit', _c.from + ' → ' + _conv); }
     }
   }
   // 용어집: 표준표기 감지 → 반영 로그 기록(괄호 병기 없음). 표시 색 하이라이트는 tokenize에서.

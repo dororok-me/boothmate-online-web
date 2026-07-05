@@ -1,0 +1,40 @@
+name: Deploy to GitHub Pages
+
+# 정적 사이트(HTML/JS)를 GitHub Actions로 배포. 기존 legacy 빌드의 배포 단계
+# 간헐 타임아웃("Timeout reached, aborting!") 대신, 공식 deploy-pages 액션 사용.
+# main에 push되면 자동 배포. 실패 시 Actions 탭에서 "Re-run" 한 번이면 재배포.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 동시 배포 방지(한 번에 하나만). 진행 중인 건 취소하지 않고 큐잉.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # 저장소 전체를 그대로 업로드(CNAME 포함 → 커스텀 도메인 유지, Jekyll 미실행)
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

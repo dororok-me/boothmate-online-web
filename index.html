@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.74 → v1.13.75) — 용어집 닫기 버튼을 설정과 동일한 고정 플로팅 바로 통일:
+  - 기존 용어집 '✕ 닫기'는 박스 안 헤더(g-head)에 있었고 설정은 박스 위 플로팅 바(setCloseBar).
+    → 스크롤해도 상단 고정되는 설정 방식으로 일치. 용어집도 박스 위 고정 바(glossCloseBar) 추가,
+    g-head에서 닫기 버튼 제거(제목만 유지). gCloseBtn은 그 고정 바로 이동.
+  - glossaryBtn/gCloseBtn 토글 시 glossCloseBar 표시·숨김 연결.
   변경점 (v1.13.73 → v1.13.74) — 로그인 화이트리스트에 테스트 계정 1개 추가:
   - jkang0604@gmail.com → ALLOWED_EMAILS 등록.
   변경점 (v1.13.72 → v1.13.73) — 모바일 기본 마이크를 내장 마이크로(교수님 요청):
@@ -1677,6 +1682,8 @@
 </div>
 </div>
 <div id="mcPanel"></div>
+<!-- 용어집 닫기 — 설정(setCloseBar)과 동일한 박스 위 고정 플로팅 바. 용어집 열릴 때만 표시 -->
+<div id="glossCloseBar" style="display:none; position:sticky; top:0; z-index:30; justify-content:flex-end; padding:2px 0 6px; background:var(--t-bg);"><button type="button" id="gCloseBtn" class="mc-close">✕ 닫기</button></div>
 <div id="glossaryPanel"></div>
 </div><!-- /panelArea -->
 <div id="errbox"></div>
@@ -1700,7 +1707,7 @@
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.74 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.75 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4387,7 +4394,7 @@ window.__syncPanelLayout = function() {
 (function initGlossaryPanel() {
   const panel = $('glossaryPanel');
   panel.innerHTML =
-    '<div class="g-head"><div class="g-ttl">📖 Glossary(양방향)</div><button type="button" id="gCloseBtn" class="g-close" title="용어집 닫기">✕ 닫기</button></div>' +
+    '<div class="g-head"><div class="g-ttl">📖 Glossary(양방향)</div></div>' +
     '<div class="g-tabs">' +
       '<button type="button" id="gTabBtnMain" class="g-tab active">✏️ 용어 추가</button>' +
       '<button type="button" id="gTabBtnSets" class="g-tab">☁️ 클라우드 용어집</button>' +
@@ -4435,7 +4442,7 @@ window.__syncPanelLayout = function() {
       '</div>' +
     '</div>';
 
-  if ($('gCloseBtn')) $('gCloseBtn').onclick = () => { panel.classList.remove('open'); window.__syncPanelLayout(); };
+  if ($('gCloseBtn')) $('gCloseBtn').onclick = () => { panel.classList.remove('open'); const gcb = $('glossCloseBar'); if (gcb) gcb.style.display = 'none'; window.__syncPanelLayout(); };
 
   const listEl = $('gList');
   // 보기 모드: 용어1 ⇄ 용어2(동일폭) + 수정/삭제, 각 용어 칩 바로 아래 별칭 박스(같은 폭 정렬)
@@ -4867,7 +4874,7 @@ window.__syncPanelLayout = function() {
   // mergeGlossary/render 이후에도 누락분 학습되도록 노출
   window.__glossaryLearnMissing = learnMissing;
 
-  $('glossaryBtn').onclick = () => { panel.classList.toggle('open'); if (panel.classList.contains('open')) { render(); learnMissing(); } window.__syncPanelLayout(); };
+  $('glossaryBtn').onclick = () => { panel.classList.toggle('open'); const isOpen = panel.classList.contains('open'); const gcb = $('glossCloseBar'); if (gcb) gcb.style.display = isOpen ? 'flex' : 'none'; if (isOpen) { render(); learnMissing(); } window.__syncPanelLayout(); };
   render();
   learnMissing();
   // 클라우드 동기화 (v1.13.58): 클라우드가 내려준 최신본을 화면에 반영하는 훅 + 시작 시 1회 당겨오기

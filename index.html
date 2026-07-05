@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.72 → v1.13.73) — 모바일 기본 마이크를 내장 마이크로(교수님 요청):
+  - 모바일 기기에서 저장된 마이크(mic_device_id)가 현재 연결돼 있지 않으면(외부·블루투스 마이크
+    분리 등) 내장 마이크(브라우저 기본 장치)로 자동 복귀 — loadMicList에서 연결 목록과 대조.
+  - isMobileDevice() 헬퍼 추가(UA + iPadOS 터치포인트 보완). 데스크톱 동작은 불변.
   변경점 (v1.13.71 → v1.13.72) — 설정에 줄 간격 조절 추가(교수님 요청):
   - 설정 패널에 '줄 간격 (여백)' 그룹 추가 — ①원문↔번역 간격(.srcline 아래 여백, 기본 8px, 0~40)
     ②묶음 사이 간격(.pair 아래 여백, 기본 28px, 0~64)을 기존 −/+ 스테퍼로 조절.
@@ -1694,7 +1698,7 @@
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.72 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.73 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2246,6 +2250,13 @@ function stopQuotaCountdown() {
   renderQuota();
 }
 
+/* 모바일 기기(휴대폰·태블릿) 판정 — iPadOS는 데스크톱 UA로 위장하므로 터치포인트로 보완 */
+function isMobileDevice() {
+  const ua = navigator.userAgent || '';
+  if (/Android|iPhone|iPad|iPod|Mobile|Windows Phone|IEMobile|Opera Mini/i.test(ua)) return true;
+  if (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return true;   // iPadOS 13+ 데스크톱 위장
+  return false;
+}
 /* ── 마이크 장치 목록 (v0.9.2) ── */
 async function loadMicList() {
   try {
@@ -2257,7 +2268,13 @@ async function loadMicList() {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const mics = devices.filter(d => d.kind === 'audioinput');
     const sel = $('micSelect');
-    const saved = localStorage.getItem('mic_device_id') || '';
+    let saved = localStorage.getItem('mic_device_id') || '';
+    // 모바일: 저장된 마이크가 지금 연결돼 있지 않으면(예: 외부 마이크·블루투스 분리)
+    //   내장 마이크(브라우저 기본 장치, value="")로 되돌린다. (v1.13.73, 교수님 요청)
+    if (saved && isMobileDevice()) {
+      const availableIds = new Set(mics.map(m => m.deviceId).filter(Boolean));
+      if (!availableIds.has(saved)) { saved = ''; localStorage.removeItem('mic_device_id'); }
+    }
     sel.innerHTML = '<option value="">기본 장치</option>';
     for (const m of mics) {
       const opt = document.createElement('option');

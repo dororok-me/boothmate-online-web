@@ -1,8 +1,8 @@
 name: Deploy to GitHub Pages
 
 # 정적 사이트(HTML/JS)를 GitHub Actions로 배포. 기존 legacy 빌드의 배포 단계
-# 간헐 타임아웃("Timeout reached, aborting!") 대신, 공식 deploy-pages 액션 사용.
-# main에 push되면 자동 배포. 실패 시 Actions 탭에서 "Re-run" 한 번이면 재배포.
+# 간헐 실패("Deployment failed"/"Timeout reached") 대신, 공식 deploy-pages 액션 +
+# 자동 재시도(최대 3회)로 스스로 복구되게 함. main에 push되면 자동 배포.
 
 on:
   push:
@@ -24,7 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,6 +34,23 @@ jobs:
         with:
           # 저장소 전체를 그대로 업로드(CNAME 포함 → 커스텀 도메인 유지, Jekyll 미실행)
           path: '.'
-      - name: Deploy to GitHub Pages
-        id: deployment
+
+      # ── 배포: GitHub Pages 배포 API가 간헐적으로 뻗어서 최대 3회 자동 재시도 ──
+      - name: Deploy (attempt 1)
+        id: d1
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Wait before retry 1
+        if: steps.d1.outcome == 'failure'
+        run: sleep 25
+      - name: Deploy (attempt 2)
+        id: d2
+        if: steps.d1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Wait before retry 2
+        if: steps.d1.outcome == 'failure' && steps.d2.outcome == 'failure'
+        run: sleep 40
+      - name: Deploy (attempt 3, final)
+        if: steps.d1.outcome == 'failure' && steps.d2.outcome == 'failure'
         uses: actions/deploy-pages@v4

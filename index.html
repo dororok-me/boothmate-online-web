@@ -996,6 +996,10 @@ if (document.documentElement.classList.contains('bm-app')) (function(){
   function ss(){ return ((performance.now()-t0)/1000).toFixed(1); }
   function log(m){ logs.push(ss()+'s '+m); if(logs.length>34) logs.shift(); try{ box().textContent='[진단2]\n'+logs.join('\n'); }catch(e){} }
   window.__bmLog=log; log('start');
+  log('build=' + (window.__bmBuild || 'OLD ⚠️재빌드필요'));
+  var gw=setInterval(function(){ var g=document.getElementById('authGate'); if(g && getComputedStyle(g).display==='none'){ log('로그인게이트 숨김완료'); clearInterval(gw);} },100);
+  setTimeout(function(){clearInterval(gw);},30000);
+  var li=setInterval(function(){ if(window.__boothmateNativeLogin && !window.__boothmateNativeLogin.__w){ var f=window.__boothmateNativeLogin; window.__boothmateNativeLogin=function(u){ log('네이티브 로그인'); return f(u); }; window.__boothmateNativeLogin.__w=1; clearInterval(li);} },50);
   document.addEventListener('DOMContentLoaded',function(){log('DOMContentLoaded');});
   window.addEventListener('load',function(){log('load');});
   window.addEventListener('touchstart',function(){log('★터치');},{once:true,capture:true});

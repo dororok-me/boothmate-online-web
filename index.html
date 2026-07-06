@@ -973,7 +973,11 @@
 </script>
 <style>.bm-app .logo-sub{display:none !important;}
 /* 앱에서는 연결방식·API키·티켓 메뉴 숨김 (앱은 중계서버 자동연결, 유저가 만질 필요 없음) */
-.bm-app #grpConn, .bm-app #grpDirect, .bm-app #grpRelay{display:none !important;}</style>
+.bm-app #grpConn, .bm-app #grpDirect, .bm-app #grpRelay{display:none !important;}
+/* 앱에서는 오버레이(별도 자막창) 버튼 숨김 — 웹브라우저 전용 기능 */
+.bm-app #openOverlayBtn{display:none !important;}
+/* 앱에서는 사업자정보 상세 숨김 (약관·개인정보처리방침 링크는 유지) */
+.bm-app #bizInfoToggle, .bm-app #bizInfoDetail{display:none !important;}</style>
 <!-- iOS 앱 전용 UI 언어 레이어(KO⇄EN). 앱모드에서만 작동, 웹 브라우저엔 영향 없음. -->
 <script defer src="app-i18n.js"></script>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">

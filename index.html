@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.83 → v1.13.84) — 모바일 용어집 세로 공간 확대(교수님 요청):
+  - [하단 끝까지] 용어집이 열리면 #panelArea.glossary-open의 max-height(58~64dvh) 제한을
+    풀고 flex:1로 화면 하단까지 차지 → 용어 리스트 클릭 공간 최대화. 설정 패널은 기존 그대로.
+  - [자막·로그 숨김] 용어집 열림 동안 __syncPanelLayout이 자막(#mcWrap)·반영로그(#reflogBox)를
+    내용 유무와 상관없이 숨김(닫으면 원래대로). 설정 열림은 기존 동작(자막 있으면 표시) 유지.
+  - [탭 한 줄 고정] '용어 추가/클라우드 용어집' 탭이 좁은 화면에서 두 줄로 커지던 문제:
+    white-space:nowrap+말줄임, 패딩·글자 축소(9px/14px→6px/8px, 14→13px), 탭 박스와
+    g-head(제목 줄) 상하 여백 축소 → 상단 고정 영역 높이 최소화.
   변경점 (v1.13.82 → v1.13.83) — 용어집·설정 패널 UI 개편(교수님 요청):
   - [닫기 플로팅] 설정·용어집 '✕ 닫기'가 한 줄을 차지하던 바(setCloseBar/glossCloseBar)를
     높이 0으로 만들고 버튼만 박스 우측 상단 위에 떠 있게(absolute) → 공간 절약.
@@ -1122,8 +1130,14 @@
   }
   /* 용어집 열림: flex 세로 구조 — 제목·탭·추가폼·도구줄·검색은 고정, 리스트만 스크롤 (v1.13.83) */
   #glossaryPanel.open { display: flex; flex-direction: column; overflow: hidden; }
-  /* 용어집이 열리면 바깥(#panelArea) 스크롤을 끄고 패널 내부(gList)만 스크롤 */
-  #panelArea.glossary-open { overflow-y: hidden; display: flex; flex-direction: column; }
+  /* 용어집이 열리면 바깥(#panelArea) 스크롤을 끄고 패널 내부(gList)만 스크롤.
+     max-height 해제 + flex:1 → 화면 하단 끝까지 차지(모바일에서 리스트 클릭 공간 확보, v1.13.84).
+     설정은 기존대로 58dvh 제한 유지. */
+  #panelArea.glossary-open {
+    overflow-y: hidden; display: flex; flex-direction: column;
+    max-height: none; flex: 1 1 auto; min-height: 0;
+  }
+  #panelArea.glossary-open #glossaryPanel.open { margin-bottom: 4px; }
   #panelArea.glossary-open #glossaryPanel.open { flex: 1 1 auto; min-height: 0; }
   #glossaryPanel #gTabMain { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
   #glossaryPanel #gTabSets { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
@@ -1150,7 +1164,7 @@
   }
   #glossaryPanel .g-head {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #2a3a55;
+    margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid #2a3a55;
     position: sticky; top: 0; background: inherit; z-index: 1;
   }
   #glossaryPanel .g-ttl { font-size: 13px; font-weight: 700; color: #7dd3fc; }
@@ -1274,11 +1288,13 @@
   #glossaryPanel .g-tool.g-danger:hover { background: #5a2a3a; }
   /* 용어집 패널 탭 — 세그먼트(알약) 스타일로 활성 탭을 채워서 구분 강조 (v1.13.65) */
   #glossaryPanel .g-tabs {
-    display: flex; gap: 5px; margin-bottom: 14px; padding: 5px;
+    display: flex; gap: 5px; margin-bottom: 8px; padding: 4px;
     background: var(--t-area-bg, #0f1626); border: 1px solid var(--t-border, #2a3a55); border-radius: 10px;
   }
+  /* 탭은 항상 한 줄(줄바꿈 금지·넘치면 말줄임) — 좁은 화면에서 두 줄로 커지지 않게 (v1.13.84) */
   #glossaryPanel .g-tab {
-    flex: 1 1 0; padding: 9px 14px; font-size: 14px; font-weight: 700;
+    flex: 1 1 0; min-width: 0; padding: 6px 8px; font-size: 13px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     background: transparent; color: var(--t-muted, #7a8ba8);
     border: none; border-radius: 7px; cursor: pointer;
   }
@@ -1793,7 +1809,7 @@
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.83 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.84 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4189,14 +4205,17 @@ window.addEventListener('pagehide', () => {
    보면서 설정·용어를 수정할 수 있게(v1.13.48, 교수님 요청). 닫으면 원래대로 복원. */
 window.__syncPanelLayout = function() {
   const mp = $('mcPanel'), gp = $('glossaryPanel'), mw = $('mcWrap'), rf = $('reflogBox');
-  const anyOpen = (mp && mp.classList.contains('open')) || (gp && gp.classList.contains('open'));
+  const gOpen = !!(gp && gp.classList.contains('open'));
+  const anyOpen = (mp && mp.classList.contains('open')) || gOpen;
   const hasSubs = !!(combinedEl && combinedEl.querySelector('.pair:not(.offpair)'));
-  if (mw) mw.style.display = (anyOpen && !hasSubs) ? 'none' : '';
+  // 용어집이 열려 있으면 자막·반영로그를 무조건 숨겨 패널이 하단 끝까지 차지 (v1.13.84).
+  // 설정은 기존대로: 자막이 있으면 패널 아래에 계속 표시.
+  if (mw) mw.style.display = (gOpen || (anyOpen && !hasSubs)) ? 'none' : '';
   if (rf) {
     // 반영 로그는 사용자 설정(reflog_visible, 기본 표시)에 따라 복원
     const vis = localStorage.getItem('reflog_visible') !== '0';
     const hasLog = (typeof reflogEntries !== 'undefined') && reflogEntries.length > 0;
-    rf.style.display = (anyOpen && !hasLog) ? 'none' : (vis ? 'flex' : 'none');
+    rf.style.display = (gOpen || (anyOpen && !hasLog)) ? 'none' : (vis ? 'flex' : 'none');
   }
 };
 

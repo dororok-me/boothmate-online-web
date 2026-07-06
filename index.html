@@ -971,7 +971,9 @@
   }catch(e){}
 })();
 </script>
-<style>.bm-app .logo-sub{display:none !important;}</style>
+<style>.bm-app .logo-sub{display:none !important;}
+/* 앱에서는 연결방식·API키·티켓 메뉴 숨김 (앱은 중계서버 자동연결, 유저가 만질 필요 없음) */
+.bm-app #grpConn, .bm-app #grpDirect, .bm-app #grpRelay{display:none !important;}</style>
 <!-- iOS 앱 전용 UI 언어 레이어(KO⇄EN). 앱모드에서만 작동, 웹 브라우저엔 영향 없음. -->
 <script defer src="app-i18n.js"></script>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -1603,7 +1605,15 @@
     .mc-area { padding: 22px 18px; }
   }
 </style>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+/* 구글 로그인 스크립트는 웹(브라우저)에서만 로드. 앱모드에서는 네이티브 로그인을 쓰므로 스킵(로딩 속도 개선). */
+if (!document.documentElement.classList.contains('bm-app')) {
+  var _gsi = document.createElement('script');
+  _gsi.src = 'https://accounts.google.com/gsi/client';
+  _gsi.async = true; _gsi.defer = true;
+  document.head.appendChild(_gsi);
+}
+</script>
 </head>
 <body class="theme-light">
 <script>
@@ -4253,7 +4263,7 @@ window.__syncPanelLayout = function() {
       '</div>' +
       '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">로그인 계정과 남은 시간이 표시됩니다.</div>' +
     '</div>' +
-    '<div class="grp"><div class="grp-ttl">🔌 연결 방식</div>' +
+    '<div class="grp" id="grpConn"><div class="grp-ttl">🔌 연결 방식</div>' +
       '<div class="row" style="max-width:none;">' +
         '<select id="connMode" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--t-border); background:var(--t-input-bg); color:var(--t-text); font-size:13px;">' +
           '<option value="direct">직접 연결 (내 API 키 사용)</option>' +

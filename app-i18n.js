@@ -240,20 +240,40 @@
     });
   }
 
-  function apply() {
+  function curMap() { return lang === 'en' ? DICT : reverse(); }
+
+  // 전체 훑기 (초기 1회 + 언어 토글 시에만)
+  function applyAll() {
     busy = true;
     if (observer) observer.disconnect();
     ensureLangToggle();
-    sweep(document.body, lang === 'en' ? DICT : reverse());
+    sweep(document.body, curMap());
     if (observer) observer.observe(document.body, { childList: true, subtree: true, characterData: true });
     busy = false;
     syncToggle();
   }
 
-  function schedule() {
-    if (scheduled || busy) return;
-    scheduled = true;
-    requestAnimationFrame(function () { scheduled = false; apply(); });
+  function translateNode(node, map) {
+    if (inSkip(node)) return;
+    if (node.nodeType === 3) mapText(node, map);
+    else if (node.nodeType === 1) sweep(node, map);
+  }
+
+  // 관찰자 콜백: 새로 추가/변경된 부분만 처리 (전체 재훑기 X → 초기 로딩 부담 최소화)
+  function processMutations(records) {
+    if (busy) return;
+    busy = true;
+    if (observer) observer.disconnect();
+    var map = curMap();
+    for (var i = 0; i < records.length; i++) {
+      var r = records[i];
+      if (r.type === 'characterData') { if (!inSkip(r.target)) mapText(r.target, map); }
+      else if (r.addedNodes) { for (var j = 0; j < r.addedNodes.length; j++) translateNode(r.addedNodes[j], map); }
+    }
+    ensureLangToggle();
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    busy = false;
+    syncToggle();
   }
 
   window.bmGetLang = function () { return lang; };
@@ -262,15 +282,15 @@
     if (l === lang) { syncToggle(); return; }
     lang = l;
     try { localStorage.setItem('bm_ui_lang', l); } catch (e) {}
-    apply();
+    applyAll();
   };
 
   function start() {
-    apply();
-    observer = new MutationObserver(function () { schedule(); });
+    applyAll();
+    observer = new MutationObserver(processMutations);
     observer.observe(document.body, { childList: true, subtree: true, characterData: true });
-    setTimeout(apply, 300);
-    setTimeout(apply, 1200);
+    setTimeout(applyAll, 400);
+    setTimeout(applyAll, 1500);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

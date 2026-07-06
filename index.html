@@ -971,6 +971,24 @@
   }catch(e){}
 })();
 </script>
+<!-- [임시 진단] 앱 시작이 느린 원인 추적용 배너. 원인 확인 후 제거함. 앱모드에서만 표시. -->
+<script>
+if (document.documentElement.classList.contains('bm-app')) (function(){
+  var t0 = performance.now(), logs = [];
+  function box(){ var d=document.getElementById('bmDbg'); if(!d){ d=document.createElement('div'); d.id='bmDbg'; d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:2147483647;background:rgba(0,0,0,.82);color:#0f0;font:11px/1.4 monospace;padding:5px 8px;white-space:pre-wrap;max-height:45vh;overflow:auto;'; (document.body||document.documentElement).appendChild(d);} return d; }
+  function log(m){ logs.push(((performance.now()-t0)/1000).toFixed(1)+'s  '+m); try{ box().textContent='[진단]\n'+logs.join('\n'); }catch(e){} }
+  window.__bmLog = log; log('스크립트 시작');
+  document.addEventListener('DOMContentLoaded', function(){ log('DOMContentLoaded (화면 구성)'); });
+  window.addEventListener('load', function(){ log('load (리소스 완료)'); });
+  window.addEventListener('touchstart', function(){ log('★ 첫 화면 터치'); }, {once:true});
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    var _g = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = function(c){ var s=performance.now(); log('마이크 요청'); return _g(c).then(function(r){ log('마이크 성공 (+'+((performance.now()-s)/1000).toFixed(1)+'s)'); return r; }, function(e){ log('마이크 실패 '+(e&&e.name)+' (+'+((performance.now()-s)/1000).toFixed(1)+'s)'); throw e; }); };
+  }
+  try{ var _WS=window.WebSocket; function WS(u,p){ var w=arguments.length>1?new _WS(u,p):new _WS(u); var s=performance.now(); log('WS 시도 '+String(u).slice(0,42)); w.addEventListener('open',function(){log('WS open (+'+((performance.now()-s)/1000).toFixed(1)+'s)');}); w.addEventListener('error',function(){log('WS error (+'+((performance.now()-s)/1000).toFixed(1)+'s)');}); return w; } WS.prototype=_WS.prototype; ['CONNECTING','OPEN','CLOSING','CLOSED'].forEach(function(k){WS[k]=_WS[k];}); window.WebSocket=WS; }catch(e){}
+  var iv=setInterval(function(){ if(window.__boothmateNativeLogin && !window.__boothmateNativeLogin.__w){ var f=window.__boothmateNativeLogin; window.__boothmateNativeLogin=function(u){ log('네이티브 로그인'); return f(u); }; window.__boothmateNativeLogin.__w=1; clearInterval(iv);} },50);
+})();
+</script>
 <style>.bm-app .logo-sub{display:none !important;}
 /* 앱에서는 연결방식·API키·티켓 메뉴 숨김 (앱은 중계서버 자동연결, 유저가 만질 필요 없음) */
 .bm-app #grpConn, .bm-app #grpDirect, .bm-app #grpRelay{display:none !important;}

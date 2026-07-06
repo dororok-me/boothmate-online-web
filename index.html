@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.85 → v1.13.86) — 클라우드 용어집 이모지 재교체(교수님 선택):
+  - 임시 적용했던 📂 → 💭(생각 풍선)으로 변경: 구름 모양이 또렷하고 작은 크기에서도
+    잘 보임. 탭·개수 배지(renderSets)·목록 제목 3곳. '✅ 동기화됨'은 유지.
   변경점 (v1.13.84 → v1.13.85) — 클라우드 용어집 이모지 교체(교수님 요청):
   - ☁️가 작은 크기(13px 탭·12px 상태)에서 뭉개져 보이는 문제 → 작아도 또렷한 이모지로:
     탭 '☁️ 클라우드 용어집' → '📂 클라우드 용어집'(renderSets의 개수 배지 포함),
@@ -1813,7 +1816,7 @@
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.85 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.86 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4558,7 +4561,7 @@ window.__syncPanelLayout = function() {
     '<div class="g-head"><div class="g-ttl">📖 Glossary(양방향)</div></div>' +
     '<div class="g-tabs">' +
       '<button type="button" id="gTabBtnMain" class="g-tab active">✏️ 용어 추가</button>' +
-      '<button type="button" id="gTabBtnSets" class="g-tab">📂 클라우드 용어집</button>' +
+      '<button type="button" id="gTabBtnSets" class="g-tab">💭 클라우드 용어집</button>' +
     '</div>' +
     '<div id="gTabMain">' +
     '<div class="g-add">' +
@@ -4606,7 +4609,7 @@ window.__syncPanelLayout = function() {
         '<span class="g-count">이름을 붙여 보관하고, 행사마다 골라 불러옵니다</span>' +
       '</div>' +
       '<div id="gSetsBox" class="g-sets">' +
-        '<div class="g-sets-ttl">📂 저장된 클라우드 용어집 — 불러올 때 \'삭제 후 불러오기 / 이어 붙이기\'를 선택합니다</div>' +
+        '<div class="g-sets-ttl">💭 저장된 클라우드 용어집 — 불러올 때 \'삭제 후 불러오기 / 이어 붙이기\'를 선택합니다</div>' +
         '<div id="gSetsList"></div>' +
       '</div>' +
     '</div>';
@@ -5016,7 +5019,7 @@ window.__syncPanelLayout = function() {
   function renderSets() {
     const sets = loadGlossarySets();
     const tabBtn = $('gTabBtnSets');
-    if (tabBtn) tabBtn.textContent = '📂 클라우드 용어집' + (sets.length ? ' (' + sets.length + ')' : '');
+    if (tabBtn) tabBtn.textContent = '💭 클라우드 용어집' + (sets.length ? ' (' + sets.length + ')' : '');
     const box = $('gSetsList');
     if (!box) return;
     box.innerHTML = '';

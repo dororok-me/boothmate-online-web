@@ -5200,6 +5200,15 @@ window.__syncPanelLayout = function() {
     if (message) msgEl.textContent = message;
   }
 
+  // ── iOS 앱 네이티브 로그인 브리지 ──
+  // 앱(웹뷰)에서는 구글 OAuth가 막히므로, 네이티브(Sign in with Apple)가 사용자 정보를 넘겨 이 함수를 호출한다.
+  // 일반 웹 브라우저에서는 호출되지 않으므로 영향 없음(안 쓰이는 전역 함수 1개).
+  window.__boothmateNativeLogin = function(user){
+    if (!user || !user.email) return;
+    try { localStorage.setItem('boothmate_user', JSON.stringify(user)); } catch(e){}
+    showApp(user);
+  };
+
   // 구글이 로그인 성공 시 호출하는 콜백
   window.__onGoogleCredential = function(response){
     const user = decodeJwt(response.credential);

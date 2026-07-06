@@ -1,5 +1,19 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.82 → v1.13.83) — 용어집·설정 패널 UI 개편(교수님 요청):
+  - [닫기 플로팅] 설정·용어집 '✕ 닫기'가 한 줄을 차지하던 바(setCloseBar/glossCloseBar)를
+    높이 0으로 만들고 버튼만 박스 우측 상단 위에 떠 있게(absolute) → 공간 절약.
+  - [동시 열림 방지] 설정을 열면 용어집이 닫히고, 용어집을 열면 설정이 닫힘
+    (__closeSettingsPanel/__closeGlossaryPanel 상호 호출).
+  - [용어집 상단 고정] 패널을 flex 세로 구조로 변경: 제목·탭·추가폼·도구줄·검색/정렬은
+    고정되고 용어 리스트(gList)만 내부 스크롤(#panelArea.glossary-open으로 바깥 스크롤 차단).
+  - [도구줄 위로] 내보내기·불러오기·전체 삭제·개수·동기화됨 줄을 리스트 아래에서
+    상단 고정 영역(추가폼 바로 아래)으로 이동.
+  - [정렬 옵션] 검색창 옆 정렬 드롭다운(gSortSel): 최신순(기본, 최근 추가가 맨 위)·
+    ABC순(라틴 용어 기준)·가나다순(한글 용어 기준). localStorage 'glossary_sort'에 기억.
+  - [유사어 자동 표시] 용어1/용어2 입력 중 이미 등록된 비슷한 용어를 입력칸 아래
+    드롭다운(gSug)으로 표시. 클릭하면 그 항목이 입력칸에 채워져 바로 수정 가능.
+    추가 시 같은 용어가 있으면 덮어쓸지 확인(중복 등록 방지).
   변경점 (v1.13.81 → v1.13.82) — 로그인 화이트리스트에 테스트 계정 1개 추가:
   - makingin@gmail.com → ALLOWED_EMAILS 등록.
   변경점 (v1.13.79 → v1.13.80) — 로그인 화이트리스트에 테스트 계정 2개 추가:
@@ -1106,7 +1120,34 @@
     background: rgba(16,22,38,0.96); border: 1px solid #2a3a55; border-radius: 12px;
     color: #e2e8f0; font-size: 13px;
   }
-  #glossaryPanel.open { display: block; }
+  /* 용어집 열림: flex 세로 구조 — 제목·탭·추가폼·도구줄·검색은 고정, 리스트만 스크롤 (v1.13.83) */
+  #glossaryPanel.open { display: flex; flex-direction: column; overflow: hidden; }
+  /* 용어집이 열리면 바깥(#panelArea) 스크롤을 끄고 패널 내부(gList)만 스크롤 */
+  #panelArea.glossary-open { overflow-y: hidden; display: flex; flex-direction: column; }
+  #panelArea.glossary-open #glossaryPanel.open { flex: 1 1 auto; min-height: 0; }
+  #glossaryPanel #gTabMain { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+  #glossaryPanel #gTabSets { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  /* 검색 + 정렬 한 줄 */
+  #glossaryPanel .g-listbar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  #glossaryPanel .g-listbar .g-search { flex: 1 1 auto; width: auto; margin-bottom: 0; }
+  /* 용어1/2 입력 중 유사 용어 자동 표시 드롭다운 (v1.13.83) */
+  #glossaryPanel .g-add-terms { position: relative; }
+  #glossaryPanel .g-sug {
+    position: absolute; top: 100%; margin-top: 2px; z-index: 40; display: none;
+    max-height: 180px; overflow-y: auto; box-sizing: border-box;
+    background: var(--t-panel-bg, #101626); border: 1px solid var(--t-border, #2a3a55);
+    border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  }
+  #glossaryPanel .g-sug.show { display: block; }
+  #glossaryPanel .g-sug-item {
+    padding: 6px 10px; font-size: 12px; cursor: pointer;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #glossaryPanel .g-sug-item:hover { background: rgba(79,70,229,0.18); }
+  #glossaryPanel .g-sug-hint {
+    padding: 4px 10px; font-size: 10px; color: var(--t-muted, #7a8ba8);
+    border-top: 1px solid var(--t-border, #2a3a55);
+  }
   #glossaryPanel .g-head {
     display: flex; align-items: center; justify-content: space-between; gap: 10px;
     margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #2a3a55;
@@ -1126,6 +1167,11 @@
     padding: 6px 16px; border-radius: 8px; border: none; cursor: pointer; flex: 0 0 auto;
   }
   #glossaryPanel .g-close:hover, .mc-close:hover { background: #b91c1c; color: #fff; }
+  /* 닫기 버튼 플로팅: 높이 0 바(setCloseBar/glossCloseBar) 안에서 박스 우측 상단 위에 겹쳐 뜸 (v1.13.83) */
+  .mc-close-float {
+    position: absolute; top: 14px; right: 10px; z-index: 31;
+    padding: 4px 12px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+  }
   #glossaryPanel .g-add { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
   #glossaryPanel .g-add-terms, #glossaryPanel .g-add-syns, #glossaryPanel .g-add-foot { display: flex; gap: 8px; align-items: center; }
   #glossaryPanel .g-add .g-arrow, #glossaryPanel .g-add button { flex: 0 0 auto; }
@@ -1156,7 +1202,8 @@
     padding: 7px 16px; font-size: 13px; background: #378ADD; color: #fff;
     border-radius: 6px; border: none; cursor: pointer;
   }
-  #glossaryPanel .g-list { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; }
+  /* 리스트만 스크롤: 고정 높이 대신 남는 공간을 채우고 넘치면 내부 스크롤 (v1.13.83) */
+  #glossaryPanel .g-list { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   #glossaryPanel .g-item {
     display: flex; flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 10px;
     background: #0f1626; border: 1px solid #1e2b40; border-radius: 6px;
@@ -1671,8 +1718,8 @@
 </div>
 <!-- 설정/용어집 패널 영역(열면 펼쳐지며 스크롤, 닫으면 0높이) — 고정 레이아웃을 깨지 않음 (v1.7.0) -->
 <div id="panelArea">
-<!-- 설정 닫기 — 패널 영역 상단에 고정(플로팅). 설정 열릴 때만 표시 -->
-<div id="setCloseBar" style="display:none; position:sticky; top:0; z-index:30; justify-content:flex-end; padding:2px 0 6px; background:var(--t-bg);"><button type="button" id="mcCloseBtn" class="mc-close">✕ 닫기</button></div>
+<!-- 설정 닫기 — 높이 0 고정 바 + 버튼만 박스 위에 떠 있음(한 줄 차지 안 함, v1.13.83) -->
+<div id="setCloseBar" style="display:none; position:sticky; top:0; z-index:30; height:0; overflow:visible;"><button type="button" id="mcCloseBtn" class="mc-close mc-close-float">✕ 닫기</button></div>
 <div id="optsCollapse" style="display:none; margin-top:8px;">
 <!-- 사운드 설정 (최상단 별도 박스) -->
 <div style="padding:12px 14px; border:1px solid var(--t-border); border-radius:10px; background:var(--t-panel-bg); margin-bottom:10px;">
@@ -1720,8 +1767,8 @@
 </div>
 </div>
 <div id="mcPanel"></div>
-<!-- 용어집 닫기 — 설정(setCloseBar)과 동일한 박스 위 고정 플로팅 바. 용어집 열릴 때만 표시 -->
-<div id="glossCloseBar" style="display:none; position:sticky; top:0; z-index:30; justify-content:flex-end; padding:2px 0 6px; background:var(--t-bg);"><button type="button" id="gCloseBtn" class="mc-close">✕ 닫기</button></div>
+<!-- 용어집 닫기 — 설정과 동일한 높이 0 플로팅 바(한 줄 차지 안 함, v1.13.83) -->
+<div id="glossCloseBar" style="display:none; position:sticky; top:0; z-index:30; height:0; overflow:visible;"><button type="button" id="gCloseBtn" class="mc-close mc-close-float">✕ 닫기</button></div>
 <div id="glossaryPanel"></div>
 </div><!-- /panelArea -->
 <div id="errbox"></div>
@@ -1746,7 +1793,7 @@
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.82 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.83 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4438,7 +4485,20 @@ window.__syncPanelLayout = function() {
     if (show) renderSessions();
   };
 
+  // 설정 패널 닫기 (용어집 쪽에서 호출 — 동시 열림 방지, v1.13.83)
+  window.__closeSettingsPanel = () => {
+    if (!panel.classList.contains('open')) return;
+    panel.classList.remove('open');
+    const oc = document.getElementById('optsCollapse');
+    if (oc) oc.style.display = 'none';
+    const scb = document.getElementById('setCloseBar');
+    if (scb) scb.style.display = 'none';
+    $('mcOptBtn').style.background = '';
+    $('mcOptBtn').style.color = '';
+  };
   $('mcOptBtn').onclick = () => {
+    // 열 때 용어집이 열려 있으면 먼저 닫음 (동시 열림 방지, v1.13.83)
+    if (!panel.classList.contains('open') && window.__closeGlossaryPanel) window.__closeGlossaryPanel();
     panel.classList.toggle('open');
     const isOpen = panel.classList.contains('open');
     // 핵심 옵션(번역 언어/입력/음성 소스)도 함께 펼치기/접기
@@ -4494,10 +4554,8 @@ window.__syncPanelLayout = function() {
         '<button id="gAddBtn">추가</button>' +
       '</div>' +
     '</div>' +
-      '<input type="text" id="gSearch" class="g-search" placeholder="🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다">' +
-      '<div class="g-list" id="gList"></div>' +
-      // 도구줄은 용어 리스트 맨 아래(스크롤 최하단)에 배치 (v1.13.62)
-      '<div class="g-tools" style="margin-top:10px; margin-bottom:0;">' +
+      // 도구줄은 상단 고정 영역(추가폼 바로 아래)에 배치 (v1.13.83)
+      '<div class="g-tools" style="margin-bottom:8px;">' +
         '<select id="gExportFmt" class="g-sel">' +
           '<option value="" selected>이 리스트 내보내기</option>' +
           '<option value="csv">CSV</option><option value="txt">TXT</option><option value="xlsx">Excel (.xlsx)</option>' +
@@ -4508,6 +4566,16 @@ window.__syncPanelLayout = function() {
         '<span id="gCount" class="g-count"></span>' +
         '<span id="gCloudStat" class="g-count"></span>' +
       '</div>' +
+      // 검색 + 정렬(최신순 기본) 한 줄 — 상단 고정, 아래 리스트만 스크롤 (v1.13.83)
+      '<div class="g-listbar">' +
+        '<input type="text" id="gSearch" class="g-search" placeholder="🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다">' +
+        '<select id="gSortSel" class="g-sel" title="용어 정렬 순서">' +
+          '<option value="recent">최신순</option>' +
+          '<option value="abc">ABC순</option>' +
+          '<option value="ko">가나다순</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="g-list" id="gList"></div>' +
     '</div>' +
     '<div id="gTabSets" style="display:none;">' +
       '<div class="g-tools">' +
@@ -4520,7 +4588,15 @@ window.__syncPanelLayout = function() {
       '</div>' +
     '</div>';
 
-  if ($('gCloseBtn')) $('gCloseBtn').onclick = () => { panel.classList.remove('open'); const gcb = $('glossCloseBar'); if (gcb) gcb.style.display = 'none'; window.__syncPanelLayout(); };
+  // 용어집 패널 닫기 (설정 쪽에서도 호출 — 동시 열림 방지, v1.13.83)
+  window.__closeGlossaryPanel = () => {
+    panel.classList.remove('open');
+    const gcb = $('glossCloseBar');
+    if (gcb) gcb.style.display = 'none';
+    const pa = $('panelArea');
+    if (pa) pa.classList.remove('glossary-open');
+  };
+  if ($('gCloseBtn')) $('gCloseBtn').onclick = () => { window.__closeGlossaryPanel(); window.__syncPanelLayout(); };
 
   const listEl = $('gList');
   // 보기 모드: 용어1 ⇄ 용어2(동일폭) + 수정/삭제, 각 용어 칩 바로 아래 별칭 박스(같은 폭 정렬)
@@ -4597,6 +4673,17 @@ window.__syncPanelLayout = function() {
     const b = ($('gInB') && $('gInB').value || '').trim();
     return a || b;
   }
+  // ── 정렬 (v1.13.83): 최신순(기본, 최근 추가가 맨 위)·ABC순(라틴 용어 기준)·가나다순(한글 용어 기준) ──
+  function gSortMode() { return localStorage.getItem('glossary_sort') || 'recent'; }
+  function gKeyAbc(it) { if (/[A-Za-z]/.test(it.a)) return it.a; if (/[A-Za-z]/.test(it.b)) return it.b; return it.a; }
+  function gKeyKo(it) { if (/[가-힣]/.test(it.a)) return it.a; if (/[가-힣]/.test(it.b)) return it.b; return it.a; }
+  function gSortView(view) {
+    const mode = gSortMode();
+    if (mode === 'abc') view.sort((x, y) => gKeyAbc(x.it).localeCompare(gKeyAbc(y.it), 'en', { sensitivity: 'base' }));
+    else if (mode === 'ko') view.sort((x, y) => gKeyKo(x.it).localeCompare(gKeyKo(y.it), 'ko'));
+    else view.reverse();   // recent: 배열 끝(마지막 추가)이 맨 위
+    return view;
+  }
   function render() {
     const list = loadGlossary();
     const cnt = $('gCount');
@@ -4608,6 +4695,7 @@ window.__syncPanelLayout = function() {
       if (!q || gNorm(it.a).indexOf(q) >= 0 || gNorm(it.b).indexOf(q) >= 0 ||
           gNorm(it.synA).indexOf(q) >= 0 || gNorm(it.synB).indexOf(q) >= 0 || gNorm(it.syn).indexOf(q) >= 0) view.push({ it: it, idx: idx });
     });
+    gSortView(view);
     if (cnt) cnt.textContent = q ? (view.length + ' / ' + list.length + '개') : (list.length + '개');
     if (!view.length) { listEl.innerHTML = '<div class="g-empty">"' + escapeHtml(ftext) + '"와 비슷한 용어가 없습니다.</div>'; return; }
     listEl.innerHTML = '';
@@ -4626,7 +4714,16 @@ window.__syncPanelLayout = function() {
     if (!a || !b) { alert('용어 1과 용어 2를 모두 입력하세요.'); return; }
     const entry = { a: a, b: b, synA: synA, synB: synB, nat: natFromEntry({ a: a, b: b, synA: synA, synB: synB }) };
     const cur = loadGlossary();
-    cur.push(entry);
+    // 이미 같은 용어가 있으면 덮어쓸지 확인 — 중복 등록 방지 (v1.13.83)
+    const di = cur.findIndex(it =>
+      gNorm(it.a) === gNorm(a) || gNorm(it.b) === gNorm(b) ||
+      gNorm(it.a) === gNorm(b) || gNorm(it.b) === gNorm(a));
+    if (di >= 0) {
+      if (!confirm('"' + cur[di].a + ' ⇄ ' + cur[di].b + '"이(가) 이미 등록되어 있습니다.\n새 내용으로 덮어쓸까요?')) return;
+      cur[di] = entry;
+    } else {
+      cur.push(entry);
+    }
     saveGlossary(cur);
     $('gInA').value = ''; $('gInB').value = ''; $('gInSynA').value = ''; $('gInSynB').value = '';
     $('gInA').focus();
@@ -4641,6 +4738,61 @@ window.__syncPanelLayout = function() {
   if ($('gSearch')) $('gSearch').addEventListener('input', render);
   $('gInA').addEventListener('input', render);
   $('gInB').addEventListener('input', render);
+  // 정렬 드롭다운 (v1.13.83): 선택을 기억하고 즉시 재정렬
+  if ($('gSortSel')) {
+    $('gSortSel').value = gSortMode();
+    $('gSortSel').addEventListener('change', () => {
+      localStorage.setItem('glossary_sort', $('gSortSel').value);
+      render();
+    });
+  }
+  // ── 유사어 자동 표시 (v1.13.83): 용어1/2 입력 중 등록된 비슷한 용어를 입력칸 아래 드롭다운으로 ──
+  const sugEl = document.createElement('div');
+  sugEl.className = 'g-sug';
+  $('gInA').parentNode.appendChild(sugEl);   // .g-add-terms (position:relative)
+  function hideSug() { sugEl.classList.remove('show'); }
+  function showSug(input) {
+    const q = gNorm(input.value);
+    if (!q) { hideSug(); return; }
+    const list = loadGlossary();
+    const m = [];
+    for (let i = list.length - 1; i >= 0 && m.length < 6; i--) {
+      const it = list[i];
+      if (gNorm(it.a).indexOf(q) >= 0 || gNorm(it.b).indexOf(q) >= 0 ||
+          gNorm(it.synA).indexOf(q) >= 0 || gNorm(it.synB).indexOf(q) >= 0) m.push(it);
+    }
+    if (!m.length) { hideSug(); return; }
+    sugEl.innerHTML = '';
+    m.forEach(it => {
+      const d = document.createElement('div');
+      d.className = 'g-sug-item';
+      const syn = [it.synA, it.synB].filter(Boolean).join(' / ');
+      d.textContent = it.a + ' ⇄ ' + it.b + (syn ? '  (' + syn + ')' : '');
+      // mousedown: blur로 드롭다운이 사라지기 전에 처리
+      d.onmousedown = (e) => {
+        e.preventDefault();
+        $('gInA').value = it.a; $('gInB').value = it.b;
+        $('gInSynA').value = it.synA || ''; $('gInSynB').value = it.synB || '';
+        hideSug();
+        render();
+      };
+      sugEl.appendChild(d);
+    });
+    const hint = document.createElement('div');
+    hint.className = 'g-sug-hint';
+    hint.textContent = '이미 등록된 비슷한 용어 — 클릭하면 입력칸에 채워져 수정할 수 있습니다';
+    sugEl.appendChild(hint);
+    sugEl.style.left = input.offsetLeft + 'px';
+    sugEl.style.width = Math.max(input.offsetWidth, 220) + 'px';
+    sugEl.classList.add('show');
+  }
+  ['gInA', 'gInB'].forEach(id => {
+    const el = $(id);
+    el.addEventListener('input', () => showSug(el));
+    el.addEventListener('focus', () => showSug(el));
+    el.addEventListener('blur', () => setTimeout(hideSug, 150));
+    el.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideSug(); });
+  });
 
   // 내보내기: 선택한 형식(csv/txt/xlsx)으로 저장. 형식: "용어1, 용어2" 한 줄에 하나
   function downloadBlob(content, filename, mime) {
@@ -4952,7 +5104,19 @@ window.__syncPanelLayout = function() {
   // mergeGlossary/render 이후에도 누락분 학습되도록 노출
   window.__glossaryLearnMissing = learnMissing;
 
-  $('glossaryBtn').onclick = () => { panel.classList.toggle('open'); const isOpen = panel.classList.contains('open'); const gcb = $('glossCloseBar'); if (gcb) gcb.style.display = isOpen ? 'flex' : 'none'; if (isOpen) { render(); learnMissing(); } window.__syncPanelLayout(); };
+  $('glossaryBtn').onclick = () => {
+    // 열 때 설정이 열려 있으면 먼저 닫음 (동시 열림 방지, v1.13.83)
+    if (!panel.classList.contains('open') && window.__closeSettingsPanel) window.__closeSettingsPanel();
+    panel.classList.toggle('open');
+    const isOpen = panel.classList.contains('open');
+    const gcb = $('glossCloseBar');
+    if (gcb) gcb.style.display = isOpen ? 'flex' : 'none';
+    // 용어집 열림 동안 바깥 스크롤 차단 → 상단(추가폼·도구줄·검색) 고정, 리스트만 스크롤
+    const pa = $('panelArea');
+    if (pa) pa.classList.toggle('glossary-open', isOpen);
+    if (isOpen) { render(); learnMissing(); }
+    window.__syncPanelLayout();
+  };
   render();
   learnMissing();
   // 클라우드 동기화 (v1.13.58): 클라우드가 내려준 최신본을 화면에 반영하는 훅 + 시작 시 1회 당겨오기

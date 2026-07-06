@@ -988,6 +988,22 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   };
 })();
 </script>
+<!-- [임시 진단2] 하단 배너(터치 통과). 메인스레드 멈춤·마이크 추적. 원인 확인 후 제거. -->
+<script>
+if (document.documentElement.classList.contains('bm-app')) (function(){
+  var t0=performance.now(), logs=[];
+  function box(){ var d=document.getElementById('bmDbg'); if(!d){ d=document.createElement('div'); d.id='bmDbg'; d.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:2147483647;background:rgba(0,0,0,.72);color:#0f0;font:10px/1.35 monospace;padding:4px 6px;white-space:pre-wrap;max-height:40vh;overflow:hidden;pointer-events:none;'; (document.body||document.documentElement).appendChild(d);} return d; }
+  function ss(){ return ((performance.now()-t0)/1000).toFixed(1); }
+  function log(m){ logs.push(ss()+'s '+m); if(logs.length>34) logs.shift(); try{ box().textContent='[진단2]\n'+logs.join('\n'); }catch(e){} }
+  window.__bmLog=log; log('start');
+  document.addEventListener('DOMContentLoaded',function(){log('DOMContentLoaded');});
+  window.addEventListener('load',function(){log('load');});
+  window.addEventListener('touchstart',function(){log('★터치');},{once:true,capture:true});
+  var last=performance.now();
+  setInterval(function(){ var now=performance.now(), gap=now-last; if(gap>400) log('⚠️ 멈춤 '+(gap/1000).toFixed(1)+'s'); last=now; },200);
+  if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){ var _g=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices); navigator.mediaDevices.getUserMedia=function(c){ var a=performance.now(); log('mic요청'); return _g(c).then(function(r){log('mic성공 +'+((performance.now()-a)/1000).toFixed(1));return r;},function(e){log('mic거부 '+(e&&e.name));throw e;}); }; }
+})();
+</script>
 <style>.bm-app .logo-sub{display:none !important;}
 /* 앱에서는 연결방식·API키·티켓 메뉴 숨김 (앱은 중계서버 자동연결, 유저가 만질 필요 없음) */
 .bm-app #grpConn, .bm-app #grpDirect, .bm-app #grpRelay{display:none !important;}

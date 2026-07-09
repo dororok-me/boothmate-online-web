@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.87 → v1.13.88) — park.wonny 100시간 부여:
+  - park.wonny@gmail.com(기가입)에 100시간 지급: TIME_GRANTS에 100*3600초 추가
+    (grantId park-wonny-100h-20260705). 다음 접속 시 잔여시간 100시간으로 반영.
   변경점 (v1.13.86 → v1.13.87) — 화이트리스트 1개 추가 + strangermisa10 3시간 재부여:
   - 91skwon@gmail.com → ALLOWED_EMAILS 등록.
   - strangermisa10@gmail.com(기가입) 3시간 재지급: TIME_GRANTS grantId를
@@ -1864,7 +1867,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.87 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.88 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2271,7 +2274,8 @@ const TIME_GRANTS = {
   'jigojisn@gmail.com': { seconds: 20 * 3600, grantId: 'jigojisn-20h-20260702' },
   'twoamari@gmail.com': { seconds: 5 * 3600, grantId: 'twoamari-5h-20260702' },
   'min.interpreter@gmail.com': { seconds: 5 * 3600, grantId: 'min-interpreter-5h-20260703' },
-  'strangermisa10@gmail.com': { seconds: 3 * 3600, grantId: 'strangermisa10-3h-20260705-r2' }
+  'strangermisa10@gmail.com': { seconds: 3 * 3600, grantId: 'strangermisa10-3h-20260705-r2' },
+  'park.wonny@gmail.com': { seconds: 100 * 3600, grantId: 'park-wonny-100h-20260705' }
 };
 
 const Ent = (function(){

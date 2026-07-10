@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.89 → v1.13.90) — 첫 실행 기본 자막 폰트 축소(교수님 요청):
+  - 첫 실행(저장값 없음) 시 번역 자막이 30px로 너무 크게 나오던 것을 원문과 같은 18px로
+    (기본값 D.mc_trans_size 30→18, CSS 폴백 --mc-trans-size 24px→18px).
+  - 사용자가 설정에서 직접 조절한 크기는 localStorage에 저장돼 있어 영향 없음.
   변경점 (v1.13.88 → v1.13.89) — 로그인 화이트리스트에 테스트 계정 1개 추가:
   - yoonsun125p@gmail.com → ALLOWED_EMAILS 등록.
   변경점 (v1.13.87 → v1.13.88) — park.wonny 100시간 부여:
@@ -1075,7 +1079,7 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   /* ── 메인 콘솔: 상단 원문 / 하단 번역 분리 + 텔레프롬프터 흐름 ── */
   :root {
     --mc-src-size: 18px; --mc-src-color: #94a3b8; --mc-src-weight: 400;
-    --mc-trans-size: 24px; --mc-trans-color: #7dd3fc; --mc-trans-weight: 600;
+    --mc-trans-size: 18px; --mc-trans-color: #7dd3fc; --mc-trans-weight: 600;
     --mc-src-gap: 8px;    /* 원문↔번역 줄 간격(묶음 안) */
     --mc-block-gap: 28px; /* 묶음↔묶음 간격 */
   }
@@ -1869,7 +1873,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.89 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.90 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4419,8 +4423,8 @@ window.__syncPanelLayout = function() {
   if (localStorage.getItem('relay_ticket')) $('relayTicket').value = localStorage.getItem('relay_ticket');
   $('relayTicket').addEventListener('input', () => localStorage.setItem('relay_ticket', $('relayTicket').value.trim()));
 
-  // 폰트 크기 기본값 (테마와 무관)
-  const D = { mc_src_size:'18', mc_trans_size:'30', mc_src_weight:'400', mc_trans_weight:'700', mc_src_gap:'8', mc_block_gap:'28' };
+  // 폰트 크기 기본값 (테마와 무관) — 첫 실행 시 원문·번역 모두 18px (v1.13.90, 교수님 요청)
+  const D = { mc_src_size:'18', mc_trans_size:'18', mc_src_weight:'400', mc_trans_weight:'700', mc_src_gap:'8', mc_block_gap:'28' };
   const get = (k) => localStorage.getItem(k) ?? D[k];
 
   /* 색상 적용: 사용자가 직접 고른 색이 있으면 그 색, 없으면 테마 기본색

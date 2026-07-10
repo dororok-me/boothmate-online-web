@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.90 → v1.13.91) — 용어집 치환 시 원문도 하이라이트(교수님 요청):
+  - 번역 줄만 형광펜(.gword) 처리되던 것을 원문 줄(.srcline)에도 적용: 원문 언어 쪽
+    트리거어(표제어+별칭, 굴절형 포함)를 감지해 같은 인디고 형광펜으로 표시.
+  - glossarySrcHlRegexes(원문 언어 = 출력의 반대쪽, nat[srcP] 전체 = 표제어+별칭) +
+    tokenizeSrc(클릭 수정용 .w 토큰 없이 매치 부분만 .gword) 신설. 캐시 별도(_glossarySrcHlCache).
+  - 원문 줄 3곳(appendSrc/appendTrans/finishSegment) textContent → tokenizeSrc innerHTML.
+  - CSS: .srcline .gword — 원문 글자색이 흐려서 형광펜 위 글자는 진한 인디고(#312E81)로.
+  - 오버레이도 동일: pushMirror가 원문 html도 전송, overlay.html이 srcline에 html 렌더 + CSS.
   변경점 (v1.13.89 → v1.13.90) — 첫 실행 기본 자막 폰트 축소(교수님 요청):
   - 첫 실행(저장값 없음) 시 번역 자막이 30px로 너무 크게 나오던 것을 원문과 같은 18px로
     (기본값 D.mc_trans_size 30→18, CSS 폴백 --mc-trans-size 24px→18px).
@@ -1414,6 +1422,15 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
      같은 크기 음수 마진으로 되당겨 틈을 색으로 메움 — 글자 간격은 그대로 (v1.13.66) */
   .transline .gword-joinl { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 2px; margin-left: -2px; }
   .transline .gword-joinr { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 2px; margin-right: -2px; }
+  /* 원문 줄 트리거어 하이라이트 — 원문 글자색이 흐려서 형광펜 위에서는 진한 인디고로 (v1.13.91) */
+  .srcline .gword {
+    background: #C7D2FE; color: #312E81;
+    border-radius: 4px; padding: 0 3px;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .srcline .gword-joinl { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 2px; margin-left: -2px; }
+  .srcline .gword-joinr { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 2px; margin-right: -2px; }
   /* 실시간 수정 기능 숨김 시: 단어가 클릭 가능한 것처럼 보이지 않게 */
   body.no-live-edit .transline .w { cursor: text; }
   body.no-live-edit .transline .w:hover { background: none; }
@@ -1873,7 +1890,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.90 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.91 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2122,7 +2139,7 @@ bmConnect();
    오버레이는 재조립 없이 이 줄들을 그대로 표시 → 불일치/중복/깜빡임 없음 */
 function pushMirror() {
   const srcLines = Array.from(combinedEl.querySelectorAll('.pair:not(.offpair) .srcline')).map(el => ({
-    text: el.textContent, pending: el.classList.contains('pending')
+    text: el.textContent, html: el.innerHTML, pending: el.classList.contains('pending')
   }));
   const transLines = Array.from(combinedEl.querySelectorAll('.pair:not(.offpair) .transline')).map(el => ({
     text: el.textContent, html: el.innerHTML, pending: el.classList.contains('pending')
@@ -2879,6 +2896,64 @@ function glossaryHlRegexes() {
   _glossaryHlCache = { key: key, list: list };
   return list;
 }
+/* 원문(입력 언어) 쪽 트리거어 정규식 — 표제어+별칭 전부(치환을 일으킨 단어를 원문에서도 형광펜, v1.13.91) */
+let _glossarySrcHlCache = { key: null, list: null };
+function glossarySrcHlRegexes() {
+  const outCode = curTarget || ($('targetLang') && $('targetLang').value) || '';
+  const raw = localStorage.getItem('glossary') || '[]';
+  const key = outCode + '|' + raw;
+  if (_glossarySrcHlCache.key === key) return _glossarySrcHlCache.list;
+  const outP = (/ko/.test(String(outCode))) ? 'ko' : 'x';
+  const srcP = (outP === 'ko') ? 'x' : 'ko';   // 원문 언어 = 출력의 반대쪽
+  const terms = [];
+  for (const it of loadGlossary()) {
+    if (!it) continue;
+    let col;
+    if (it.nat) {
+      col = it.nat[srcP];   // [표제어, ...별칭] — 원문에서 들리는 트리거어 전부
+    } else {
+      const aHead = splitAliases(it.a)[0] || it.a;
+      const bHead = splitAliases(it.b)[0] || it.b;
+      const aKo = (gKey(aHead) === 'ko');
+      col = [(srcP === 'ko') ? (aKo ? aHead : bHead) : (aKo ? bHead : aHead)];
+    }
+    if (col) for (const t of col) if (t) terms.push(t);
+  }
+  terms.sort(function (a, b) { return b.length - a.length; });   // 긴 표제어 우선
+  const seen = {}, list = [];
+  for (const t of terms) {
+    const k = t.toLowerCase();
+    if (seen[k]) continue;
+    seen[k] = 1;
+    try { list.push(flexRegexInfl(t)); } catch (e) { /* 잘못된 표제어는 건너뜀 */ }
+  }
+  _glossarySrcHlCache = { key: key, list: list };
+  return list;
+}
+/* 원문 줄 하이라이트 — .w 토큰(클릭 수정) 없이 매치 부분만 .gword로 감쌈 (v1.13.91) */
+function tokenizeSrc(text) {
+  const res = glossarySrcHlRegexes();
+  if (!res.length) return escapeHtml(text);
+  const ranges = [];
+  for (const re of res) {
+    re.lastIndex = 0;
+    let m, guard = 0;
+    while ((m = re.exec(text)) !== null) {
+      if (m[0] === '') { re.lastIndex++; if (re.lastIndex > text.length) break; continue; }
+      if (++guard > 200) break;
+      ranges.push([m.index, m.index + m[0].length]);
+    }
+  }
+  if (!ranges.length) return escapeHtml(text);
+  ranges.sort(function (x, y) { return x[0] - y[0]; });
+  const merged = [];
+  for (const r of ranges) {
+    const last = merged[merged.length - 1];
+    if (last && r[0] <= last[1]) { if (r[1] > last[1]) last[1] = r[1]; }
+    else merged.push(r.slice());
+  }
+  return hlSlice(text, 0, merged);
+}
 function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -3506,7 +3581,7 @@ function appendSrc(t) {
     if (p.transLine) p.el.insertBefore(p.srcLine, p.transLine);
     else p.el.appendChild(p.srcLine);
   }
-  p.srcLine.textContent = tidyNumbers(srcBuf).trim();
+  p.srcLine.innerHTML = tokenizeSrc(tidyNumbers(srcBuf).trim());
   p.srcLine.classList.remove('pending');
   trimLines(combinedEl, 'srcline');
   pushMirror();
@@ -3538,7 +3613,7 @@ function appendTrans(t) {
     p.transLine.innerHTML = tokenize(sent);
     // 원문이 아직 이 묶음에 안 들어왔으면, 지금까지의 원문 버퍼를 이 묶음에 확정
     if (p.srcLine && srcBuf.trim()) {
-      p.srcLine.textContent = tidyNumbers(srcBuf).trim();
+      p.srcLine.innerHTML = tokenizeSrc(tidyNumbers(srcBuf).trim());
       p.srcLine.classList.remove('pending');
     }
     srcBuf = "";            // 이 문장 묶음에 원문도 소비됨
@@ -3578,7 +3653,7 @@ function finishSegment() {
       if (p.transLine) p.el.insertBefore(p.srcLine, p.transLine);
       else p.el.appendChild(p.srcLine);
     }
-    p.srcLine.textContent = tidyNumbers(srcBuf).trim();
+    p.srcLine.innerHTML = tokenizeSrc(tidyNumbers(srcBuf).trim());
     p.srcLine.classList.remove('pending');
   }
   srcBuf = "";

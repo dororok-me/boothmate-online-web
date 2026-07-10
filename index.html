@@ -1,5 +1,14 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.92 → v1.13.93) — 한국어 시제 보존 지침 추가(교수님 보고):
+  - "먼저 무너지고 있었던 겁니다" → "It starts to break down"처럼 과거(진행)를 현재형으로
+    오역하는 문제. 한국어 시제·상 어미는 문장 끝에 와서 실시간 번역이 시제를 미리
+    확정하는 게 원인으로 추정.
+  - 시스템 지시문에 TENSE ACCURACY 블록 추가(언어쌍에 한국어 포함 시):
+    -았/었-(과거), -고 있었-(과거진행, 예문 포함), -고 있-(현재진행), -았었-(대과거),
+    -(으)ㄹ 겁니다/-겠-(미래·추측) 명시 + "과거인데 현재형으로 내지 마라",
+    영→한 역방향도 동일(영어 과거·완료·진행을 올바른 한국어 어미로).
+  - 세션 (재)연결 시 적용. 생성 단계 지시라 후처리 부작용 없음.
   변경점 (v1.13.91 → v1.13.92) — 한국어 원문 줄 바꿈을 마침표 기준으로(교수님 요청):
   - 번역 문장이 완성돼 묶음이 닫힐 때 원문 버퍼를 통째로 소비하던 것을,
     splitToSentences로 완성 문장(.?!。 소수점 가드)까지만 이 묶음에 확정하고
@@ -1897,7 +1906,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.92 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.93 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4045,12 +4054,25 @@ function connectWS() {
                   '(e.g., 3천만 달러 → 30 million dollars, 2.2억 원 → 220 million won, 3억 → 300 million). Never change the order of magnitude. ' +
                   'Always keep each number as ONE contiguous token — never split its digits across outputs ' +
                   '(e.g., output "480만", never "4" then "80만"; output "1.7조", never "1 7 조").';
+    // 시제 보존 (v1.13.93, 교수님 보고): 한국어 시제·상 어미는 문장 끝에 와서 실시간 번역이
+    // 현재형으로 미리 확정하는 오류가 잦음("무너지고 있었던 겁니다"→"It starts to break down").
+    // 언어쌍에 한국어가 있을 때만 주입.
+    const tense = (langPrefix(_pa) === 'ko' || langPrefix(_pb) === 'ko')
+      ? ' TENSE ACCURACY — always preserve the tense and aspect of the source sentence.' +
+        ' Korean tense/aspect markers come at the END of the sentence — pay close attention to them:' +
+        ' -았-/-었- = past ("무너졌습니다" → "collapsed"), -고 있었-/-고 있었던 = past progressive' +
+        ' ("먼저 무너지고 있었던 겁니다" → "it had been breaking down first", NOT "it starts to break down"),' +
+        ' -고 있- = present progressive, -았었-/-었었- = past perfect, -(으)ㄹ 겁니다/-겠- = future or conjecture.' +
+        ' Never default to the present tense when the source is past.' +
+        ' The same applies in reverse: render English past/perfect/progressive with the correct Korean endings' +
+        ' (-았/었-, -고 있었-, -았었- 등), not the present tense.'
+      : '';
     // 단방향 모드: 타겟 언어가 들리면 번역하지 않고 침묵 (방향 전환이 없으므로 모델에 명시)
     const oneWay = (getDirMode() !== 'auto')
       ? ' ONE-WAY MODE — translate ONLY ' + langName(_other) + ' speech into ' + langName(TARGET_LANGUAGE) +
         '. If an utterance is already in ' + langName(TARGET_LANGUAGE) + ', stay silent and output nothing for it.'
       : '';
-    const combined = [toAll, oneWay, instr, glos].filter(Boolean).join(' ');
+    const combined = [toAll, tense, oneWay, instr, glos].filter(Boolean).join(' ');
     if (combined) setupMessage.setup.systemInstruction = { parts: [{ text: combined }] };
     ws.send(JSON.stringify(setupMessage));
     reconnectAttempt = 0;   // 연결 성공 → 시도 횟수 리셋

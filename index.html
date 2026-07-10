@@ -1,5 +1,14 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.93 → v1.13.94) — 원문 감지에 연음 표기 허용(교수님 요청):
+  - STT가 발음대로 받아쓴 연음 표기(트리톤은→"트리 토는", 트리톤이→"트리토니")가
+    원문 하이라이트·반영 로그 좌측 감지에서 매치되지 않던 문제.
+    (공백 허용은 기존에 있었고, 받침이 다음 음절 초성으로 넘어간 표기가 원인.)
+  - koLiaisonAlt: 마지막 글자의 받침을 떼고(톤→토) 그 받침을 초성으로 갖는 글자([나-닣] 등)가
+    뒤따르는 형태를 대체 패턴으로 생성. flexRegexSrc = flexRegexInfl + 연음 대체
+    (명사·2글자 이상만, '~다' 용언·영어는 기존 그대로).
+  - 적용 범위: 원문 하이라이트(glossarySrcHlRegexes)·로그 좌측 감지(scanSrcTrigger)만.
+    출력(번역) 쪽 감지·치환은 AI가 맞춤법대로 쓰므로 변경 없음 — 오탐 위험 최소화.
   변경점 (v1.13.92 → v1.13.93) — 한국어 시제 보존 지침 추가(교수님 보고):
   - "먼저 무너지고 있었던 겁니다" → "It starts to break down"처럼 과거(진행)를 현재형으로
     오역하는 문제. 한국어 시제·상 어미는 문장 끝에 와서 실시간 번역이 시제를 미리
@@ -1906,7 +1915,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.93 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.94 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2614,7 +2623,8 @@ function scanSrcTrigger(srcCol) {
   for (const w of (srcCol || [])) {
     if (!w) continue;
     let r;
-    try { r = flexRegexInfl(w); } catch (e) { continue; }
+    // 연음 표기("트리 토는")도 트리거어로 인식 (v1.13.94)
+    try { r = flexRegexSrc(w); } catch (e) { continue; }
     r.lastIndex = 0;
     if (r.test(hay)) return w;
   }
@@ -2941,7 +2951,8 @@ function glossarySrcHlRegexes() {
     const k = t.toLowerCase();
     if (seen[k]) continue;
     seen[k] = 1;
-    try { list.push(flexRegexInfl(t)); } catch (e) { /* 잘못된 표제어는 건너뜀 */ }
+    // 연음 표기("트리 토는")도 하이라이트되도록 원문 전용 정규식 사용 (v1.13.94)
+    try { list.push(flexRegexSrc(t)); } catch (e) { /* 잘못된 표제어는 건너뜀 */ }
   }
   _glossarySrcHlCache = { key: key, list: list };
   return list;
@@ -3151,6 +3162,37 @@ function flexRegexInfl(term) {
   if (/e$/i.test(term)) core = esc.slice(0, -1) + '(?:e|es|ed|ing|ely)';   // exclude→excluded/excluding
   else core = esc + '(?:es|s|ed|d|ing|ly|er|est)?';
   return new RegExp('(?<![A-Za-z0-9])' + core + '(?![A-Za-z0-9])', 'gi');
+}
+/* 원문(STT 전사) 감지용 정규식 — flexRegexInfl에 '연음 표기' 허용을 더함 (v1.13.94).
+   STT가 발음대로 받아쓰면 받침이 다음 음절 초성으로 넘어간다: 트리톤은→"트리 토는",
+   트리톤이→"트리토니". 마지막 글자의 받침을 뗀 형태 + 그 받침을 초성으로 갖는 글자가
+   뒤따르는 경우도 매치. 명사(비 '~다' 용어)·2글자 이상만 적용(1글자는 오탐 위험).
+   출력(번역) 쪽 감지는 AI가 맞춤법대로 쓰므로 기존 flexRegexInfl 그대로. */
+function koLiaisonAlt(term) {
+  const t = term.replace(/\s+/g, '');
+  const last = t.charCodeAt(t.length - 1);
+  if (last < 0xAC00 || last > 0xD7A3) return null;
+  const jong = (last - 0xAC00) % 28;
+  if (!jong) return null;   // 받침 없음 → 연음 없음
+  // 종성 → 초성 인덱스 (겹받침·연음 불가 자음은 제외. ㅇ 받침은 초성 ㅇ이 무음이라 표기 이동 없음)
+  const jong2cho = { 1:0, 2:1, 4:2, 7:3, 8:5, 16:6, 17:7, 19:9, 20:10, 22:12, 23:14, 24:15, 25:16, 26:17, 27:18 };
+  const cho = jong2cho[jong];
+  if (cho === undefined) return null;
+  const bare = String.fromCharCode(last - jong);                       // 받침 뗀 글자 (톤→토)
+  const from = String.fromCharCode(0xAC00 + cho * 588);                // 그 받침이 초성인 글자 범위
+  const to = String.fromCharCode(0xAC00 + cho * 588 + 587);
+  return { bare: bare, range: '[' + from + '-' + to + ']' };
+}
+function flexRegexSrc(term) {
+  if (!/[가-힣]/.test(term) || /다$/.test(term)) return flexRegexInfl(term);
+  const chars = term.split('').filter(function (c) { return !/\s/.test(c); })
+    .map(function (c) { return c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+  const alt = koLiaisonAlt(term);
+  if (!alt || chars.length < 2) return flexRegexInfl(term);
+  const head = chars.slice(0, -1).join('\\s*');
+  const lastEsc = chars[chars.length - 1];
+  // 원형(트리톤) 또는 연음형(트리토 + 뒤에 [나-닣] 계열 글자)
+  return new RegExp(head + '\\s*(?:' + lastEsc + '|' + alt.bare + '(?=' + alt.range + '))', 'g');
 }
 /* 프롬프트용 글로서리 지시문 — 괄호 주석 방식으로 전환하여 프롬프트 주입 사용 안 함 */
 /* 용어집 프롬프트 주입 — 현재 출력 언어 방향의 (트리거어 → 표준표기) 매핑을 systemInstruction에 실어

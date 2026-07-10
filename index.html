@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.96 → v1.13.97) — 스크롤 힌트 화살표 표시 수정 + 설정 메뉴 순서 재배치(교수님 요청):
+  - [화살표 안 보임] 힌트 버튼 안 SVG가 일부 환경에서 폭 0으로 붕괴해 보라 원만 보이던 문제
+    → SVG 대신 텍스트 글리프 ▼(폭 붕괴 불가) + 버튼 padding:0·line-height 중앙 정렬.
+  - [메뉴 순서] 설정 그룹을 위에서부터: 사운드 설정 → 원문(인식 결과) → 번역 → 줄 간격 →
+    번역·입력 설정 → 테마 → 나머지(계정·연결 방식·키/티켓·Log·무음 자동 정지·자막 기록).
+    optsCollapse의 두 박스를 mcPanel 안으로 DOM 이동(reorderSettingsGroups) — 바인딩 유지,
+    #mcPanel 스코프 CSS(.grp 등)는 원래 mcPanel 그룹에만 해당돼 영향 없음.
   변경점 (v1.13.95 → v1.13.96) — 설정 패널 스크롤 힌트 ↓ 추가(교수님 요청):
   - 설정을 열었을 때 아래에 메뉴가 더 있는 걸 사용자들이 몰라서, 스크롤포트 하단 중앙에
     통통 튀는 ↓ 원형 버튼(panelScrollHint, sticky bottom) 표시.
@@ -1288,12 +1295,13 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     position: absolute; top: 14px; right: 10px; z-index: 31;
     padding: 4px 12px; font-size: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.35);
   }
-  /* 설정 스크롤 힌트 — 스크롤포트 하단 중앙에 떠 있는 ↓ 원형 버튼, 살짝 통통 튐 (v1.13.96) */
+  /* 설정 스크롤 힌트 — 스크롤포트 하단 중앙에 떠 있는 ▼ 원형 버튼, 살짝 통통 튐 (v1.13.96)
+     ▼는 텍스트 글리프(SVG는 일부 환경에서 폭 0으로 붕괴해 안 보였음, v1.13.97) */
   #panelScrollHintBtn {
     position: relative; top: -42px;
-    width: 34px; height: 34px; border-radius: 50%; border: none; cursor: pointer;
-    background: #4F46E5; color: #fff;
-    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; padding: 0; box-sizing: border-box;
+    border-radius: 50%; border: none; cursor: pointer;
+    background: #4F46E5; color: #fff; font-size: 14px; line-height: 34px; text-align: center;
     box-shadow: 0 3px 10px rgba(0,0,0,0.35);
     animation: hintBounce 1.6s ease-in-out infinite;
   }
@@ -1909,7 +1917,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 <div id="glossaryPanel"></div>
 <!-- 설정 스크롤 힌트 — 아래에 메뉴가 더 있으면 하단에 ↓ 표시, 맨 아래 도달 시 숨김 (v1.13.96) -->
 <div id="panelScrollHint" style="display:none; position:sticky; bottom:0; height:0; overflow:visible; text-align:center; z-index:29;">
-  <button type="button" id="panelScrollHintBtn" title="아래에 설정 메뉴가 더 있습니다" aria-label="아래로 스크롤"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></button>
+  <button type="button" id="panelScrollHintBtn" title="아래에 설정 메뉴가 더 있습니다" aria-label="아래로 스크롤">▼</button>
 </div>
 </div><!-- /panelArea -->
 <div id="errbox"></div>
@@ -1934,7 +1942,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.96 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.97 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4749,6 +4757,25 @@ window.__syncPanelLayout = function() {
       window.__syncPanelLayout();
     };
   }
+
+  // 설정 그룹 순서 재배치 (v1.13.97, 교수님 요청):
+  // 사운드 설정 → 원문 → 번역 → 줄 간격 → 번역·입력 설정 → 테마 → 나머지(계정·연결·티켓·Log 등).
+  // optsCollapse의 두 박스(사운드/번역·입력)를 mcPanel 안으로 옮겨 한 흐름으로 정렬
+  // (DOM 이동은 이벤트 바인딩 유지, mcPanel의 .open 토글 하나로 표시·숨김 관리).
+  (function reorderSettingsGroups() {
+    const oc = document.getElementById('optsCollapse');
+    if (!oc || oc.children.length < 2) return;
+    const soundBox = oc.children[0], transBox = oc.children[1];
+    const byTtl = (t) => Array.prototype.find.call(panel.querySelectorAll(':scope > .grp'), (grp) => {
+      const e = grp.querySelector('.grp-ttl');
+      return e && e.textContent.trim().indexOf(t) === 0;
+    });
+    const order = [soundBox, byTtl('원문'), byTtl('번역'), byTtl('줄 간격'), transBox, byTtl('⚙ 테마')].filter(Boolean);
+    const ref = panel.firstChild;
+    order.forEach((el) => panel.insertBefore(el, ref));
+    soundBox.style.marginBottom = '10px';
+    transBox.style.marginBottom = '10px';
+  })();
 })();
 
 /* ── 용어집(글로서리) 패널 ── */

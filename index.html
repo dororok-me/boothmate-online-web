@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.94 → v1.13.95) — 원문 하이라이트 제거, 번역문만 하이라이트(교수님 결정):
+  - 원문·번역문 양쪽 형광펜(v1.13.91~94)이 오히려 헷갈린다는 의견 — 원문 감지는
+    반영 로그가 이미 보여주므로 원문 줄 하이라이트를 제거하고 번역문만 유지.
+  - 원문 줄 3곳 textContent로 복원, tokenizeSrc/glossarySrcHlRegexes 제거,
+    .srcline .gword CSS 제거(메인·오버레이), pushMirror 원문 html 전송·오버레이 렌더 원복.
+  - 유지: 로그 좌측 감지의 연음 인식(flexRegexSrc/koLiaisonAlt + scanSrcTrigger, v1.13.94)
+    — "트리 토는"도 로그에는 '트리톤 → Triton'으로 정확히 잡힘.
   변경점 (v1.13.93 → v1.13.94) — 원문 감지에 연음 표기 허용(교수님 요청):
   - STT가 발음대로 받아쓴 연음 표기(트리톤은→"트리 토는", 트리톤이→"트리토니")가
     원문 하이라이트·반영 로그 좌측 감지에서 매치되지 않던 문제.
@@ -1447,15 +1454,6 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
      같은 크기 음수 마진으로 되당겨 틈을 색으로 메움 — 글자 간격은 그대로 (v1.13.66) */
   .transline .gword-joinl { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 2px; margin-left: -2px; }
   .transline .gword-joinr { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 2px; margin-right: -2px; }
-  /* 원문 줄 트리거어 하이라이트 — 원문 글자색이 흐려서 형광펜 위에서는 진한 인디고로 (v1.13.91) */
-  .srcline .gword {
-    background: #C7D2FE; color: #312E81;
-    border-radius: 4px; padding: 0 3px;
-    -webkit-box-decoration-break: clone;
-    box-decoration-break: clone;
-  }
-  .srcline .gword-joinl { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 2px; margin-left: -2px; }
-  .srcline .gword-joinr { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 2px; margin-right: -2px; }
   /* 실시간 수정 기능 숨김 시: 단어가 클릭 가능한 것처럼 보이지 않게 */
   body.no-live-edit .transline .w { cursor: text; }
   body.no-live-edit .transline .w:hover { background: none; }
@@ -1915,7 +1913,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.94 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.95 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2164,7 +2162,7 @@ bmConnect();
    오버레이는 재조립 없이 이 줄들을 그대로 표시 → 불일치/중복/깜빡임 없음 */
 function pushMirror() {
   const srcLines = Array.from(combinedEl.querySelectorAll('.pair:not(.offpair) .srcline')).map(el => ({
-    text: el.textContent, html: el.innerHTML, pending: el.classList.contains('pending')
+    text: el.textContent, pending: el.classList.contains('pending')
   }));
   const transLines = Array.from(combinedEl.querySelectorAll('.pair:not(.offpair) .transline')).map(el => ({
     text: el.textContent, html: el.innerHTML, pending: el.classList.contains('pending')
@@ -2922,65 +2920,8 @@ function glossaryHlRegexes() {
   _glossaryHlCache = { key: key, list: list };
   return list;
 }
-/* 원문(입력 언어) 쪽 트리거어 정규식 — 표제어+별칭 전부(치환을 일으킨 단어를 원문에서도 형광펜, v1.13.91) */
-let _glossarySrcHlCache = { key: null, list: null };
-function glossarySrcHlRegexes() {
-  const outCode = curTarget || ($('targetLang') && $('targetLang').value) || '';
-  const raw = localStorage.getItem('glossary') || '[]';
-  const key = outCode + '|' + raw;
-  if (_glossarySrcHlCache.key === key) return _glossarySrcHlCache.list;
-  const outP = (/ko/.test(String(outCode))) ? 'ko' : 'x';
-  const srcP = (outP === 'ko') ? 'x' : 'ko';   // 원문 언어 = 출력의 반대쪽
-  const terms = [];
-  for (const it of loadGlossary()) {
-    if (!it) continue;
-    let col;
-    if (it.nat) {
-      col = it.nat[srcP];   // [표제어, ...별칭] — 원문에서 들리는 트리거어 전부
-    } else {
-      const aHead = splitAliases(it.a)[0] || it.a;
-      const bHead = splitAliases(it.b)[0] || it.b;
-      const aKo = (gKey(aHead) === 'ko');
-      col = [(srcP === 'ko') ? (aKo ? aHead : bHead) : (aKo ? bHead : aHead)];
-    }
-    if (col) for (const t of col) if (t) terms.push(t);
-  }
-  terms.sort(function (a, b) { return b.length - a.length; });   // 긴 표제어 우선
-  const seen = {}, list = [];
-  for (const t of terms) {
-    const k = t.toLowerCase();
-    if (seen[k]) continue;
-    seen[k] = 1;
-    // 연음 표기("트리 토는")도 하이라이트되도록 원문 전용 정규식 사용 (v1.13.94)
-    try { list.push(flexRegexSrc(t)); } catch (e) { /* 잘못된 표제어는 건너뜀 */ }
-  }
-  _glossarySrcHlCache = { key: key, list: list };
-  return list;
-}
-/* 원문 줄 하이라이트 — .w 토큰(클릭 수정) 없이 매치 부분만 .gword로 감쌈 (v1.13.91) */
-function tokenizeSrc(text) {
-  const res = glossarySrcHlRegexes();
-  if (!res.length) return escapeHtml(text);
-  const ranges = [];
-  for (const re of res) {
-    re.lastIndex = 0;
-    let m, guard = 0;
-    while ((m = re.exec(text)) !== null) {
-      if (m[0] === '') { re.lastIndex++; if (re.lastIndex > text.length) break; continue; }
-      if (++guard > 200) break;
-      ranges.push([m.index, m.index + m[0].length]);
-    }
-  }
-  if (!ranges.length) return escapeHtml(text);
-  ranges.sort(function (x, y) { return x[0] - y[0]; });
-  const merged = [];
-  for (const r of ranges) {
-    const last = merged[merged.length - 1];
-    if (last && r[0] <= last[1]) { if (r[1] > last[1]) last[1] = r[1]; }
-    else merged.push(r.slice());
-  }
-  return hlSlice(text, 0, merged);
-}
+/* 원문 줄 하이라이트(v1.13.91~94)는 번역문·로그와 중복 표시로 헷갈린다는 교수님 의견으로
+   제거(v1.13.95) — 하이라이트는 번역문만, 원문 감지는 반영 로그 좌측(scanSrcTrigger)이 담당. */
 function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
@@ -3639,7 +3580,7 @@ function appendSrc(t) {
     if (p.transLine) p.el.insertBefore(p.srcLine, p.transLine);
     else p.el.appendChild(p.srcLine);
   }
-  p.srcLine.innerHTML = tokenizeSrc(tidyNumbers(srcBuf).trim());
+  p.srcLine.textContent = tidyNumbers(srcBuf).trim();
   p.srcLine.classList.remove('pending');
   trimLines(combinedEl, 'srcline');
   pushMirror();
@@ -3674,7 +3615,7 @@ function appendTrans(t) {
     if (srcBuf.trim()) {
       const sres = splitToSentences(srcBuf);
       if (p.srcLine && sres.done.length) {
-        p.srcLine.innerHTML = tokenizeSrc(tidyNumbers(sres.done.join(' ')).trim());
+        p.srcLine.textContent = tidyNumbers(sres.done.join(' ')).trim();
         p.srcLine.classList.remove('pending');
         // rest는 trim돼 있어 뒤 공백 하나를 되살림 — 다음 조각과 안 붙게 ("해야"+"되는지" 방지)
         srcBuf = sres.rest ? sres.rest + ' ' : '';
@@ -3722,7 +3663,7 @@ function finishSegment() {
       if (p.transLine) p.el.insertBefore(p.srcLine, p.transLine);
       else p.el.appendChild(p.srcLine);
     }
-    p.srcLine.innerHTML = tokenizeSrc(tidyNumbers(srcBuf).trim());
+    p.srcLine.textContent = tidyNumbers(srcBuf).trim();
     p.srcLine.classList.remove('pending');
   }
   srcBuf = "";

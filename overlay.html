@@ -67,8 +67,8 @@
   }
   .transline.pending { opacity: 1; }
   /* 용어집 표준표기 하이라이트 — 형광펜처럼 단어를 색으로 감쌈(어두운 배경용 반투명 인디고).
-     원문 줄(.srcline)도 트리거어 하이라이트 (v1.13.91) */
-  .transline .gword, .srcline .gword {
+     원문 줄 하이라이트는 번역문과 중복 표시로 헷갈려 제거 — 번역문만 (v1.13.95) */
+  .transline .gword {
     background: rgba(129,140,248,0.42);
     color: #F2F4FF;
     border-radius: 4px;
@@ -77,8 +77,8 @@
     box-decoration-break: clone;
   }
   /* 여러 단어 표제어("눈에 띄다") — 이어지는 조각의 안쪽 모서리·패딩을 없애 한 덩어리 형광펜으로 (v1.13.61) */
-  .transline .gword-joinl, .srcline .gword-joinl { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 0; }
-  .transline .gword-joinr, .srcline .gword-joinr { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 0; }
+  .transline .gword-joinl { border-top-left-radius: 0; border-bottom-left-radius: 0; padding-left: 0; }
+  .transline .gword-joinr { border-top-right-radius: 0; border-bottom-right-radius: 0; padding-right: 0; }
 
   /* ── 대기 메시지 ── */
   #hint {
@@ -350,9 +350,7 @@ function renderSubtitles(srcLines, transLines) {
     const tEl = pair.querySelector('.transline');
     const sl  = srcLines[i]   || { text: '', pending: false };
     const tl  = transLines[i] || { text: '', pending: false };
-    // 원문 줄: 메인에서 온 하이라이트 HTML(트리거어 .gword)을 그대로 표시. 없으면 텍스트 (v1.13.91)
-    if (typeof sl.html === 'string') sEl.innerHTML = sl.html;
-    else sEl.textContent = sl.text;
+    sEl.textContent = sl.text;
     sEl.classList.toggle('pending', !!sl.pending);
     // 번역 줄: 메인에서 온 하이라이트 HTML(용어집 표준표기 .gword)을 그대로 표시. 없으면 텍스트.
     if (typeof tl.html === 'string') tEl.innerHTML = tl.html;

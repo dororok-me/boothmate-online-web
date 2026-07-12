@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.97 → v1.13.98) — 로그인 화이트리스트에 테스트 계정 2개 추가:
+  - cktngus2339@gmail.com, sj.serena.im@gmail.com → ALLOWED_EMAILS 등록.
   변경점 (v1.13.96 → v1.13.97) — 스크롤 힌트 화살표 표시 수정 + 설정 메뉴 순서 재배치(교수님 요청):
   - [화살표 안 보임] 힌트 버튼 안 SVG가 일부 환경에서 폭 0으로 붕괴해 보라 원만 보이던 문제
     → SVG 대신 텍스트 글리프 ▼(폭 붕괴 불가) + 버튼 padding:0·line-height 중앙 정렬.
@@ -1942,7 +1944,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.97 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.98 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -5389,7 +5391,7 @@ window.__syncPanelLayout = function() {
   // ⚠️ 출시 전까지는 운영자(dororok)만 로그인 가능하게 잠가둠.
   //    → 나만 중계서버에 도달 가능 → 내 Gemini 비용 안전.
   // 출시할 때 이 배열을 비우면([]) 누구나 통과, 또는 일부만 받으려면 이메일 추가.
-  const ALLOWED_EMAILS = ['dororok@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com', 'alicecha0114@gmail.com', 'heira.jung@gmail.com', 'topclasstrancc@gmail.com', 'itswonsun@gmail.com', 'janeyu0114@gmail.com', 'interpreterceci@gmail.com', 'min.interpreter@gmail.com', 'skch159@gmail.com', 'luckyeunji@gmail.com', 'myfate0429@gmail.com', 'sandra.jy.lim@gmail.com', 'luvange@gmail.com', 'jigojisn@gmail.com', 'sarahkim005@gmail.com', 'strangermisa10@gmail.com', 'twoamari@gmail.com', 'chloekim2014@gmail.com', 'jkang0604@gmail.com', 'syyou128@gmail.com', 'yujinsart@gmail.com', 'jessyessy.p@gmail.com', 'rcho0702@gmail.com', 'makingin@gmail.com', '91skwon@gmail.com', 'yoonsun125p@gmail.com'];
+  const ALLOWED_EMAILS = ['dororok@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com', 'alicecha0114@gmail.com', 'heira.jung@gmail.com', 'topclasstrancc@gmail.com', 'itswonsun@gmail.com', 'janeyu0114@gmail.com', 'interpreterceci@gmail.com', 'min.interpreter@gmail.com', 'skch159@gmail.com', 'luckyeunji@gmail.com', 'myfate0429@gmail.com', 'sandra.jy.lim@gmail.com', 'luvange@gmail.com', 'jigojisn@gmail.com', 'sarahkim005@gmail.com', 'strangermisa10@gmail.com', 'twoamari@gmail.com', 'chloekim2014@gmail.com', 'jkang0604@gmail.com', 'syyou128@gmail.com', 'yujinsart@gmail.com', 'jessyessy.p@gmail.com', 'rcho0702@gmail.com', 'makingin@gmail.com', '91skwon@gmail.com', 'yoonsun125p@gmail.com', 'cktngus2339@gmail.com', 'sj.serena.im@gmail.com'];
 
   const gate = document.getElementById('authGate');
   const bar = document.getElementById('authBar');   // v1.6.1: 설정 패널로 이동 → null일 수 있음(가드 처리)

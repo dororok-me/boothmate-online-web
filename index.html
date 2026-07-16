@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.112 → v1.13.113) — 무료 체험 3시간 → 30분(교수님 결정, Play 출시 대비):
+  - FREE_QUOTA_SECONDS = 1800초. 신규 사용자(기기)부터 적용 — 이미 시간이 부여된 기존
+    기기·TIME_GRANTS 지급분은 영향 없음. 쿼터가 기기(localStorage) 단위라 기기를 바꾸면
+    30분이 또 생기지만, 남용 피해가 기기당 30분으로 제한됨. start() 안내 문구도 30분으로.
   변경점 (v1.13.111 → v1.13.112) — 갤럭시 앱: 구매·과금 분리·영어 모드(교수님 요청):
   - [과금 분리] 갤럭시 앱(bm-galaxy)은 중계 서버 WS에 &platform=galaxy, /translate 바디에
     platform:'galaxy'를 붙여 보냄 → 서버(v3.3.0)가 GEMINI_API_KEY_GALAXY(설정 시)로 분리 과금.
@@ -2031,7 +2035,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.112 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.113 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2426,7 +2430,7 @@ try { localStorage.removeItem('mc_wrap_h'); } catch (e) {}
    ⚠️ 지금은 localStorage라 정직한 사용자용. 출시 시 이 모듈 내부(load/save/
       tick/addTime)만 Firebase(users/{uid})로 교체하면 바깥 코드는 그대로 동작.
    ════════════════════════════════════════════ */
-const FREE_QUOTA_SECONDS = 3 * 3600;   // 무료 체험 3시간 = 10800초 (첫 가입자 정책)
+const FREE_QUOTA_SECONDS = 30 * 60;   // 무료 체험 30분 = 1800초 (POLICY_SPEC §2 원안 복귀 — 기기당 30분, v1.13.113)
 
 /* 시간 제한 완전 면제(무제한) 계정 — 5분 세션 제한 + 쿼터 모두 적용 안 함 */
 const UNLIMITED_EMAILS = ['dororok@gmail.com'];
@@ -4083,7 +4087,7 @@ async function start() {
   if (running) return;
   // 잔여 시간 확인 — 0이면 통역 시작 차단 (POLICY_SPEC §5 canInterpret)
   if (!Ent.canInterpret()) {
-    showErr('남은 시간이 없습니다. 무료 체험(3시간)을 모두 사용했다면 충전(구매) 후 이용할 수 있습니다.');
+    showErr('남은 시간이 없습니다. 무료 체험(30분)을 모두 사용했다면 충전(구매) 후 이용할 수 있습니다.');
     return;
   }
   // 새 세션 시작 전: 화면에 남은 이전 세션 자막이 있으면 자동 저장 후 비움

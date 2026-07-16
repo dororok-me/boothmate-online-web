@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.119 → v1.13.120) — 경과·잔여 카운터 두 줄 정렬 통일(교수님 요청):
+  - 위=경과(회색 00:00:00), 아래=잔여(빨강 - 00:00:00)를 같은 크기(12px)·굵기(600)·자간·
+    글꼴·우측정렬로 맞춰 나란히 병렬로 보이게 함. 시계+ 구매 아이콘은 아이콘 줄 맨 오른쪽 유지.
   변경점 (v1.13.118 → v1.13.119) — 구매 아이콘 교체 + 라이선스 표기(교수님 요청):
   - 카드 아이콘이 거부감 있음 → '시계+플러스' 라인 SVG(시간 추가 의미)로 교체(#gxBuyBtn).
     파스텔 골드 유지, 위치(아이콘 줄 맨 오른쪽) 유지.
@@ -1164,19 +1167,22 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
 .bm-galaxy #soundBox{display:none !important;}            /* 사운드 설정(입력 선택) — 마이크 자동 고정 */
 .bm-galaxy #openOverlayBtn{display:none !important;}      /* 오버레이 자막창 — 데스크톱 전용 */
 /* 갤럭시 전용 구매 UI — 웹에서는 숨김 (v1.13.112 / v1.13.116 재배치) */
-/* 남은 시간: 헤더 경과 카운터 바로 아래 줄에 빨간 '- HH:MM:SS' (별도 행 없음 → 자막 영역 유지) */
+/* 잔여 시간: 경과 카운터(위) 바로 아래 줄에 '- HH:MM:SS'(빨강). 위 경과와 같은 크기·글꼴·
+   정렬로 맞춰 두 줄이 나란히 병렬로 보이게 함 (v1.13.120). */
 #gxQuotaText{display:none;}
 .bm-galaxy #gxQuotaText{
-  display:block; flex-basis:100%; text-align:right;   /* flex-basis:100% → #timerBar 안에서 카운터 아래 줄로 */
-  font-size:11px; font-weight:700; line-height:1.2; margin-top:1px; color:#dc2626;
-  font-variant-numeric:tabular-nums; letter-spacing:0.3px;
+  display:block; flex-basis:100%; text-align:right;   /* flex-basis:100% → #timerBar 안에서 경과 아래 줄로 */
+  font-size:12px; font-weight:600; line-height:1.35; margin-top:1px; color:#dc2626;
+  font-variant-numeric:tabular-nums; letter-spacing:0.3px;   /* .tbox(경과)와 동일한 크기·굵기·자간 */
   font-family: ui-rounded, "Segoe UI Variable Display", "Segoe UI", Pretendard, system-ui, sans-serif;
 }
+/* 경과 줄(위)도 잔여와 줄높이를 맞춰 두 줄 간격을 균일하게 */
+.bm-galaxy #timerStack{line-height:1.35;}
 /* 남은 시간이 한 줄 더 필요 → 헤더를 그만큼만 키우고(62→78px) 아이콘 줄을 위로 붙여
    카운터·아이콘 겹침 방지. 로고·재생 버튼은 그대로 세로 중앙. */
-.bm-galaxy #appHeader{height:78px;}
-.bm-galaxy #headerActions{align-self:flex-start; margin-top:6px;}
-.bm-galaxy #timerBar{flex-wrap:wrap; justify-content:flex-end; bottom:4px;}
+.bm-galaxy #appHeader{height:86px;}   /* 경과+잔여 두 줄(12px) + 아이콘 줄이 겹치지 않게 여유 확보 */
+.bm-galaxy #headerActions{align-self:flex-start; margin-top:5px;}
+.bm-galaxy #timerBar{flex-wrap:wrap; justify-content:flex-end; bottom:5px;}
 /* 사용권 구매 — 다른 헤더 아이콘과 같은 라인 카드 SVG. 파스텔 골드(💳 톤)로만 구분,
    위치는 아이콘 줄 맨 오른쪽(카운터 오른쪽 끝). 판매 인상 완화 (v1.13.117) */
 #gxBuyBtn{display:none;}
@@ -2096,7 +2102,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.119 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.120 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 

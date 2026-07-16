@@ -5,6 +5,9 @@
   - 남은 시간을 별도 행(#gxQuotaBar 제거) → 헤더 경과 카운터 바로 아래 줄에 빨간
     '- HH:MM:SS'로 표시(#gxQuotaText를 #timerBar 안으로, flex-basis:100% 줄바꿈).
     자막 영역이 한 줄만큼 넓어짐. 무제한 계정은 '무제한'(회색) 표기.
+  - [실기 확인 후 수정] 남은시간 줄이 생기며 카운터가 위로 밀려 헤더 아이콘(💳·⚙)과 겹침
+    → bm-galaxy에서만 헤더 62→78px, #headerActions를 align-self:flex-start로 위 정렬.
+    로고·재생 버튼은 그대로 세로 중앙. (별도 행 30px보다 여전히 이득)
   - 설정 안 계정 배지·구매 그룹은 그대로. 웹 브라우저는 전부 숨김(변화 없음).
   변경점 (v1.13.114 → v1.13.115) — 갤럭시 앱 제품명 BoothmatePro로 통일(교수님 결정):
   - 애플 앱(BoothmatePro)과 브랜딩 통일. bm-galaxy에서만 로그인 게이트 제목·document.title을
@@ -1156,7 +1159,11 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   font-variant-numeric:tabular-nums; letter-spacing:0.3px;
   font-family: ui-rounded, "Segoe UI Variable Display", "Segoe UI", Pretendard, system-ui, sans-serif;
 }
-.bm-galaxy #timerBar{flex-wrap:wrap; justify-content:flex-end;}
+/* 남은 시간이 한 줄 더 필요 → 헤더를 그만큼만 키우고(62→78px) 아이콘 줄을 위로 붙여
+   카운터·아이콘 겹침 방지. 로고·재생 버튼은 그대로 세로 중앙. */
+.bm-galaxy #appHeader{height:78px;}
+.bm-galaxy #headerActions{align-self:flex-start; margin-top:6px;}
+.bm-galaxy #timerBar{flex-wrap:wrap; justify-content:flex-end; bottom:4px;}
 /* 사용권 구매 — 문구 대신 💳 아이콘(헤더 아이콘 줄). 판매 인상 완화 (v1.13.116) */
 #gxBuyBtn{display:none;}
 .bm-galaxy #gxBuyBtn{display:inline-flex; align-items:center; justify-content:center;}

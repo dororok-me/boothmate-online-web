@@ -1,5 +1,14 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.122 → v1.13.123) — 서버 차감 + 기기별 사용 기록(교수님 요청, 동시 사용 허점 차단):
+  - [서버가 잔여시간의 주인] 기존: 기기가 잔여시간을 계산해 절대값을 서버에 덮어씀 → 두 기기
+    동시 사용 시 늦게 저장한 쪽만 반영되는 허점. 이제: usage 리포터가 통역 중 매초 세고
+    15초마다·정지·pagehide에 델타만 POST /usage(서버 v3.5.0) → 서버가 원자적으로 차감·합산,
+    응답의 잔여시간을 로컬이 채택(Ent.adoptRemaining) → 두 기기 카운터가 15초 내 수렴.
+  - 절대값 push(save/정지/pagehide) 제거 — 최초 업로드·TIME_GRANTS 부여 시에만 유지.
+  - 구매 적립도 POST /credit(원자 가산 + purchase 기록)으로, 실패 시 로컬 적립 폴백.
+  - [사용 기록 UI] 설정에 '🧾 사용 기록' 그룹(웹·갤럭시 공통): 날짜·시간대·기기(갤럭시 모델/
+    브라우저)·사용시간, 구매(+시간) 내역 최근 50건. 무제한 계정도 기록됨(차감만 없음).
   변경점 (v1.13.121 → v1.13.122) — 데모 카운터 정지 반영 + 두 줄 간격 축소(교수님 요청):
   - 데모 잔여 카운터가 정지 상태에서도 내려가던 문제 → running(통역 중)일 때만 차감, 정지 시 고정.
   - 경과·잔여 두 줄 line-height 1.35→1.05로 좁힘 + 헤더 86→74px → 상단 공간 절약, 자막 영역 확대.
@@ -2109,7 +2118,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.122 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.123 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2555,8 +2564,8 @@ const Ent = (function(){
   }
   function save(s){
     try { localStorage.setItem(key(), JSON.stringify(s)); } catch(e){}
-    // 클라우드(계정) 동기화 — 15초 스로틀, 초기 pull 전·미로그인·무제한이면 내부에서 무시 (v1.13.114)
-    try { if (typeof cloudQuotaPush === 'function') cloudQuotaPush(); } catch(e){}
+    // (v1.13.123) 자동 절대값 push 제거 — 사용 차감은 이제 usage 리포터가 델타로 서버에 보고하고
+    // 서버가 원자적으로 차감(동시 사용 합산). 절대값 push는 최초 업로드·부여(grant) 시에만 명시 호출.
   }
 
   return {
@@ -2588,6 +2597,17 @@ const Ent = (function(){
     adoptCloud(data){
       if (isUnlimited() || !data || typeof data.remainingSeconds !== 'number') return;
       save(Object.assign(defaults(), data));   // 다음 load()에서 TIME_GRANTS 미적용분은 자동 적용됨
+    },
+    /* 서버가 계산한 잔여시간만 채택 (v1.13.123) — usage 보고 응답·결제 적립 응답에 사용.
+       서버는 다른 기기의 동시 사용분까지 합산해 차감하므로, 이 값이 항상 최신·정확. */
+    adoptRemaining(sec, newGrade){
+      if (isUnlimited() || typeof sec !== 'number' || !isFinite(sec)) return;
+      const s = load();
+      s.remainingSeconds = Math.max(0, Math.floor(sec));
+      if (newGrade) s.grade = newGrade;
+      if (s.remainingSeconds === 0 && s.grade === 'free_trial_active') { s.trialUsed = true; s.grade = 'free'; }
+      s.mt = Date.now();
+      save(s);
     }
   };
 })();
@@ -2713,9 +2733,22 @@ async function bmBuy(sku) {
     const token = response.details && response.details.purchaseToken;
     try { if (token) await service.consume(token); } catch (e) { console.error('[구매] consume 실패: ' + e.message); }
     await response.complete('success');
-    Ent.addTime(item.seconds, item.grade);
+    // 서버 지갑에 원자적 적립 + 구매 기록 (v1.13.123). 서버 실패 시 로컬 적립 폴백(구매 유실 방지).
+    try {
+      const r = await fetch(cloudHttpBase() + '/credit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
+        body: JSON.stringify({ user: cloudEmail(), seconds: item.seconds, grade: item.grade, device: 'Google Play', platform: 'galaxy' })
+      });
+      if (!r.ok) throw new Error('server ' + r.status);
+      const j = await r.json();
+      if (typeof j.remainingSeconds === 'number') Ent.adoptRemaining(j.remainingSeconds, item.grade);
+      else Ent.addTime(item.seconds, item.grade);
+    } catch (e2) {
+      Ent.addTime(item.seconds, item.grade);
+      try { cloudQuotaPush(true); } catch (e3) {}
+    }
     renderQuota();
-    try { cloudQuotaPush(true); } catch (e) {}   // 구매 즉시 계정(클라우드)에 반영 (v1.13.114)
     alert(en ? 'Purchase complete — time added!' : '구매 완료 — 시간이 충전되었습니다!');
   } catch (e) {
     if (e && (e.name === 'AbortError' || /cancel/i.test(e.message || ''))) return;   // 사용자 취소
@@ -2761,8 +2794,8 @@ function startQuotaCountdown() {
 function stopQuotaCountdown() {
   if (quotaTimer) { clearInterval(quotaTimer); quotaTimer = null; }
   renderQuota();
-  // 통역 정지 시점의 잔여시간을 계정(클라우드)에 즉시 반영 (v1.13.114)
-  try { if (typeof cloudQuotaPush === 'function') cloudQuotaPush(true); } catch(e){}
+  // (v1.13.123) 정지 시 절대값 push 제거 — usage 리포터의 최종 델타 보고가 서버 차감·동기화를 담당.
+  // 절대값을 올리면 다른 기기의 동시 사용분을 덮어쓸 수 있음.
 }
 
 /* 모바일 기기(휴대폰·태블릿) 판정 — iPadOS는 데스크톱 UA로 위장하므로 터치포인트로 보완 */
@@ -3381,6 +3414,8 @@ async function cloudQuotaPull() {
       __quotaPullDone = true;
       renderQuota();
       console.log('[시간 클라우드] 계정 잔여시간 내려받음: ' + fmtHMS(j.data.remainingSeconds || 0));
+      // 채택 직후 TIME_GRANTS가 새로 적용됐다면(로컬 mt가 더 새로워짐) 1회 업로드 (v1.13.123)
+      try { const fresh = Ent.state(); if (fresh.mt && fresh.mt > cloudMt) cloudQuotaPush(true); } catch (e) {}
     } else {
       // 클라우드가 비어 있거나(첫 업로드) 로컬이 더 최신 → 업로드
       __quotaPullDone = true;
@@ -3389,7 +3424,65 @@ async function cloudQuotaPull() {
     }
   } catch (e) { console.log('[시간 클라우드] 연결 실패 — 로컬 전용'); __quotaPullDone = true; }
 }
-window.addEventListener('pagehide', function () { if (__quotaPullDone) cloudQuotaPush(true); });
+// (v1.13.123) pagehide 절대값 push 제거 — usage 리포터가 pagehide에서 미보고 델타를 keepalive로 전송.
+
+/* ── 사용량 서버 보고 리포터 (v1.13.123) — 서버가 잔여시간의 주인 ──
+   통역 중(running) 매초 사용량을 세고, 15초마다·정지 시·탭 닫힐 때 델타를 POST /usage로 보고.
+   서버(v3.5.0)가 원자적으로 차감·세션 기록하고 잔여시간을 돌려주면 로컬이 그 값을 채택
+   → 같은 계정의 두 기기가 동시에 써도 서버에서 합산되고 15초 내 양쪽 카운터가 수렴.
+   무제한 계정은 deduct:false로 기록만 남김(설정의 '사용 기록'에서 확인 가능). */
+(function(){
+  var sess = null, used = 0, sinceFlush = 0;
+  function devInfo(){
+    var ua = navigator.userAgent || '';
+    var isGx = document.documentElement.classList.contains('bm-galaxy');
+    var m = ua.match(/;\s*([A-Za-z0-9._\- ]+)\s+Build\//);   // 안드로이드 모델명 (SM-S908N 등)
+    if (isGx) return { platform: 'galaxy', device: (m ? m[1].trim() : 'Galaxy') };
+    var br = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Chrome\//.test(ua) ? 'Chrome'
+           : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+    var os = /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'macOS' : /Android/.test(ua) ? 'Android'
+           : /iPhone|iPad/.test(ua) ? 'iOS' : /Linux/.test(ua) ? 'Linux' : '';
+    return { platform: 'web', device: br + (os ? '·' + os : '') };
+  }
+  function flush(final){
+    if (!sess) return;
+    if (used <= 0) { if (final) sess = null; return; }
+    var email = cloudEmail();
+    if (!email || !cloudHttpBase() || !RELAY_PASS_KEY) { if (final) { sess = null; used = 0; } return; }
+    var delta = used; used = 0;
+    var mySess = sess;
+    fetch(cloudHttpBase() + '/usage', {
+      method: 'POST', keepalive: true,
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
+      body: JSON.stringify({ user: email, sessionId: mySess.id, device: mySess.device, platform: mySess.platform,
+        seconds: delta, startedAt: mySess.start, endedAt: Date.now(), deduct: !Ent.isUnlimited() })
+    }).then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(j){
+        if (j && typeof j.remainingSeconds === 'number' && !Ent.isUnlimited()) {
+          Ent.adoptRemaining(j.remainingSeconds);   // 서버 합산값 채택 — 다른 기기 사용분 반영
+          renderQuota();
+        }
+      })
+      .catch(function(){ used += delta; });   // 실패 시 델타 복구 → 다음 보고에 합산 (세션 종료 시 유실은 사용자에게 유리)
+    if (final) sess = null;
+  }
+  setInterval(function(){
+    var on = (typeof running !== 'undefined' && running) || window.__bmForceRunning === true;
+    if (on) {
+      if (!sess) {
+        var d = devInfo();
+        sess = { id: 'u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+                 start: Date.now(), device: d.device, platform: d.platform };
+        sinceFlush = 0;
+      }
+      used++; sinceFlush++;
+      if (sinceFlush >= 15) { sinceFlush = 0; flush(false); }
+    } else if (sess) {
+      flush(true);   // 정지 → 최종 델타 보고 + 세션 종료
+    }
+  }, 1000);
+  window.addEventListener('pagehide', function(){ if (sess) flush(true); });
+})();
 /* 번역 방향에 따라 [찾을말, 바꿀말] 쌍 목록.
    양방향: 등록쌍 {a,b}에서 — 번역 결과 언어로 '바꿀말'이 가게.
    targetLang 'ko'(→한국어): 결과가 한국어이므로, 영어쪽을 한국어쪽으로 바꿔야 함
@@ -4765,6 +4858,12 @@ window.__syncPanelLayout = function() {
       '</div>' +
       '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">Google Play로 결제되며, 구매 즉시 남은 시간에 더해집니다.</div>' +
     '</div>' +
+    // 🧾 사용 기록 — 기기별 통역 사용·구매 내역 (웹·갤럭시 공통, 서버 user_usage) (v1.13.123)
+    '<div class="grp" id="grpUsage"><div class="grp-ttl">🧾 사용 기록</div>' +
+      '<div class="row" style="max-width:none;"><button id="usageLoadBtn" class="g-tool">사용 기록 보기</button></div>' +
+      '<div id="usageList" style="display:none; margin-top:8px; max-height:220px; overflow-y:auto; font-size:12px; line-height:1.7; font-variant-numeric:tabular-nums;"></div>' +
+      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">기기별 통역 사용·구매 내역입니다 (최근 50건).</div>' +
+    '</div>' +
     '<div class="grp" id="grpConn"><div class="grp-ttl">🔌 연결 방식</div>' +
       '<div class="row" style="max-width:none;">' +
         '<select id="connMode" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--t-border); background:var(--t-input-bg); color:var(--t-text); font-size:13px;">' +
@@ -4847,6 +4946,42 @@ window.__syncPanelLayout = function() {
     const ft = document.getElementById('appFooter');
     if (gv && ft) { const m = ft.textContent.match(/v\d+\.\d+\.\d+/); gv.innerHTML = 'BoothmatePro ' + (m ? m[0] : '') + '<br>© 2026 dororok AI Lab'; }
   })();
+  // 사용 기록 보기 (v1.13.123) — 서버 user_usage에서 기기별 사용·구매 내역을 불러와 표시
+  if ($('usageLoadBtn')) $('usageLoadBtn').onclick = async function(){
+    const box = $('usageList'); const en = (typeof bmEN === 'function' && bmEN());
+    box.style.display = '';
+    box.textContent = en ? 'Loading…' : '불러오는 중…';
+    try {
+      const email = cloudEmail();
+      if (!email) throw new Error(en ? 'login required' : '로그인이 필요합니다');
+      const res = await fetch(cloudHttpBase() + '/usage?user=' + encodeURIComponent(email), {
+        headers: { 'Authorization': 'Bearer ' + RELAY_PASS_KEY }
+      });
+      if (!res.ok) throw new Error('server ' + res.status);
+      const j = await res.json();
+      const rows = (j.sessions || []).slice(0, 50);
+      if (!rows.length) { box.textContent = en ? 'No usage yet.' : '아직 사용 기록이 없습니다.'; return; }
+      const esc = function(s){ return String(s || '').replace(/[<>&]/g, ''); };
+      const two = function(n){ return (n < 10 ? '0' : '') + n; };
+      box.innerHTML = rows.map(function(r){
+        const st = r.started_at ? new Date(r.started_at) : null;
+        const et = r.ended_at ? new Date(r.ended_at) : null;
+        const day = st ? (st.getFullYear() + '.' + (st.getMonth() + 1) + '.' + st.getDate()) : '';
+        const dur = fmtHMS(r.seconds || 0);
+        if (r.kind === 'purchase') {
+          const at = st ? two(st.getHours()) + ':' + two(st.getMinutes()) : '';
+          return '<div>' + day + ' ' + at + ' · <b style="color:#16a34a;">+' + dur + '</b> · ' +
+                 (en ? 'Purchase' : '구매') + (r.device ? ' (' + esc(r.device) + ')' : '') + '</div>';
+        }
+        const range = (st && et) ? two(st.getHours()) + ':' + two(st.getMinutes()) + '–' + two(et.getHours()) + ':' + two(et.getMinutes()) : '';
+        const dev = (r.platform === 'galaxy' ? (en ? 'Galaxy app' : '갤럭시 앱') : (en ? 'Web' : '웹')) +
+                    (r.device ? ' (' + esc(r.device) + ')' : '');
+        return '<div>' + day + ' ' + range + ' · <b>' + dur + '</b> · ' + dev + '</div>';
+      }).join('');
+    } catch (e) {
+      box.textContent = (en ? 'Failed to load: ' : '불러오기 실패: ') + e.message;
+    }
+  };
   // 사용권 구매 버튼 (갤럭시 전용 그룹 — 웹에서는 CSS로 숨겨져 클릭 불가) (v1.13.112)
   if ($('buy5hBtn')) $('buy5hBtn').onclick = () => bmBuy('time_5h');
   if ($('buy10hBtn')) $('buy10hBtn').onclick = () => bmBuy('time_10h');

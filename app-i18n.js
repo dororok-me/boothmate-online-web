@@ -60,6 +60,11 @@
     'Google Play로 결제되며, 구매 즉시 남은 시간에 더해집니다.': 'Paid via Google Play. Time is added to your balance immediately.',
     '로그인 계정과 남은 시간이 표시됩니다.': 'Shows your account and remaining time.',
 
+    // 사용 기록 (v1.13.123)
+    '🧾 사용 기록': '🧾 Usage history',
+    '사용 기록 보기': 'View usage history',
+    '기기별 통역 사용·구매 내역입니다 (최근 50건).': 'Per-device interpretation usage and purchases (last 50).',
+
     // 섹션 제목
     '🔊 사운드 설정': '🔊 Sound settings',
     '번역 · 입력 설정': 'Translation · Input settings',

@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.114 → v1.13.115) — 갤럭시 앱 제품명 BoothmatePro로 통일(교수님 결정):
+  - 애플 앱(BoothmatePro)과 브랜딩 통일. bm-galaxy에서만 로그인 게이트 제목·document.title을
+    'BoothmatePro'로 교체(#gateTitle id 부여). 웹 브라우저는 'Boothmate Online' 그대로.
+  - 안드로이드 런처 앱 이름도 BoothmatePro로 변경(strings.xml, 앱 v1.1.0 재빌드).
   변경점 (v1.13.113 → v1.13.114) — 잔여 시간 계정 동기화(교수님 요청, Play 출시 대비):
   - 구매·차감된 잔여시간(Ent 상태)을 중계서버 /quota(v3.4.0, Turso user_quota)에 이메일 단위로
     동기화 — 용어집(/glossary)과 동일 패턴. 폰에서 산 시간이 패드에서도 보이고, 재설치해도 유지.
@@ -1838,6 +1842,13 @@ if (!document.documentElement.classList.contains('bm-app')) {
       localStorage.removeItem('mic_device_id');
       localStorage.setItem('sys_audio_mode', '0');
     } catch(e){}
+    /* 갤럭시 앱 브랜딩: 제품명 BoothmatePro (애플 앱과 통일, 교수님 결정 v1.13.115).
+       웹은 Boothmate Online 유지 — 로그인 게이트 제목과 문서 제목만 앱에서 교체. */
+    document.addEventListener('DOMContentLoaded', function(){
+      var t = document.getElementById('gateTitle');
+      if (t) t.textContent = 'BoothmatePro';
+      try { document.title = 'BoothmatePro'; } catch(e){}
+    });
   }
   /* 저장된 테마 즉시 복원 (깜빡임 방지) */
   (function(){
@@ -1852,7 +1863,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 <!-- 로그인 게이트: 로그인 전 화면 전체를 덮음 -->
 <div id="authGate" style="position:fixed; inset:0; z-index:9999; background:#FFFFFF; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;">
   <img src="logo.png" alt="Boothmate" style="height:46px; width:auto; margin-bottom:22px;">
-  <div style="font-size:26px; font-weight:700; color:#0F172A; margin-bottom:8px; letter-spacing:-0.3px;">Boothmate Online</div>
+  <div id="gateTitle" style="font-size:26px; font-weight:700; color:#0F172A; margin-bottom:8px; letter-spacing:-0.3px;">Boothmate Online</div>
   <div style="font-size:14px; color:#64748B; margin-bottom:30px;">실시간 통역 자막 · 시작하려면 구글로 로그인하세요</div>
   <div id="googleSignInBtn"></div>
   <div id="authGateMsg" style="font-size:12px; color:#B45309; margin-top:16px; min-height:18px;"></div>
@@ -2046,7 +2057,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.114 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.115 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 

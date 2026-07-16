@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.110 → v1.13.111) — 갤럭시(Android) 앱 모드 추가(교수님 요청, Play스토어 버전):
+  - 갤럭시 TWA 앱이 ?app=galaxy 로 열면 html에 bm-galaxy 클래스 부여. 웹 브라우저는 영향 없음.
+  - bm-galaxy에서 숨김: 하단 푸터(#appFooter) 전체, 로고 아래 'online'(.logo-sub),
+    사운드 설정 박스(#soundBox — 입력 선택 UI), 오버레이 버튼(#openOverlayBtn, 데스크톱 전용).
+  - 입력은 마이크 + 기본 장치로 고정(input_mode=mic, mic_device_id 제거, sys_audio_mode=0)
+    → 안드로이드가 외부 마이크 연결/분리 시 기본 장치를 자동 전환하므로 "TV처럼 알아서" 동작.
+    계정별 설정 네임스페이스 프록시(v1.11.7) 적용 이후에 실행해 로그인 전·후 모두 반영.
+  - iOS 모드(bm-app)와 달리 구글 GSI 로그인은 그대로 로드(TWA는 진짜 Chrome이라 OAuth 정상 동작).
   변경점 (v1.13.109 → v1.13.110) — strangermisa10 3시간 재부여:
   - strangermisa10@gmail.com(기가입) 3시간 재지급: TIME_GRANTS grantId를
     strangermisa10-3h-20260705-r2 → -20260713-r3으로 변경(재적용). 다음 접속 시 잔여시간 3시간으로 반영.
@@ -1069,6 +1077,7 @@
   try{
     var p = new URLSearchParams(location.search);
     if (p.get('app') === 'ios') document.documentElement.classList.add('bm-app');
+    if (p.get('app') === 'galaxy') document.documentElement.classList.add('bm-galaxy');
     if (p.get('lang') === 'en') document.documentElement.classList.add('bm-lang-en');
   }catch(e){}
 })();
@@ -1096,7 +1105,12 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
 /* 앱에서는 오버레이(별도 자막창) 버튼 숨김 — 웹브라우저 전용 기능 */
 .bm-app #openOverlayBtn{display:none !important;}
 /* 앱에서는 사업자정보 상세 숨김 (약관·개인정보처리방침 링크는 유지) */
-.bm-app #bizInfoToggle, .bm-app #bizInfoDetail{display:none !important;}</style>
+.bm-app #bizInfoToggle, .bm-app #bizInfoDetail{display:none !important;}
+/* 갤럭시(Android TWA) 앱 모드 — Play스토어 버전 (v1.13.111). bm-app과 달리 구글 GSI 로그인은 유지. */
+.bm-galaxy .logo-sub{display:none !important;}            /* 로고 아래 'online' 표기 */
+.bm-galaxy #appFooter{display:none !important;}           /* 하단 푸터 전체 */
+.bm-galaxy #soundBox{display:none !important;}            /* 사운드 설정(입력 선택) — 마이크 자동 고정 */
+.bm-galaxy #openOverlayBtn{display:none !important;}      /* 오버레이 자막창 — 데스크톱 전용 */</style>
 <!-- iOS 앱 전용 UI 언어 레이어(KO⇄EN). 앱모드에서만 작동, 웹 브라우저엔 영향 없음. -->
 <script defer src="app-i18n.js"></script>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -1782,6 +1796,16 @@ if (!document.documentElement.classList.contains('bm-app')) {
     localStorage.setItem = function(k, v){ return s(SETTING_KEYS[k] ? pfx + k : k, v); };
     localStorage.removeItem = function(k){ return r(SETTING_KEYS[k] ? pfx + k : k); };
   })();
+  /* 갤럭시 앱 모드: 입력을 마이크 + 기본 장치로 고정 (v1.13.111).
+     기본 장치는 안드로이드가 외부 마이크 연결/분리 시 자동 전환.
+     위 네임스페이스 프록시 다음에 실행돼 로그인 전(평면 키)·후(계정 키) 모두 적용. */
+  if (document.documentElement.classList.contains('bm-galaxy')) {
+    try {
+      localStorage.setItem('input_mode', 'mic');
+      localStorage.removeItem('mic_device_id');
+      localStorage.setItem('sys_audio_mode', '0');
+    } catch(e){}
+  }
   /* 저장된 테마 즉시 복원 (깜빡임 방지) */
   (function(){
     var t = localStorage.getItem('mc_theme') || 'theme-light';
@@ -1909,7 +1933,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 <div id="setCloseBar" style="display:none; position:sticky; top:0; z-index:30; height:0; overflow:visible;"><button type="button" id="mcCloseBtn" class="mc-close mc-close-float">✕ 닫기</button></div>
 <div id="optsCollapse" style="display:none; margin-top:8px;">
 <!-- 사운드 설정 (최상단 별도 박스) -->
-<div style="padding:12px 14px; border:1px solid var(--t-border); border-radius:10px; background:var(--t-panel-bg); margin-bottom:10px;">
+<div id="soundBox" style="padding:12px 14px; border:1px solid var(--t-border); border-radius:10px; background:var(--t-panel-bg); margin-bottom:10px;">
 <div style="font-size:13px; font-weight:700; color:var(--t-accent); margin-bottom:8px;">🔊 사운드 설정</div>
 <div class="opts">
   <label>사운드 선택:
@@ -1984,7 +2008,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.110 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.111 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 

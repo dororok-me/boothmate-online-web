@@ -1,7 +1,9 @@
-/* app-i18n.js — iOS 앱 전용 UI 언어 레이어 (KO ⇄ EN)
+/* app-i18n.js — 앱 전용 UI 언어 레이어 (KO ⇄ EN)
  *
  * 원칙:
- *  - 앱모드(<html class="bm-app">)에서만 작동. 일반 웹 브라우저에서는 아무 것도 안 함(웹은 한국어 유지).
+ *  - 앱모드(<html class="bm-app"> 또는 <html class="bm-galaxy">)에서만 작동.
+ *    일반 웹 브라우저에서는 아무 것도 안 함(웹은 한국어 유지).
+ *  - 기본값: iOS(bm-app)=영어, 갤럭시(bm-galaxy)=기기 언어(한국어 기기=KO, 그 외=EN). (v1.13.112)
  *  - 통역 자막(#mcWrap)과 반영 로그(#reflogList)는 절대 건드리지 않음(실제 통역 결과).
  *  - UI 껍데기(버튼/설정/용어집 라벨/placeholder 등)만 사전(DICT)에 있는 '정확히 일치하는' 문자열을 교체.
  *  - 자막 텍스트는 DICT에 없으므로 매칭되지 않아 안전.
@@ -13,7 +15,8 @@
 (function () {
   'use strict';
 
-  if (!document.documentElement.classList.contains('bm-app')) return;
+  var isGalaxy = document.documentElement.classList.contains('bm-galaxy');
+  if (!document.documentElement.classList.contains('bm-app') && !isGalaxy) return;
 
   /* ── KO → EN 사전 (UI 껍데기만) ────────────────────────────── */
   var DICT = {
@@ -48,6 +51,14 @@
     '수정': 'Edit',
     '삭제': 'Delete',
     '이 파일을 용어집에 보내기': 'Send this file to glossary',
+
+    // 사용권 구매 (갤럭시, v1.13.112)
+    '💳 사용권 구매': '💳 Buy time passes',
+    '사용권 구매': 'Buy time',
+    '5시간권 ₩29,000': '5-hour pass ₩29,000',
+    '10시간권 ₩55,000': '10-hour pass ₩55,000',
+    'Google Play로 결제되며, 구매 즉시 남은 시간에 더해집니다.': 'Paid via Google Play. Time is added to your balance immediately.',
+    '로그인 계정과 남은 시간이 표시됩니다.': 'Shows your account and remaining time.',
 
     // 섹션 제목
     '🔊 사운드 설정': '🔊 Sound settings',
@@ -161,7 +172,9 @@
   var SKIP_IDS = ['mcWrap', 'reflogList', 'reflogBox', 'bmLangGrp'];
 
   var REV = null;
-  var lang = localStorage.getItem('bm_ui_lang') || 'en';   // 앱 기본값: 영어
+  // 기본값: iOS 앱=영어, 갤럭시=기기 언어 따라 자동 (한국어 기기=KO, 그 외=EN)
+  var deviceLang = ((navigator.language || 'ko').toLowerCase().indexOf('ko') === 0) ? 'ko' : 'en';
+  var lang = localStorage.getItem('bm_ui_lang') || (isGalaxy ? deviceLang : 'en');
   var observer = null, busy = false, scheduled = false;
 
   function reverse() {
@@ -283,6 +296,8 @@
     lang = l;
     try { localStorage.setItem('bm_ui_lang', l); } catch (e) {}
     applyAll();
+    // 동적 텍스트(남은 시간 배지 등)는 사전 매칭이 안 되므로 직접 다시 그림 (v1.13.112)
+    try { if (typeof window.renderQuota === 'function') window.renderQuota(); } catch (e) {}
   };
 
   function start() {

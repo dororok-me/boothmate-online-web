@@ -1,5 +1,16 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.111 → v1.13.112) — 갤럭시 앱: 구매·과금 분리·영어 모드(교수님 요청):
+  - [과금 분리] 갤럭시 앱(bm-galaxy)은 중계 서버 WS에 &platform=galaxy, /translate 바디에
+    platform:'galaxy'를 붙여 보냄 → 서버(v3.3.0)가 GEMINI_API_KEY_GALAXY(설정 시)로 분리 과금.
+  - [사용권 구매] Google Play 결제(TWA Payment Request + Digital Goods API, bm-galaxy 전용):
+    · 설정 '👤 계정' 아래 '💳 사용권 구매' 그룹 — 5시간권 ₩29,000(time_5h)·10시간권 ₩55,000(time_10h).
+    · 메인 헤더 아래 남은 시간 배지 + '사용권 구매' 버튼(#gxQuotaBar) — 누르면 설정의 구매 그룹으로.
+    · 결제 성공 → consume(소모성) → Ent.addTime 적립. Play Console에 동일 ID 상품 등록 필요.
+    · 웹 브라우저에서는 구매 UI 전부 숨김(기존과 동일 화면).
+  - [영어 모드] app-i18n.js 게이트에 bm-galaxy 추가 — 설정 맨 위 🌐 Language(KO/EN) 토글 표시.
+    갤럭시 기본값: 기기 언어(한국어 기기=KO, 그 외=EN). iOS(bm-app)는 기존대로 기본 EN.
+    남은 시간 배지·등급 라벨은 동적 텍스트라 사전 매칭이 안 되므로 bmEN() 분기로 직접 영어화.
   변경점 (v1.13.110 → v1.13.111) — 갤럭시(Android) 앱 모드 추가(교수님 요청, Play스토어 버전):
   - 갤럭시 TWA 앱이 ?app=galaxy 로 열면 html에 bm-galaxy 클래스 부여. 웹 브라우저는 영향 없음.
   - bm-galaxy에서 숨김: 하단 푸터(#appFooter) 전체, 로고 아래 'online'(.logo-sub),
@@ -1110,7 +1121,14 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
 .bm-galaxy .logo-sub{display:none !important;}            /* 로고 아래 'online' 표기 */
 .bm-galaxy #appFooter{display:none !important;}           /* 하단 푸터 전체 */
 .bm-galaxy #soundBox{display:none !important;}            /* 사운드 설정(입력 선택) — 마이크 자동 고정 */
-.bm-galaxy #openOverlayBtn{display:none !important;}      /* 오버레이 자막창 — 데스크톱 전용 */</style>
+.bm-galaxy #openOverlayBtn{display:none !important;}      /* 오버레이 자막창 — 데스크톱 전용 */
+/* 갤럭시 전용 구매 UI — 웹에서는 숨김 (v1.13.112) */
+#gxQuotaBar{display:none;}
+.bm-galaxy #gxQuotaBar{display:flex; flex:0 0 auto; align-items:center; justify-content:center; gap:10px; padding:5px 10px;}
+#gxQuotaText{font-size:12px; font-weight:700; padding:4px 10px; border-radius:6px; background:#1e3a2f; color:#5dcaa5; font-variant-numeric:tabular-nums;}
+#gxBuyBtn{font-size:12px; font-weight:700; padding:5px 12px; border-radius:6px; background:#4f46e5; color:#fff; border:none; cursor:pointer;}
+#grpBuy{display:none;}
+.bm-galaxy #grpBuy{display:block;}</style>
 <!-- iOS 앱 전용 UI 언어 레이어(KO⇄EN). 앱모드에서만 작동, 웹 브라우저엔 영향 없음. -->
 <script defer src="app-i18n.js"></script>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -1927,6 +1945,11 @@ if (!document.documentElement.classList.contains('bm-app')) {
     </div>
   </div>
 </div>
+<!-- 갤럭시 앱 전용: 남은 시간 + 사용권 구매 (bm-galaxy에서만 표시, v1.13.112) -->
+<div id="gxQuotaBar">
+  <span id="gxQuotaText">남은 시간 --:--:--</span>
+  <button id="gxBuyBtn">사용권 구매</button>
+</div>
 <!-- 설정/용어집 패널 영역(열면 펼쳐지며 스크롤, 닫으면 0높이) — 고정 레이아웃을 깨지 않음 (v1.7.0) -->
 <div id="panelArea">
 <!-- 설정 닫기 — 높이 0 고정 바 + 버튼만 박스 위에 떠 있음(한 줄 차지 안 함, v1.13.83) -->
@@ -2008,7 +2031,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.111 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.112 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2495,31 +2518,85 @@ function fmtHMS(sec) {
   return hh + ':' + mm + ':' + ss;
 }
 
-/* 등급 한글 라벨 */
+/* 앱 UI가 영어 모드인지 (app-i18n.js 로드 전이면 false) — 동적 텍스트 영어화용 (v1.13.112) */
+function bmEN(){ return !!(window.bmGetLang && window.bmGetLang() === 'en'); }
+
+/* 등급 라벨 (영어 모드면 영어) */
 function gradeLabel(g){
+  if (bmEN()) return ({ free_trial_active:'Free trial', free:'Trial ended', '1h':'1-hour pass', '5h':'5-hour pass', '10h':'10-hour pass', unlimited:'Unlimited' })[g] || g;
   return ({ free_trial_active:'무료 체험', free:'체험 만료', '1h':'1시간권', '5h':'5시간권', '10h':'10시간권', unlimited:'무제한' })[g] || g;
 }
 
 function renderQuota() {
   const badge = document.getElementById('authQuotaBadge');
   if (Ent.isUnlimited()) {
-    if (badge) { badge.textContent = '무제한'; badge.style.background = '#1e2f3a'; badge.style.color = '#7abaff'; }
+    if (badge) { badge.textContent = bmEN() ? 'Unlimited' : '무제한'; badge.style.background = '#1e2f3a'; badge.style.color = '#7abaff'; }
+    syncGxQuota();
     applyEntitlementUI();
     return;
   }
   const left = Ent.remainingSeconds();
   if (badge) {
-    badge.textContent = gradeLabel(Ent.grade()) + ' · 남은 시간 ' + fmtHMS(left);
+    badge.textContent = gradeLabel(Ent.grade()) + (bmEN() ? ' · Time left ' : ' · 남은 시간 ') + fmtHMS(left);
     if (left <= 0) {
       badge.style.background = '#3a1e1e'; badge.style.color = '#f09595';
-      badge.textContent = '시간 소진 — 충전 필요';
+      badge.textContent = bmEN() ? 'Time used up — purchase needed' : '시간 소진 — 충전 필요';
     } else if (left <= 300) {   // 5분 이하
       badge.style.background = '#3a341e'; badge.style.color = '#fac775';
     } else {
       badge.style.background = '#1e3a2f'; badge.style.color = '#5dcaa5';
     }
   }
+  syncGxQuota();
   applyEntitlementUI();
+}
+
+/* 갤럭시 메인 화면 남은 시간 배지 — 설정 안 배지(authQuotaBadge)를 그대로 미러 (v1.13.112) */
+function syncGxQuota() {
+  const b = document.getElementById('authQuotaBadge');
+  const g = document.getElementById('gxQuotaText');
+  if (!b || !g) return;
+  g.textContent = b.textContent;
+  g.style.background = b.style.background;
+  g.style.color = b.style.color;
+}
+
+/* ── 갤럭시 앱 사용권 구매 — Google Play 결제 (v1.13.112, bm-galaxy 전용) ──
+   TWA의 Payment Request API('https://play.google.com/billing') + Digital Goods API 사용.
+   Play Console에 같은 ID의 '소모성' 인앱 상품이 등록돼 있어야 한다:
+     time_5h = 5시간권 ₩29,000 · time_10h = 10시간권 ₩55,000
+   흐름: 결제 성공 → consume(재구매 가능하게 소모 처리) → Ent.addTime 적립.
+   ⚠ 적립은 현재 클라이언트에서 함 — 쿼터 자체가 localStorage('정직한 사용자용')와 같은 수준.
+     Firebase 이전 시 구매 토큰 서버 검증(Play Developer API)으로 강화할 것. */
+const GX_SKUS = {
+  time_5h:  { seconds: 5 * 3600,  grade: '5h',  labelKo: '5시간권',  labelEn: '5-hour pass',  price: '29000' },
+  time_10h: { seconds: 10 * 3600, grade: '10h', labelKo: '10시간권', labelEn: '10-hour pass', price: '55000' }
+};
+async function bmBuy(sku) {
+  const item = GX_SKUS[sku];
+  if (!item) return;
+  const en = bmEN();
+  if (!window.PaymentRequest || !('getDigitalGoodsService' in window)) {
+    alert(en ? 'Purchases are available only in the Play Store app.' : '구매는 Play 스토어에서 설치한 앱에서만 가능합니다.');
+    return;
+  }
+  try {
+    const service = await window.getDigitalGoodsService('https://play.google.com/billing');
+    const request = new PaymentRequest(
+      [{ supportedMethods: 'https://play.google.com/billing', data: { sku: sku } }],
+      { total: { label: en ? item.labelEn : item.labelKo, amount: { currency: 'KRW', value: item.price } } }
+    );
+    const response = await request.show();
+    const token = response.details && response.details.purchaseToken;
+    try { if (token) await service.consume(token); } catch (e) { console.error('[구매] consume 실패: ' + e.message); }
+    await response.complete('success');
+    Ent.addTime(item.seconds, item.grade);
+    renderQuota();
+    alert(en ? 'Purchase complete — time added!' : '구매 완료 — 시간이 충전되었습니다!');
+  } catch (e) {
+    if (e && (e.name === 'AbortError' || /cancel/i.test(e.message || ''))) return;   // 사용자 취소
+    alert((en ? 'Purchase failed: ' : '구매에 실패했습니다: ') + (e && e.message ? e.message : e));
+  }
 }
 
 /* 등급에 따른 버튼 잠금/해제 (POLICY_SPEC §5). 버튼이 아직 없으면 조용히 통과. */
@@ -3324,7 +3401,8 @@ async function aiTranslateTerm(term, targetCode) {
     const res = await fetch(baseHttp + '/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
-      body: JSON.stringify({ text: term, targetLang: langName(targetCode) })
+      body: JSON.stringify({ text: term, targetLang: langName(targetCode),
+        platform: document.documentElement.classList.contains('bm-galaxy') ? 'galaxy' : undefined })
     });
     if (!res.ok) throw new Error('relay ' + res.status);
     const data = await res.json();
@@ -4101,6 +4179,8 @@ function connectWS() {
       const ticket = (localStorage.getItem('relay_ticket') || '').trim();
       wsUrl = base + '/?ticket=' + encodeURIComponent(ticket);
     }
+    // 갤럭시 앱: 서버(v3.3.0)가 갤럭시 전용 API 키로 과금 분리하도록 표시 (v1.13.112)
+    if (document.documentElement.classList.contains('bm-galaxy')) wsUrl += '&platform=galaxy';
   } else {
     // 직접 연결 (본인 API 키)
     const apiKey = $('apiKey').value.trim();
@@ -4495,6 +4575,14 @@ window.__syncPanelLayout = function() {
       '</div>' +
       '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">로그인 계정과 남은 시간이 표시됩니다.</div>' +
     '</div>' +
+    // 💳 사용권 구매 — 갤럭시 앱 전용(bm-galaxy에서만 CSS로 표시). Google Play 결제 (v1.13.112)
+    '<div class="grp" id="grpBuy"><div class="grp-ttl">💳 사용권 구매</div>' +
+      '<div class="row" style="max-width:none; gap:8px; flex-wrap:wrap;">' +
+        '<button id="buy5hBtn" style="flex:1; min-width:130px; background:#4f46e5; color:#fff; font-weight:700; padding:10px 12px; border-radius:8px;">5시간권 ₩29,000</button>' +
+        '<button id="buy10hBtn" style="flex:1; min-width:130px; background:#4f46e5; color:#fff; font-weight:700; padding:10px 12px; border-radius:8px;">10시간권 ₩55,000</button>' +
+      '</div>' +
+      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">Google Play로 결제되며, 구매 즉시 남은 시간에 더해집니다.</div>' +
+    '</div>' +
     '<div class="grp" id="grpConn"><div class="grp-ttl">🔌 연결 방식</div>' +
       '<div class="row" style="max-width:none;">' +
         '<select id="connMode" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--t-border); background:var(--t-input-bg); color:var(--t-text); font-size:13px;">' +
@@ -4569,6 +4657,14 @@ window.__syncPanelLayout = function() {
     '</div>';
 
   const root = document.documentElement.style;
+  // 사용권 구매 버튼 (갤럭시 전용 그룹 — 웹에서는 CSS로 숨겨져 클릭 불가) (v1.13.112)
+  if ($('buy5hBtn')) $('buy5hBtn').onclick = () => bmBuy('time_5h');
+  if ($('buy10hBtn')) $('buy10hBtn').onclick = () => bmBuy('time_10h');
+  // 메인 화면 '사용권 구매' 버튼 → 설정 열고 구매 그룹으로 스크롤
+  if ($('gxBuyBtn')) $('gxBuyBtn').onclick = () => {
+    if (!panel.classList.contains('open')) $('mcOptBtn').click();
+    setTimeout(() => { const g = $('grpBuy'); if (g) g.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 150);
+  };
   // 설정 패널 상단 '✕ 닫기' — 설정 버튼(mcOptBtn)과 동일하게 닫기 (열린 상태에서만)
   if ($('mcCloseBtn')) $('mcCloseBtn').onclick = () => { if (panel.classList.contains('open')) $('mcOptBtn').click(); };
   // 무음 자동 정지 시간 선택 — 저장/복원, 통역 중 변경 시 즉시 반영

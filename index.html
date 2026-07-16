@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.120 → v1.13.121) — (임시) 무제한 계정 잔여 카운터 미리보기(교수님 요청):
+  - 무제한 계정은 잔여 카운터가 '무제한'으로만 떠 실제 카운트다운을 볼 수 없었음 →
+    데모로 '- 99:99:60'부터 매초 내려가고 0에서 리셋. bm-galaxy + 무제한 계정에만 적용.
+    실제 유료 사용자는 진짜 잔여시간 표시(영향 없음). syncGxQuota에 __gxDemo 가드 추가.
   변경점 (v1.13.119 → v1.13.120) — 경과·잔여 카운터 두 줄 정렬 통일(교수님 요청):
   - 위=경과(회색 00:00:00), 아래=잔여(빨강 - 00:00:00)를 같은 크기(12px)·굵기(600)·자간·
     글꼴·우측정렬로 맞춰 나란히 병렬로 보이게 함. 시계+ 구매 아이콘은 아이콘 줄 맨 오른쪽 유지.
@@ -2102,7 +2106,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.120 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.121 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2639,6 +2643,7 @@ function syncGxQuota() {
   const g = document.getElementById('gxQuotaText');
   if (!g) return;
   if (Ent.isUnlimited()) {
+    if (window.__gxDemo) return;   // 데모 카운터(아래 IIFE)가 제어 중이면 덮어쓰지 않음 (v1.13.121)
     g.textContent = bmEN() ? 'Unlimited' : '무제한';
     g.style.color = 'var(--t-muted)';
     return;
@@ -2646,6 +2651,32 @@ function syncGxQuota() {
   g.textContent = '- ' + fmtHMS(Ent.remainingSeconds());
   g.style.color = '#dc2626';
 }
+
+/* ── (임시) 무제한 계정용 잔여 카운터 미리보기 (교수님 요청, v1.13.121) ──
+   무제한이라 실제 카운트다운을 볼 수 없으므로, 데모로 '- 99:99:60'부터 매초 내려가고
+   00:00:00에서 다시 99:99:60으로 리셋. 갤럭시(bm-galaxy) + 무제한 계정에만 적용되므로
+   실제 유료 사용자는 진짜 잔여시간이 그대로 표시됨(영향 없음).
+   ※ 나중에 없애려면 이 블록만 삭제하고 syncGxQuota의 __gxDemo 가드 한 줄만 지우면 됨. */
+(function(){
+  if (!document.documentElement.classList.contains('bm-galaxy')) return;
+  var h = 99, m = 99, s = 60, timer = null;
+  function pad(n){ return (n < 10 ? '0' : '') + n; }
+  function tick(){
+    var el = document.getElementById('gxQuotaText');
+    if (!el || typeof Ent === 'undefined' || !Ent.isUnlimited()) {
+      window.__gxDemo = false; if (timer) { clearInterval(timer); timer = null; } return;
+    }
+    window.__gxDemo = true;
+    el.textContent = '- ' + pad(h) + ':' + pad(m) + ':' + pad(s);
+    el.style.color = '#dc2626';
+    s--; if (s < 0) { s = 59; m--; if (m < 0) { m = 59; h--; if (h < 0) { h = 99; m = 99; s = 60; } } }
+  }
+  var boot = setInterval(function(){
+    if (!window.__boothmateUser) return;   // 로그인 전엔 대기
+    clearInterval(boot);
+    if (typeof Ent !== 'undefined' && Ent.isUnlimited()) { tick(); timer = setInterval(tick, 1000); }
+  }, 500);
+})();
 
 /* ── 갤럭시 앱 사용권 구매 — Google Play 결제 (v1.13.112, bm-galaxy 전용) ──
    TWA의 Payment Request API('https://play.google.com/billing') + Digital Goods API 사용.

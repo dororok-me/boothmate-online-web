@@ -1,5 +1,16 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.113 → v1.13.114) — 잔여 시간 계정 동기화(교수님 요청, Play 출시 대비):
+  - 구매·차감된 잔여시간(Ent 상태)을 중계서버 /quota(v3.4.0, Turso user_quota)에 이메일 단위로
+    동기화 — 용어집(/glossary)과 동일 패턴. 폰에서 산 시간이 패드에서도 보이고, 재설치해도 유지.
+  - 시작 시 cloudQuotaPull: 클라우드가 있고 로컬이 미사용(mt 없음)이거나 클라우드가 최신이면 채택
+    → 새 기기는 무료체험 30분 대신 계정의 실제 잔여시간을 이어받음(기기별 체험 중복도 로그인 계정엔 차단).
+    클라우드가 비어 있거나 로컬이 최신이면 업로드.
+  - 변경 시 cloudQuotaPush: 통역 중 15초 스로틀, 정지·구매·탭닫기(pagehide)는 즉시(keepalive).
+    초기 pull 전에는 push 금지 — 새 기기의 체험 상태가 계정 데이터를 덮지 않게.
+  - Ent 상태에 mt(마지막 사용 변경 시각) 추가: tick/addTime/setRemaining/applyGrant에서 갱신.
+    기본값 생성 시에는 안 찍음 — mt 없음 = "이 기기에서 아직 안 씀" 판정에 사용.
+  - 실패·미로그인·무제한 계정·서버 DB 미설정 시 조용히 로컬 전용(기존 동작 그대로).
   변경점 (v1.13.112 → v1.13.113) — 무료 체험 3시간 → 30분(교수님 결정, Play 출시 대비):
   - FREE_QUOTA_SECONDS = 1800초. 신규 사용자(기기)부터 적용 — 이미 시간이 부여된 기존
     기기·TIME_GRANTS 지급분은 영향 없음. 쿼터가 기기(localStorage) 단위라 기기를 바꾸면
@@ -2035,7 +2046,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.113 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.114 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2459,6 +2470,7 @@ const Ent = (function(){
     s.remainingSeconds = Math.max(0, Math.floor(g.seconds));
     s.appliedGrant = g.grantId;
     if (s.grade === 'free') s.grade = 'free_trial_active';   // 체험 만료였으면 다시 활성화
+    s.mt = Date.now();   // 클라우드 동기화용 변경 시각 (v1.13.114)
     return true;
   }
   function load(){
@@ -2478,7 +2490,11 @@ const Ent = (function(){
       return d;
     } catch(e){ return defaults(); }
   }
-  function save(s){ try { localStorage.setItem(key(), JSON.stringify(s)); } catch(e){} }
+  function save(s){
+    try { localStorage.setItem(key(), JSON.stringify(s)); } catch(e){}
+    // 클라우드(계정) 동기화 — 15초 스로틀, 초기 pull 전·미로그인·무제한이면 내부에서 무시 (v1.13.114)
+    try { if (typeof cloudQuotaPush === 'function') cloudQuotaPush(); } catch(e){}
+  }
 
   return {
     isUnlimited: isUnlimited,
@@ -2497,13 +2513,19 @@ const Ent = (function(){
       const s = load();
       s.remainingSeconds = Math.max(0, s.remainingSeconds - 1);
       if (s.remainingSeconds === 0 && s.grade === 'free_trial_active') { s.trialUsed = true; s.grade = 'free'; }
+      s.mt = Date.now();
       save(s);
       return s.remainingSeconds;
     },
     /* 잔여시간 직접 설정 (호환용) */
-    setRemaining(sec){ const s = load(); s.remainingSeconds = Math.max(0, Math.floor(sec)); save(s); },
+    setRemaining(sec){ const s = load(); s.remainingSeconds = Math.max(0, Math.floor(sec)); s.mt = Date.now(); save(s); },
     /* 결제 적립 (출시 시 결제 백엔드 성공 후 호출 — POLICY_SPEC §6) */
-    addTime(sec, newGrade){ const s = load(); s.remainingSeconds += Math.max(0, Math.floor(sec)); if (newGrade) s.grade = newGrade; save(s); }
+    addTime(sec, newGrade){ const s = load(); s.remainingSeconds += Math.max(0, Math.floor(sec)); if (newGrade) s.grade = newGrade; s.mt = Date.now(); save(s); },
+    /* 클라우드(계정) 상태 채택 — 다른 기기에서 저장한 잔여시간으로 교체 (v1.13.114) */
+    adoptCloud(data){
+      if (isUnlimited() || !data || typeof data.remainingSeconds !== 'number') return;
+      save(Object.assign(defaults(), data));   // 다음 load()에서 TIME_GRANTS 미적용분은 자동 적용됨
+    }
   };
 })();
 
@@ -2596,6 +2618,7 @@ async function bmBuy(sku) {
     await response.complete('success');
     Ent.addTime(item.seconds, item.grade);
     renderQuota();
+    try { cloudQuotaPush(true); } catch (e) {}   // 구매 즉시 계정(클라우드)에 반영 (v1.13.114)
     alert(en ? 'Purchase complete — time added!' : '구매 완료 — 시간이 충전되었습니다!');
   } catch (e) {
     if (e && (e.name === 'AbortError' || /cancel/i.test(e.message || ''))) return;   // 사용자 취소
@@ -2641,6 +2664,8 @@ function startQuotaCountdown() {
 function stopQuotaCountdown() {
   if (quotaTimer) { clearInterval(quotaTimer); quotaTimer = null; }
   renderQuota();
+  // 통역 정지 시점의 잔여시간을 계정(클라우드)에 즉시 반영 (v1.13.114)
+  try { if (typeof cloudQuotaPush === 'function') cloudQuotaPush(true); } catch(e){}
 }
 
 /* 모바일 기기(휴대폰·태블릿) 판정 — iPadOS는 데스크톱 UA로 위장하므로 터치포인트로 보완 */
@@ -3212,6 +3237,62 @@ async function cloudPullGlossary() {
     cloudStat('✅ 동기화됨');
   } catch (e) { console.log('[용어집 클라우드] 연결 실패 — 로컬 전용'); }
 }
+/* ── 잔여 시간 계정(클라우드) 동기화 (v1.13.114) ──
+   구조: 브라우저 ↔ 중계서버(GET/PUT /quota, PASS_KEY 인증) ↔ Turso user_quota. 용어집과 동일 패턴.
+   · 시작 시 cloudQuotaPull: 클라우드 상태가 있고 로컬이 미사용(mt 없음)이거나 클라우드 mt가 더
+     최신이면 클라우드 채택 → 새 기기도 계정의 실제 잔여시간을 이어받음. 로컬이 더 최신이면 업로드.
+   · 변경 시 cloudQuotaPush: 통역 중 매초 save()가 부르므로 15초 스로틀. 정지·구매·탭닫기는 즉시.
+   · 초기 pull 완료 전에는 push 금지 — 새 기기의 무료체험 상태가 계정 데이터를 덮지 않게.
+   · 실패·미로그인·무제한 계정·서버 DB 미설정(503) 시 조용히 로컬 전용(기존 동작). */
+let __quotaPushTimer = null, __quotaPullDone = false;
+function cloudQuotaPush(immediate) {
+  const email = cloudEmail();
+  if (!email || !cloudHttpBase() || !RELAY_PASS_KEY) return;
+  // Ent가 실제 계정 키로 동작 중일 때만 — 로그인 복원 전(anon 상태)의 push 방지 (v1.13.114)
+  if (!window.__boothmateUser || !window.__boothmateUser.email) return;
+  if (!__quotaPullDone) return;   // 초기 pull 전 푸시 금지
+  if (Ent.isUnlimited()) return;
+  const doSend = function () {
+    __quotaPushTimer = null;
+    let payload;
+    try { payload = JSON.stringify({ user: email, data: Ent.state() }); } catch (e) { return; }
+    fetch(cloudHttpBase() + '/quota', {
+      method: 'PUT',
+      keepalive: true,   // 탭 닫는 중에도 전송 (상태 JSON은 수백 바이트)
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
+      body: payload
+    }).catch(function () {});
+  };
+  if (immediate) { if (__quotaPushTimer) { clearTimeout(__quotaPushTimer); __quotaPushTimer = null; } doSend(); return; }
+  if (__quotaPushTimer) return;   // 이미 예약됨 — 스로틀(통역 중 매초 호출돼도 15초마다 1회)
+  __quotaPushTimer = setTimeout(doSend, 15000);
+}
+async function cloudQuotaPull() {
+  const email = cloudEmail();
+  if (!email || !cloudHttpBase() || !RELAY_PASS_KEY || Ent.isUnlimited()) { __quotaPullDone = true; return; }
+  if (!window.__boothmateUser || !window.__boothmateUser.email) { __quotaPullDone = true; return; }   // showApp 이후에만
+  try {
+    const res = await fetch(cloudHttpBase() + '/quota?user=' + encodeURIComponent(email), {
+      headers: { 'Authorization': 'Bearer ' + RELAY_PASS_KEY }
+    });
+    if (!res.ok) { console.log('[시간 클라우드] 서버 응답 ' + res.status + ' — 로컬 전용'); __quotaPullDone = true; return; }
+    const j = await res.json();
+    const localMt = Ent.state().mt || 0;
+    const cloudMt = (j.data && j.data.mt) || 0;
+    if (j.data && (!localMt || cloudMt >= localMt)) {
+      Ent.adoptCloud(j.data);   // 클라우드 채택 (새 기기 = 계정 잔여시간 이어받기)
+      __quotaPullDone = true;
+      renderQuota();
+      console.log('[시간 클라우드] 계정 잔여시간 내려받음: ' + fmtHMS(j.data.remainingSeconds || 0));
+    } else {
+      // 클라우드가 비어 있거나(첫 업로드) 로컬이 더 최신 → 업로드
+      __quotaPullDone = true;
+      cloudQuotaPush(true);
+      console.log('[시간 클라우드] 로컬 잔여시간 업로드');
+    }
+  } catch (e) { console.log('[시간 클라우드] 연결 실패 — 로컬 전용'); __quotaPullDone = true; }
+}
+window.addEventListener('pagehide', function () { if (__quotaPullDone) cloudQuotaPush(true); });
 /* 번역 방향에 따라 [찾을말, 바꿀말] 쌍 목록.
    양방향: 등록쌍 {a,b}에서 — 번역 결과 언어로 '바꿀말'이 가게.
    targetLang 'ko'(→한국어): 결과가 한국어이므로, 영어쪽을 한국어쪽으로 바꿔야 함
@@ -5542,6 +5623,8 @@ window.__syncPanelLayout = function() {
   // 클라우드 동기화 (v1.13.58): 클라우드가 내려준 최신본을 화면에 반영하는 훅 + 시작 시 1회 당겨오기
   window.__glossaryRerender = function () { render(); renderSets(); learnMissing(); };
   cloudPullGlossary();   // 시작 시 1회: 다른 기기에서 저장한 최신 용어집 내려받기
+  // (잔여시간 동기화 cloudQuotaPull은 여기가 아니라 showApp에서 호출 — 이 시점엔
+  //  window.__boothmateUser가 아직 없어 Ent가 anon 키로 동작하기 때문. v1.13.114)
 })();
 </script>
 <script>
@@ -5584,6 +5667,11 @@ window.__syncPanelLayout = function() {
     if (emailEl) emailEl.textContent = user.email || user.name || '로그인됨';
     window.__boothmateUser = user;   // 다른 코드에서 참조 가능
     if (typeof renderQuota === 'function') renderQuota();   // 남은 무료 시간 표시
+    // 계정 잔여시간 동기화 — __boothmateUser 설정 직후여야 Ent가 올바른 계정 키를 씀 (v1.13.114)
+    if (typeof cloudQuotaPull === 'function' && !window.__quotaPullStarted) {
+      window.__quotaPullStarted = true;
+      cloudQuotaPull();
+    }
     if (typeof refreshMeter === 'function') refreshMeter();   // 로그인 후 입력 레벨미터 켜기(마이크 모드)
   }
 

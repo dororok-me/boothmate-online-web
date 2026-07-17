@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.129 → v1.13.130) — 일시정지 버튼 + 헤더 정리(교수님 요청):
+  - [일시정지] 재생(▶) 누르면 옆에 ⏸ 버튼 표시(웹·갤럭시 공통, #playRow).
+    일시정지 중: 시간 차감 없음(quotaTimer 정지 + running=false로 usage 리포터 카운트 중단),
+    캡처 스트림·오디오 그래프는 유지 → 재개 시 창 선택/사운드 공유 재선택 불필요(WS만 재연결).
+    일시정지 상태 버튼은 초록 ▶(재개). 공유가 끊긴 채 재개하면 완전 정지로 전환 안내.
+  - [헤더] 재생 버튼 옆 세로 구분바(.hdr-sep) 삭제.
+  - [오버레이] v1.13.129의 '큰 창으로 전환' 버튼 원상복구(제거) — overlay.html을 v1.13.128로 되돌림.
   변경점 (v1.13.128 → v1.13.129) — 오버레이 창 크기 제한 해소(교수님 요청):
   - (overlay.html) PiP('항상 위') 창은 크롬 정책상 화면의 약 80%까지만 커져 상하 확장 제한.
     컨트롤 바 오른쪽 끝에 '큰 창으로 전환' 버튼(↗) 추가 — 크기 제한 없는 일반 팝업 창으로
@@ -1263,6 +1270,14 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
     display: inline-flex; align-items: center; z-index: 5;
   }
+  /* 재생+일시정지 한 줄 묶음 — 갤럭시 세로 클러스터 안에서도 두 버튼은 가로로 (v1.13.130) */
+  #playRow { display: inline-flex; align-items: center; gap: 8px; }
+  /* 일시정지 버튼 — 통역 중에만 표시(.show). 일시정지 상태(.paused)면 초록 재개(▶)로 변신 */
+  #pauseBtn {
+    display: none; align-items: center; justify-content: center;
+    background: #4b5563; color: #e5e7eb; padding: 6px 12px; border-radius: 9px; line-height: 1;
+  }
+  #pauseBtn.show { display: inline-flex; }
   /* 타이머는 우측 아이콘 그룹의 세로 구분바(hdr-sep) 옆에 오른쪽 정렬로 배치(일반 흐름) */
   /* 입력 사운드 레벨 미터 — 카운터 왼쪽, 가로 점 7개(작고 촘촘), 회색 계열. 소리 들어오면 왼쪽부터 진해짐. */
   #levelMeter { display: inline-flex; align-items: center; gap: 2px; }
@@ -1818,7 +1833,14 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   #toggleBtn:not(.running):hover { background: #4338CA; transform: translateY(-1px); }
   #toggleBtn #toggleLabel { font-size: 15px; font-weight: 700; }
   #toggleBtn.running { background: #DC2626; color: #fff; box-shadow: 0 2px 10px rgba(220,38,38,0.40); }
-  .hdr-sep { width: 1px; height: 24px; background: var(--t-border); display: inline-block; }
+  /* 일시정지 — 재생 버튼과 같은 동그란 톤. 진행 중=호박색 ⏸, 일시정지 중=초록 ▶(재개) (v1.13.130) */
+  #pauseBtn {
+    width: 46px; height: 46px; padding: 0; border-radius: 50%;
+    background: #F59E0B; color: #fff; box-shadow: 0 2px 10px rgba(245,158,11,0.30);
+  }
+  #pauseBtn:hover { background: #D97706; transform: translateY(-1px); }
+  #pauseBtn.paused { background: #059669; box-shadow: 0 2px 10px rgba(5,150,105,0.32); }
+  #pauseBtn.paused:hover { background: #047857; }
   .icon-btn, #mcOptBtn, #glossaryBtn {
     width: 38px; height: 38px; padding: 0; border-radius: 10px; font-size: 18px;
     display: inline-flex; align-items: center; justify-content: center;
@@ -1873,9 +1895,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     /* 헤더 한 줄에 모두 들어오도록 아이콘·타이머·시작버튼 축소 */
     #elapsed { font-size: 11px; letter-spacing: 0.5px; }
     #toggleBtn, #toggleBtn:not(.running) { width: 40px; height: 40px; }
+    #pauseBtn { width: 40px; height: 40px; }
     .icon-btn, #mcOptBtn, #glossaryBtn { width: 32px; height: 32px; }
     .icon-btn svg, #mcOptBtn svg, #glossaryBtn svg { width: 17px; height: 17px; }
-    .hdr-sep { height: 20px; }
     #topLogo img { height: 30px; }
     .mc-area { padding: 22px 18px; }
   }
@@ -2032,9 +2054,16 @@ if (!document.documentElement.classList.contains('bm-app')) {
   <div id="topLogo"><img src="logo.png" alt="Boothmate"><span class="logo-sub">online</span></div>
   <div id="headerActions">
     <div id="playCluster">
-      <button id="toggleBtn" title="시작 / 정지"><span id="toggleLabel">▶</span></button>
+      <!-- 재생+일시정지 한 줄(#playRow) — 갤럭시의 세로 배치(#playCluster column)에서도 두 버튼은 나란히 (v1.13.130) -->
+      <div id="playRow">
+        <button id="toggleBtn" title="시작 / 정지"><span id="toggleLabel">▶</span></button>
+        <!-- 일시정지: 통역 중에만 표시. 시간 차감 없음 + 창·사운드 공유 유지 → 재개 시 재선택 불필요 (v1.13.130) -->
+        <button id="pauseBtn" title="일시정지 (시간 차감 없음 · 창/사운드 공유 유지)" aria-label="일시정지/재개">
+          <svg id="pauseIcon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/></svg>
+          <svg id="resumeIcon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none;"><path d="M7 4.5v15a1 1 0 0 0 1.52.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>
+        </button>
+      </div>
     </div>
-    <span class="hdr-sep"></span>
     <button id="resetSubBtn" class="icon-btn" title="자막 리셋 (화면 자막 전체 지우기)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
     <button id="openOverlayBtn" class="icon-btn" title="오버레이"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg></button>
     <button id="glossaryBtn" class="icon-btn" title="용어집"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2C10.4 5 7.8 4.5 4 4.5V18c3.8 0 6.4.5 8 1.8 1.6-1.3 4.2-1.8 8-1.8V4.5c-3.8 0-6.4.5-8 1.7z"></path><path d="M12 6.2V19.8"></path></svg></button>
@@ -2145,7 +2174,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.129 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.130 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2353,6 +2382,19 @@ function setRunningUI(on) {
   const lbl = $('toggleLabel');
   if (on) { if (lbl) lbl.textContent = '■'; tb.classList.add('running'); }
   else { if (lbl) lbl.textContent = '▶'; tb.classList.remove('running'); }
+  // 일시정지 버튼: 통역 중에만 표시. 정지되면 숨기고 상태도 초기화 (v1.13.130)
+  const pb = $('pauseBtn');
+  if (pb) { pb.classList.toggle('show', on); if (!on) setPausedUI(false); }
+}
+/* 일시정지 버튼 표시 상태 — 진행 중=⏸(호박색), 일시정지=▶(초록, 재개) (v1.13.130) */
+function setPausedUI(p) {
+  const pb = $('pauseBtn');
+  if (!pb) return;
+  pb.classList.toggle('paused', p);
+  const pi = $('pauseIcon'), ri = $('resumeIcon');
+  if (pi) pi.style.display = p ? 'none' : '';
+  if (ri) ri.style.display = p ? '' : 'none';
+  pb.title = p ? '재개 — 창/사운드 공유가 유지된 채 바로 계속' : '일시정지 (시간 차감 없음 · 창/사운드 공유 유지)';
 }
 setRunningUI(false);
 function showErr(t) { errEl.textContent = t; }
@@ -2522,6 +2564,20 @@ function stopElapsed() {
   if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
   renderElapsed(0, true);            // 정지 시 00/00/00로 리셋
   stopQuotaCountdown();
+}
+/* 경과 타이머 일시정지/재개 — 표시값은 유지, 멈춘 시간만큼 기준점(elapsedStart)을 뒤로 밀어
+   재개 후 카운터가 이어서 흐르게 한다 (v1.13.130) */
+let elapsedPausedAt = 0;
+function pauseElapsed() {
+  if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+  elapsedPausedAt = Date.now();
+}
+function resumeElapsed() {
+  if (elapsedPausedAt) { elapsedStart += Date.now() - elapsedPausedAt; elapsedPausedAt = 0; }
+  if (elapsedTimer) clearInterval(elapsedTimer);
+  elapsedTimer = setInterval(() => {
+    renderElapsed(Math.floor((Date.now() - elapsedStart) / 1000));
+  }, 1000);
 }
 
 /* 자막창은 고정 레이아웃(flex:1)에서 남는 공간을 자동으로 채움(v1.7.0).
@@ -4332,6 +4388,7 @@ let sessionLimitTimer = null;   // 한 세션 최대 5분 제한 타이머
 const SESSION_LIMIT_MS = 5 * 60 * 1000;   // 5분
 const SESSION_LIMIT_ENABLED = false;   // v1.13.19: 한 세션 5분 제한 해제(교수님 요청). true로 되돌리면 재적용.
 let userStopped = false;        // 사용자가 정지를 눌렀는지 (true면 재연결 안 함)
+let paused = false;             // 일시정지 중 (스트림·오디오 그래프 유지, WS·타이머·차감만 멈춤) (v1.13.130)
 
 /* ── 무음 자동 정지 ──
    '사운드'가 아니라 실제 음성 인식 결과(입력 transcription = appendSrc)가
@@ -4401,6 +4458,7 @@ async function start() {
   resetSubtitles();
   running = true;
   userStopped = false;
+  paused = false;
   reconnectAttempt = 0;
   // 방향 초기화 — 양방향 자동은 A→B로 시작(입력 감지로 전환), 단방향은 선택 방향 고정.
   { curTarget = defaultTargetForMode(); if ($('targetLang')) $('targetLang').value = curTarget; }
@@ -4718,9 +4776,12 @@ async function startMic() {
       }
       // 화면(영상) 트랙은 안 쓰므로 정지 — 오디오만 사용
       micStream.getVideoTracks().forEach(t => t.stop());
-      // 사용자가 브라우저 기본 "공유 중지" 버튼을 누르면 통역도 정지
+      // 사용자가 브라우저 기본 "공유 중지" 버튼을 누르면 통역도 정지 (일시정지 중이면 완전 정지로 전환)
       const at = micStream.getAudioTracks()[0];
-      if (at) at.addEventListener('ended', () => { if (running) stop(); });
+      if (at) at.addEventListener('ended', () => {
+        if (running) stop();
+        else if (paused) { paused = false; stop(); showErr('사운드 공유가 종료되어 정지했습니다. "시작"을 눌러 다시 시작해 주세요.'); }
+      });
     } else {
       // ── 마이크 / 오디오 장치 ──
       // "TV처럼 알아서": 장치를 일일이 고르지 않아도 열리는 입력을 자동으로 찾아 바로 시작.
@@ -4814,6 +4875,7 @@ async function startMic() {
 function stop() {
   userStopped = true;                            // 사용자 정지 → 재연결 막음
   running = false;
+  paused = false;                                // 일시정지 중 정지해도 상태 초기화 (v1.13.130)
   if (sessionLimitTimer) { clearTimeout(sessionLimitTimer); sessionLimitTimer = null; }
   setRunningUI(false);
   if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
@@ -4834,6 +4896,67 @@ function stop() {
 }
 $('toggleBtn').onclick = () => { if (uiRunning) stop(); else start(); };
 
+/* ── 일시정지/재개 (v1.13.130, 교수님 요청) ──
+   정지(stop)와 달리 캡처 스트림·오디오 그래프를 살려 둔 채 WS(Gemini 세션)와
+   모든 타이머(경과·쿼터 차감·무음 감시)만 멈춘다.
+   → 시간 차감 없음(로컬 quotaTimer 정지 + running=false로 usage 리포터도 카운트 중단·최종 델타 보고),
+   → 재개 시 창 선택/사운드 공유를 다시 고를 필요 없이 WS만 다시 연결(자동 재연결과 같은 경로). */
+function pauseInterp() {
+  if (!running || paused) return;
+  paused = true;
+  running = false;   // usage 리포터 카운트 중단(1초 뒤 최종 델타 보고) + ws.onclose 재연결 차단
+  if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+  if (sessionLimitTimer) { clearTimeout(sessionLimitTimer); sessionLimitTimer = null; }
+  if (pairFlipTimer) { clearTimeout(pairFlipTimer); pairFlipTimer = null; }
+  if (idleFlushTimer) { clearTimeout(idleFlushTimer); idleFlushTimer = null; }
+  // WS만 닫는다 — micStream·audioContext·workletNode는 그대로(재선택 불필요의 핵심).
+  // onaudioprocess는 ws가 없으면 즉시 반환하므로 오디오 전송도 자연히 멈춤.
+  if (ws) { try { ws.onclose = null; ws.onerror = null; ws.onmessage = null; ws.close(); } catch (e) {} ws = null; }
+  finishSegment();
+  if (typeof stopPlayback === 'function') stopPlayback();
+  pauseElapsed();        // 경과 카운터 표시 유지한 채 정지
+  stopQuotaCountdown();  // 잔여시간 차감 정지
+  stopSilenceWatch();    // 무음 자동 정지도 일시정지 중엔 미적용
+  setPausedUI(true);
+  setStatus('일시정지됨', false);
+}
+function resumeInterp() {
+  if (!paused) return;
+  // 일시정지 중 사용자가 브라우저 '공유 중지'를 눌렀거나 장치가 끊겼으면 재개 불가 → 완전 정지
+  const at = micStream && micStream.getAudioTracks ? micStream.getAudioTracks()[0] : null;
+  if (!at || at.readyState === 'ended') {
+    paused = false;
+    stop();
+    showErr('일시정지 중 사운드 공유(입력)가 종료되었습니다. "시작"을 눌러 다시 시작해 주세요.');
+    return;
+  }
+  // 잔여 시간 확인 — 0이면 재개 차단
+  if (!Ent.canInterpret()) {
+    paused = false;
+    stop();
+    showErr('남은 시간이 없습니다. 충전(구매) 후 이용할 수 있습니다.');
+    return;
+  }
+  paused = false;
+  running = true;
+  userStopped = false;
+  reconnectAttempt = 0;
+  // 5분 세션 제한이 켜져 있으면 재개 시 새로 걸어줌 (현재 비활성 — SESSION_LIMIT_ENABLED=false)
+  if (SESSION_LIMIT_ENABLED && !isUnlimitedUser()) {
+    if (sessionLimitTimer) clearTimeout(sessionLimitTimer);
+    sessionLimitTimer = setTimeout(() => {
+      if (running) { stop(); showErr('한 세션은 최대 5분까지입니다. 계속하려면 "시작"을 다시 눌러주세요.'); }
+    }, SESSION_LIMIT_MS);
+  }
+  resumeElapsed();        // 경과 카운터 이어서
+  startQuotaCountdown();  // 차감 재개
+  startSilenceWatch();
+  setPausedUI(false);
+  setStatus('연결 중...', false);
+  connectWS();            // 스트림은 살아 있으므로 WS만 다시 연결(자동 재연결과 동일 경로)
+}
+$('pauseBtn').onclick = () => { if (paused) resumeInterp(); else pauseInterp(); };
+
 /* ── 창 닫힘/이탈 시 자동 정지 (크레딧 누수 방지) ──
    사용자가 탭/창을 닫거나 페이지를 떠날 때 통역이 돌고 있으면
    WebSocket·마이크·오디오를 즉시 정리해서 Gemini 과금이 계속되지 않게 한다.
@@ -4841,13 +4964,14 @@ $('toggleBtn').onclick = () => { if (uiRunning) stop(); else start(); };
 */
 window.addEventListener('pagehide', () => {
   try { LevelMeter.stop(); } catch(e){}   // 페이지 이탈: 대기 레벨미터도 마이크 해제
-  if (running) {
+  if (running || paused) {   // 일시정지 중에도 스트림이 살아 있으므로 함께 정리 (v1.13.130)
     try {
       if (workletNode) { workletNode.disconnect(); workletNode = null; }
       if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
       if (audioContext) { try { audioContext.close(); } catch(e){} audioContext = null; }
       if (ws) { try { ws.close(); } catch(e){} ws = null; }
       running = false;
+      paused = false;
     } catch(e){}
   }
 });

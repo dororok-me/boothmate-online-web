@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.135 → v1.13.136) — 글로서리를 한/영/중/일 다국어 방향 지원(교수님 보고):
+  - 기존 글로서리는 언어 판별이 '한글 vs 아님(gKey ko/x)' 2분류라, 중↔영·일↔영 등 한국어가 없는
+    쌍은 두 용어가 같은 칸('x')에 뭉쳐 방향 판별이 깨졌음(작동 안 함).
+  - gKey를 스크립트 분류(한글ko/가나ja/한자zh/라틴en)로 교체 + 언어코드→키(gScriptOf) +
+    현재 언어쌍 기반 방향(gDirKeys) + 소거법 선택(gPick). loadGlossary가 로드 시 nat 재계산해
+    예전 저장분(구 gKey)도 복구. applyGlossaryReplace·annotateGlossary·glossaryInstruction 반영.
+  - 검증: 한↔영 기존과 동일(회귀 없음), 중↔영·한↔일·영↔중 양방향 정상. 순한자 일본어는 소거법으로 처리.
+    (한계: 중↔일 둘 다 순한자면 구분 불가 — 드문 케이스, 가나 있으면 정상.)
   변경점 (v1.13.134 → v1.13.135) — sorim126 등록 + 3시간권 부여:
   - sorim126@gmail.com → ALLOWED_EMAILS 등록 + TIME_GRANTS 3시간(grantId sorim126-3h-20260717).
     다음 접속 시 잔여시간 3시간으로 반영.
@@ -2190,7 +2198,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.135 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.136 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3375,8 +3383,13 @@ function escapeHtml(s) {
    localStorage 키: 'glossary'  (구버전 syn 단일 필드는 열 때 synA/synB로 자동 이관)
    ════════════════════════════════════════════ */
 function loadGlossary() {
-  try { return JSON.parse(localStorage.getItem('glossary') || '[]'); }
-  catch (e) { return []; }
+  try {
+    const list = JSON.parse(localStorage.getItem('glossary') || '[]');
+    // nat(언어별 칸)을 항상 현재 gKey 기준으로 재계산 — 예전에 저장된 엔트리(구 gKey: ko/x)도
+    // 새 스크립트 분류(ko/en/zh/ja)로 올바르게 재배속. (중↔영·일↔영 등이 한 칸에 뭉쳐 저장됐던 것 복구)
+    for (const it of list) { if (it && (it.a !== undefined || it.b !== undefined)) it.nat = natFromEntry(it); }
+    return list;
+  } catch (e) { return []; }
 }
 /* SheetJS(xlsx) 동적 로더 — 엑셀 입출력 시에만 CDN에서 1회 로드 */
 let __sheetjsLoading = false, __sheetjsCbs = [];
@@ -3701,23 +3714,22 @@ function flexRegexSrc(term) {
    v1.13.52: 원문쪽 별칭(예: patient의 participant·subject)도 트리거어로 포함 — 별칭이 들려도
    대표 쌍(피험자)으로 번역. 지침도 "어근 유지 + 문법 굴절 허용"으로 완화(patients/took/gradually 대응). */
 function glossaryInstruction(targetCode) {
-  const outP = (/ko/.test(String(targetCode))) ? 'ko' : 'x';
-  const otherP = (outP === 'ko') ? 'x' : 'ko';
+  const { outP, otherP } = gDirKeys(targetCode);
   const pairs = [];
   for (const it of loadGlossary()) {
     if (!it) continue;
     let tgt, srcs;
-    if (it.nat) {
-      tgt = it.nat[outP] && it.nat[outP][0];
-      srcs = (it.nat[otherP] || []).filter(Boolean);   // 표제어 + 원문쪽 별칭 전부 트리거어로
+    const tcol = gPick(it.nat, outP, otherP);
+    if (tcol) {
+      tgt = tcol[0];
+      srcs = (gPick(it.nat, otherP, outP) || []).filter(Boolean);   // 표제어 + 원문쪽 별칭 전부 트리거어로
     } else {
       const aHead = splitAliases(it.a)[0] || it.a;
       const bHead = splitAliases(it.b)[0] || it.b;
-      const aKo = (gKey(aHead) === 'ko');
-      const koSide = aKo ? aHead : bHead;
-      const xSide = aKo ? bHead : aHead;
-      tgt = (outP === 'ko') ? koSide : xSide;
-      srcs = [(outP === 'ko') ? xSide : koSide];
+      const n2 = {}; const ka = gKey(aHead), kb = gKey(bHead);
+      n2[ka] = [aHead]; if (n2[kb] === undefined) n2[kb] = []; if (n2[kb].indexOf(bHead) < 0) n2[kb].push(bHead);
+      const tc = gPick(n2, outP, otherP); tgt = tc && tc[0];
+      srcs = (gPick(n2, otherP, outP) || []).filter(Boolean);
     }
     if (!tgt) continue;
     for (const src of srcs) if (src && !eqTerm(tgt, src)) pairs.push('"' + src + '" → "' + tgt + '"');
@@ -3774,7 +3786,43 @@ function applyGlossary(text) {
    - 통역 중엔 AI에 개입하지 않고, 출력 언어의 별칭(예: 고양이)을 표준표기(냥냥이)로 치환
    entry.nat = { ko:[표준,별칭...], x:[표준,별칭...] }  (ko=한국어, x=비한국어)
    ════════════════════════════════════════════ */
-function gKey(term) { return /[가-힣]/.test(term) ? 'ko' : 'x'; }
+/* 용어 → 스크립트(문자체계) 키. 한/영/중/일 글로서리 방향 판별용.
+   한글→ko, 가나→ja, 한자(가나·한글 없음)→zh, 그 외(라틴 등)→en.
+   ※ 가나 없는 순한자 일본어는 zh로 잡히지만, 방향 판별은 언어쌍 소거법(gPick)이 보정. */
+function gKey(term) {
+  const t = String(term || '');
+  if (/[가-힣]/.test(t)) return 'ko';
+  if (/[぀-ヿｦ-ﾝ]/.test(t)) return 'ja';                 // 히라가나·가타카나(반각 포함)
+  if (/[㐀-䶿一-鿿豈-﫿]/.test(t)) return 'zh';   // 한자(CJK 표의문자)
+  return 'en';                                                             // 라틴 등
+}
+/* 언어 코드 → 글로서리 스크립트 키(gKey와 짝). */
+function gScriptOf(code) {
+  const c = String(code || '');
+  if (/^ko/.test(c)) return 'ko';
+  if (/^ja/.test(c)) return 'ja';
+  if (/^zh/.test(c)) return 'zh';
+  return 'en';                    // en 및 기타 라틴 언어
+}
+/* 현재 번역 방향의 (출력키, 입력키)를 실제 언어쌍(getPair)에서 구한다. 한↔영 전용 → 한/영/중/일 확장. */
+function gDirKeys(outCode) {
+  let other = outCode;
+  try {
+    const p = getPair();
+    other = (langPrefix(p.a) === langPrefix(outCode)) ? p.b : p.a;
+  } catch (e) {}
+  return { outP: gScriptOf(outCode), otherP: gScriptOf(other) };
+}
+/* 엔트리 nat에서 원하는 언어(wantP)의 칸을 고른다. 정확 매치가 없으면(순한자 일↔중 중복, 또는
+   구버전 'x' 키) 상대 언어(otherP) 칸을 제외한 나머지 칸으로 결정 — 칸이 곧 언어라 소거법이 안전. */
+function gPick(nat, wantP, otherP) {
+  if (!nat) return null;
+  if (nat[wantP] && nat[wantP].length) return nat[wantP];
+  const keys = Object.keys(nat).filter(function (k) { return nat[k] && nat[k].length; });
+  const rest = keys.filter(function (k) { return k !== otherP; });
+  if (rest.length === 1) return nat[rest[0]];
+  return nat[wantP] || null;
+}
 function eqTerm(a, b) {
   const n = function(s){ return String(s||'').toLowerCase().replace(/\s+/g, ''); };
   return n(a) === n(b);
@@ -3869,22 +3917,21 @@ function synSplitByLang(a, b, words) {
    v1.13.52: 영어 별칭은 규칙 복수(-s/-es)도 매치하고 표준표기에 접미사를 보존
    (participants→patients — 복수가 단수로 깎이지 않게). 로그는 실제 매치된 별칭 기준. */
 function applyGlossaryReplace(text, outCode) {
-  const outP = (/ko/.test(String(outCode))) ? 'ko' : 'x';
-  const otherP = (outP === 'ko') ? 'x' : 'ko';
+  const { outP, otherP } = gDirKeys(outCode);
   let out = text;
   const corrections = [];
   for (const it of loadGlossary()) {
     if (!it) continue;
-    const col = it.nat && it.nat[outP];
+    const col = gPick(it.nat, outP, otherP);
     if (!col || !col.length) continue;
     const canonical = col[0];
-    const canonEn = !/[가-힣]/.test(canonical);
+    const canonEn = gKey(canonical) === 'en';   // 복수 접미사 보존은 영어(라틴)에만
     // 원문쪽 트리거어 목록(표제어+별칭) — 로그 좌측에 '실제 말한 단어'를 찾기 위한 후보
-    const srcCol = (it.nat[otherP] || []).filter(Boolean);
+    const srcCol = (gPick(it.nat, otherP, outP) || []).filter(Boolean);
     for (let i = 1; i < col.length; i++) {
       const alias = col[i];
       if (!alias || eqTerm(alias, canonical)) continue;
-      const aliasEn = !/[가-힣]/.test(alias);
+      const aliasEn = gKey(alias) === 'en';
       let re;
       try { re = flexRegexP(alias); } catch (e) { continue; }   // 영어 별칭은 복수형까지 매치
       let hit = false;
@@ -3902,21 +3949,22 @@ function applyGlossaryReplace(text, outCode) {
 /* 용어집 표준표기 감지 → 반영 로그에 기록만 한다(괄호 병기 없음).
    표시 단계(tokenize)에서 표준표기 단어를 로그와 같은 색(인디고)으로 하이라이트한다. */
 function annotateGlossary(text, outCode) {
-  const outP = (/ko/.test(String(outCode))) ? 'ko' : 'x';
-  const otherP = (outP === 'ko') ? 'x' : 'ko';
+  const { outP, otherP } = gDirKeys(outCode);
   let out = text;
   for (const it of loadGlossary()) {
     if (!it) continue;
     let canon, other;
-    if (it.nat) {
-      canon = it.nat[outP] && it.nat[outP][0];
-      other = it.nat[otherP] && it.nat[otherP][0];
+    const canonCol = gPick(it.nat, outP, otherP), otherCol = gPick(it.nat, otherP, outP);
+    if (canonCol || otherCol) {
+      canon = canonCol && canonCol[0];
+      other = otherCol && otherCol[0];
     } else {
       const aHead = splitAliases(it.a)[0] || it.a;
       const bHead = splitAliases(it.b)[0] || it.b;
-      const aKo = (gKey(aHead) === 'ko');
-      canon = (outP === 'ko') ? (aKo ? aHead : bHead) : (aKo ? bHead : aHead);
-      other = (outP === 'ko') ? (aKo ? bHead : aHead) : (aKo ? aHead : bHead);
+      const n2 = {}; const ka = gKey(aHead), kb = gKey(bHead);
+      n2[ka] = [aHead]; if (n2[kb] === undefined) n2[kb] = []; if (n2[kb].indexOf(bHead) < 0) n2[kb].push(bHead);
+      const cc = gPick(n2, outP, otherP), oc = gPick(n2, otherP, outP);
+      canon = cc && cc[0]; other = oc && oc[0];
     }
     if (!canon || !other || eqTerm(canon, other)) continue;
     let re;
@@ -3933,7 +3981,7 @@ function annotateGlossary(text, outCode) {
         turnLogged.add(k);
         // 로그 좌측 = 이번 턴 원문에서 '실제 말한' 등록어(표제어 또는 원문쪽 별칭, 굴절 포함).
         // 원문 전사가 아직 안 왔으면 표제어로 우선 기록 후 소급 갱신(pending, v1.13.53).
-        const srcCol = ((it.nat && it.nat[otherP]) || [other]).filter(Boolean);
+        const srcCol = ((it.nat && gPick(it.nat, otherP, outP)) || [other]).filter(Boolean);
         if (typeof reflogAddGlossary === 'function') reflogAddGlossary(other, canon, srcCol);
       }
     }

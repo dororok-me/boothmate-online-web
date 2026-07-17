@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.130 → v1.13.131) — 일시정지 중 정지 버튼 연한 빨강(교수님 요청):
+  - 일시정지 상태에서 정지(■) 버튼 빨강을 연하게(#F0A3A3) + 펄스 애니메이션 중단
+    → '지금은 쉬는 중'이 한눈에 보임. 재개하면 원래 진한 빨강·펄스 복귀.
   변경점 (v1.13.129 → v1.13.130) — 일시정지 버튼 + 헤더 정리(교수님 요청):
   - [일시정지] 재생(▶) 누르면 옆에 ⏸ 버튼 표시(웹·갤럭시 공통, #playRow).
     일시정지 중: 시간 차감 없음(quotaTimer 정지 + running=false로 usage 리포터 카운트 중단),
@@ -1833,6 +1836,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   #toggleBtn:not(.running):hover { background: #4338CA; transform: translateY(-1px); }
   #toggleBtn #toggleLabel { font-size: 15px; font-weight: 700; }
   #toggleBtn.running { background: #DC2626; color: #fff; box-shadow: 0 2px 10px rgba(220,38,38,0.40); }
+  /* 일시정지 상태: 정지(■) 버튼 빨강을 연하게 + 펄스 중단 — '지금은 쉬는 중' 시각 신호 (v1.13.131) */
+  #toggleBtn.running.paused-dim { background: #F0A3A3; box-shadow: 0 2px 8px rgba(220,38,38,0.14); animation: none; }
+  #toggleBtn.running.paused-dim:hover { background: #E88888; }
   /* 일시정지 — 재생 버튼과 같은 동그란 톤. 진행 중=호박색 ⏸, 일시정지 중=초록 ▶(재개) (v1.13.130) */
   #pauseBtn {
     width: 46px; height: 46px; padding: 0; border-radius: 50%;
@@ -2174,7 +2180,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.130 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.131 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2391,6 +2397,9 @@ function setPausedUI(p) {
   const pb = $('pauseBtn');
   if (!pb) return;
   pb.classList.toggle('paused', p);
+  // 일시정지 중엔 정지(■) 버튼 빨강을 연하게(펄스도 중단) — CSS .paused-dim (v1.13.131)
+  const tb = $('toggleBtn');
+  if (tb) tb.classList.toggle('paused-dim', p);
   const pi = $('pauseIcon'), ri = $('resumeIcon');
   if (pi) pi.style.display = p ? 'none' : '';
   if (ri) ri.style.display = p ? '' : 'none';

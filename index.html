@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.136 → v1.13.137) — 글로서리 다국어: 자막 하이라이트도 반영(교수님 보고):
+  - v1.13.136에서 치환·로그·프롬프트는 언어쌍 기반으로 고쳤는데 하이라이트 함수(glossaryHlRegexes)를
+    빠뜨려, 中 출력 등에서 로그는 뜨는데 자막 형광펜(.gword)이 안 붙던 문제. gDirKeys+gPick로 통일.
+  - 검증: 中 출력 '代表团'·'修复' 하이라이트 정상, 한 출력 '고양이' 하이라이트 회귀 없음.
   변경점 (v1.13.135 → v1.13.136) — 글로서리를 한/영/중/일 다국어 방향 지원(교수님 보고):
   - 기존 글로서리는 언어 판별이 '한글 vs 아님(gKey ko/x)' 2분류라, 중↔영·일↔영 등 한국어가 없는
     쌍은 두 용어가 같은 칸('x')에 뭉쳐 방향 판별이 깨졌음(작동 안 함).
@@ -2198,7 +2202,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.136 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.137 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3345,18 +3349,20 @@ function glossaryHlRegexes() {
   const raw = localStorage.getItem('glossary') || '[]';
   const key = outCode + '|' + raw;
   if (_glossaryHlCache.key === key) return _glossaryHlCache.list;
-  const outP = (/ko/.test(String(outCode))) ? 'ko' : 'x';
+  const { outP, otherP } = gDirKeys(outCode);
   const terms = [];
   for (const it of loadGlossary()) {
     if (!it) continue;
     let canon;
-    if (it.nat) {
-      canon = it.nat[outP] && it.nat[outP][0];
+    const col = gPick(it.nat, outP, otherP);
+    if (col) {
+      canon = col[0];
     } else {
       const aHead = splitAliases(it.a)[0] || it.a;
       const bHead = splitAliases(it.b)[0] || it.b;
-      const aKo = (gKey(aHead) === 'ko');
-      canon = (outP === 'ko') ? (aKo ? aHead : bHead) : (aKo ? bHead : aHead);
+      const n2 = {}; const ka = gKey(aHead), kb = gKey(bHead);
+      n2[ka] = [aHead]; if (n2[kb] === undefined) n2[kb] = []; if (n2[kb].indexOf(bHead) < 0) n2[kb].push(bHead);
+      const c = gPick(n2, outP, otherP); canon = c && c[0];
     }
     if (canon) terms.push(canon);   // 공백 포함 표제어("눈에 띄다")도 하이라이트 (v1.13.56, 범위 기반 tokenize)
   }

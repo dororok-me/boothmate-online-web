@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.126 → v1.13.127) — 구매 버튼 무반응 기기 대응(테스터 제보):
+  - [진단] 결제 모듈 연결(getDigitalGoodsService)이 무한 대기하는 기기(기본 브라우저가 Chrome이
+    아닌 경우 등)에서 침묵 대신 8초 후 안내 팝업 표시 (Chrome 기본 브라우저 설정 유도).
+  - [방어] 구매 버튼 2개에 onclick 인라인 연결 추가 — 설정 패널 초기화가 기기별 오류로
+    중단돼 핸들러가 안 붙는 경우에도 버튼이 동작.
   변경점 (v1.13.125 → v1.13.126) — 로그인 화이트리스트에 테스트 계정 1개 추가:
   - ty6891@gmail.com → ALLOWED_EMAILS 등록.
   변경점 (v1.13.124 → v1.13.125) — Google Play 심사 계정 등록:
@@ -2125,7 +2130,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.126 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.127 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2733,7 +2738,13 @@ async function bmBuy(sku) {
     return;
   }
   try {
-    const service = await window.getDigitalGoodsService('https://play.google.com/billing');
+    // 결제 모듈 연결이 무한 대기하는 기기(기본 브라우저가 Chrome이 아닌 경우 등)를 위해 8초 타임아웃 (v1.13.127)
+    const service = await Promise.race([
+      window.getDigitalGoodsService('https://play.google.com/billing'),
+      new Promise((_, rej) => setTimeout(() => rej(new Error(en
+        ? 'Payment module not responding. Please set Chrome as the default browser, update Chrome, then reopen the app.'
+        : '결제 모듈이 응답하지 않습니다. 폰의 기본 브라우저를 Chrome으로 설정하고 Chrome을 최신으로 업데이트한 뒤 앱을 다시 열어 주세요.')), 8000))
+    ]);
     const request = new PaymentRequest(
       [{ supportedMethods: 'https://play.google.com/billing', data: { sku: sku } }],
       { total: { label: en ? item.labelEn : item.labelKo, amount: { currency: 'KRW', value: item.price } } }
@@ -4862,8 +4873,9 @@ window.__syncPanelLayout = function() {
     // 💳 사용권 구매 — 갤럭시 앱 전용(bm-galaxy에서만 CSS로 표시). Google Play 결제 (v1.13.112)
     '<div class="grp" id="grpBuy"><div class="grp-ttl">💳 사용권 구매</div>' +
       '<div class="row" style="max-width:none; gap:8px; flex-wrap:wrap;">' +
-        '<button id="buy5hBtn" style="flex:1; min-width:130px; background:#4f46e5; color:#fff; font-weight:700; padding:10px 12px; border-radius:8px;">5시간권 ₩29,000</button>' +
-        '<button id="buy10hBtn" style="flex:1; min-width:130px; background:#4f46e5; color:#fff; font-weight:700; padding:10px 12px; border-radius:8px;">10시간권 ₩55,000</button>' +
+        // onclick 인라인 연결: 아래쪽 초기화 코드가 기기별 오류로 중단돼 핸들러가 안 붙어도 버튼이 동작하게 (v1.13.127)
+        '<button id="buy5hBtn" onclick="bmBuy(\'time_5h\')" style="flex:1; min-width:130px; background:#4f46e5; color:#fff; font-weight:700; padding:10px 12px; border-radius:8px;">5시간권 ₩29,000</button>' +
+        '<button id="buy10hBtn" onclick="bmBuy(\'time_10h\')" style="flex:1; min-width:130px; background:#4f46e5; color:#fff; font-weight:700; padding:10px 12px; border-radius:8px;">10시간권 ₩55,000</button>' +
       '</div>' +
       '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">Google Play로 결제되며, 구매 즉시 남은 시간에 더해집니다.</div>' +
     '</div>' +

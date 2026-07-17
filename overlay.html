@@ -220,6 +220,13 @@
       </button>
     </span>
   </div>
+
+  <!-- 일반 창 전환 — PiP(항상 위) 창은 크롬 정책상 화면의 80%까지만 커짐 → 제한 없는 일반 창으로.
+       #panelInner 밖에 둬서 max-width 클리핑을 피하고 패널을 접어도 항상 보임 (v1.13.129) -->
+  <div class="ctrl-sep" id="popoutSep"></div>
+  <button class="ctrl-btn" id="popoutBtn" title="큰 창으로 전환 — 크기 제한 없이 자유롭게 확대 (단, '항상 위' 해제)" aria-label="큰 창으로 전환">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+  </button>
 </div>
 
 <!-- 자막 -->
@@ -306,6 +313,24 @@ srcColorPicker.value = srcColor;
 traColorPicker.value = traColor;
 srcColorPicker.oninput = () => { srcColor = srcColorPicker.value; applyStyles(); save(); };
 traColorPicker.oninput = () => { traColor = traColorPicker.value; applyStyles(); save(); };
+
+/* ── 큰 창 전환 (v1.13.129) ──
+   PiP('항상 위' 창)는 크롬 정책상 화면의 약 80%까지만 커질 수 있어 상하 확장에 한계가 있음.
+   PiP 안에서만 이 버튼을 노출(iframe으로 실행 중 = PiP), 클릭 시 크기 제한 없는 일반
+   팝업 창으로 overlay.html을 다시 열고 PiP를 닫는다. 팝업은 최대화까지 자유. */
+const popoutBtn = document.getElementById('popoutBtn');
+const inPip = (window.parent !== window);   // PiP일 때만 iframe 안에서 돈다
+if (!inPip) {
+  popoutBtn.style.display = 'none';
+  document.getElementById('popoutSep').style.display = 'none';
+}
+popoutBtn.onclick = () => {
+  const w = Math.min(screen.availWidth,  Math.max(900, window.innerWidth));
+  const h = Math.min(screen.availHeight, Math.max(400, window.innerHeight * 2));
+  window.open('overlay.html', 'boothmate_overlay',
+    'width=' + w + ',height=' + h + ',resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no');
+  try { window.parent.close(); } catch (e) {}  // 팝업을 먼저 열고 PiP를 닫는다
+};
 
 /* 패널 접기/펼치기 — 펼침=» 셰브론(접기), 접힘=슬라이더 아이콘(펼치기) */
 const panelInner = document.getElementById('panelInner');

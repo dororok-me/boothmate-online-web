@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.146 → v1.13.147) — show() 호출 순서 복구 (v1.13.142에서 내가 만든 결함):
+  - v1.13.142에서 user activation을 살리려고 결제 모듈 연결 완료 전에 show()를 호출하도록 바꿨는데,
+    공식 샘플은 연결이 끝난 뒤에 show()를 부른다. 연결 전 호출은 Invalid state 원인이 될 수 있다.
+  - 진단의 service=OK는 '실패한 뒤'에 측정한 값이라, 탭한 순간의 연결 여부를 보장하지 않는다.
+  - 복구: 시작 시 gxWarmBilling()으로 미리 연결(그대로 유지) → 클릭 시 그 완료를 await한 뒤 show().
+    미리 연결돼 있으면 await는 마이크로태스크로 끝나므로 클릭 권한도 유지된다. 연결 실패 시 안내 후 중단.
   변경점 (v1.13.145 → v1.13.146) — 진단 메시지에 앱 버전 표시:
   - v1.13.145 배포 후에도 테스터 화면에 owned= 가 없었다. 서버는 정상 배포됨(확인함)이고,
     원인은 캐시 — GitHub Pages가 Cache-Control: max-age=600 을 주므로 TWA가 최대 10분간
@@ -2247,7 +2253,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.146 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.147 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2907,7 +2913,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.146';
+const GX_DIAG_VER = '1.13.147';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -2961,20 +2967,27 @@ async function bmBuy(sku) {
     alert(en ? 'Purchases are available only in the Play Store app.' : '구매는 Play 스토어에서 설치한 앱에서만 가능합니다.');
     return;
   }
-  gxWarmBilling();   // 아직 연결 전이면 지금 시작 (아래에서 기다리지는 않음)
   const t0 = Date.now();
   try {
-    // ★ 클릭 권한이 살아 있는 동안 결제창부터 띄운다 — 이 앞에 await를 두면 안 된다.
+    // 결제 모듈 연결이 끝난 뒤에 show()를 호출해야 한다(공식 샘플과 동일한 순서).
+    // 연결 전에 show()를 부르면 AbortError: Invalid state 가 날 수 있다. (v1.13.147)
+    // 앱 시작 시 gxWarmBilling()으로 미리 연결해 두므로 보통 이 await는 즉시 끝나고,
+    // 클릭 권한(user activation)도 그대로 유지된다.
+    const service = await Promise.race([
+      gxWarmBilling(),
+      new Promise((res) => setTimeout(() => res(null), 8000))
+    ]);
+    if (!service) {
+      alert(en
+        ? 'Could not connect to Google Play billing. Please make sure Google Play services are up to date, then reopen the app.'
+        : 'Google Play 결제 모듈에 연결하지 못했습니다. Google Play 서비스를 최신으로 업데이트한 뒤 앱을 다시 열어 주세요.');
+      return;
+    }
     const request = new PaymentRequest(
       [{ supportedMethods: 'https://play.google.com/billing', data: { sku: sku } }],
       { total: { label: en ? item.labelEn : item.labelKo, amount: { currency: 'KRW', value: item.price } } }
     );
     const response = await request.show();
-    // 결제창이 닫힌 뒤에는 클릭 권한이 필요 없으므로 여기서 결제 모듈을 기다린다.
-    const service = await Promise.race([
-      gxWarmBilling(),
-      new Promise((res) => setTimeout(() => res(null), 8000))
-    ]);
     const token = response.details && response.details.purchaseToken;
     try { if (token && service) await service.consume(token); } catch (e) { console.error('[구매] consume 실패: ' + e.message); }
     await response.complete('success');

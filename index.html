@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.145 → v1.13.146) — 진단 메시지에 앱 버전 표시:
+  - v1.13.145 배포 후에도 테스터 화면에 owned= 가 없었다. 서버는 정상 배포됨(확인함)이고,
+    원인은 캐시 — GitHub Pages가 Cache-Control: max-age=600 을 주므로 TWA가 최대 10분간
+    이전 빌드를 그대로 쓴다. 즉 그 화면은 v1.13.144에서 나온 것.
+  - 갤럭시에서는 푸터(#appFooter)가 숨겨져 테스터가 버전을 볼 수 없다. 그래서 진단 문자열
+    맨 앞에 v= 를 넣어, 어느 빌드에서 나온 화면인지 항상 확인 가능하게 한다.
+  - ※ GX_DIAG_VER 는 푸터 버전 표기와 함께 올릴 것.
   변경점 (v1.13.144 → v1.13.145) — 소비되지 않은 이전 구매 확인 (진단 3차):
   - v1.13.144 진단 결과: ref=android-app://kr.co.boothmate.online/ · TWA=Y · service=OK ·
     items=time_5h,time_10h → TWA/결제위임/상품등록은 모두 정상. show()만 Invalid state로 거부.
@@ -2240,7 +2247,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.145 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.146 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2897,8 +2904,12 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
      service=FAIL          → 앱 빌드에 Play 결제가 포함되지 않음(TWA 결제 위임 누락)
      items=(0개)           → 이 계정에서 인앱 상품이 보이지 않음(상품 비활성/트랙 미참여/계정 문제)
      items=time_5h,time_10h → 상품은 정상. 결제 거부는 계정·결제수단 쪽 문제 */
+/* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
+   TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
+   테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
+const GX_DIAG_VER = '1.13.146';
 async function gxDiagnose() {
-  const out = ['ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
+  const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
     const svc = await Promise.race([
       gxWarmBilling(),

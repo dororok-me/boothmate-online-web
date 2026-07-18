@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.141 → v1.13.142) — 구매 버튼 무반응 수정 (테스터 기기에서만 발생):
+  - 원인: 클릭 핸들러에서 getDigitalGoodsService()를 await한 뒤 PaymentRequest.show()를 호출했다.
+    show()는 클릭 직후(user activation)에만 허용되는데, 결제 모듈 콜드 스타트가 느린 기기에서는
+    그 사이 클릭 권한이 만료돼 결제창이 아예 뜨지 않았다. (개발자 폰은 모듈이 떠 있어 즉시 응답 → 정상)
+  - 수정: 앱 시작 시 gxWarmBilling()으로 결제 모듈을 미리 연결해 캐시. 클릭 시에는 기다리지 않고
+    show()를 먼저 호출하고, consume()에 필요한 service는 결제창이 닫힌 뒤에 받는다.
+  - 조용히 삼키던 실패에 원인 메시지 추가: NotAllowedError(클릭 권한 만료) 안내, AbortError는
+    400ms 미만이면 '창이 뜨지 못한 것'으로 보고 안내(진짜 사용자 취소와 구분). 콘솔에 소요시간 기록.
   변경점 (v1.13.140 → v1.13.141) — 로그인 화이트리스트에 테스트 계정 1개 추가:
   - hgold93@gmail.com → ALLOWED_EMAILS 등록. (Play 라이선스 테스터 목록엔 있었으나 웹 로그인이 막혀 있던 계정)
   변경점 (v1.13.139 → v1.13.140) — 로그인 화이트리스트에 테스트 계정 1개 추가:
@@ -2210,7 +2218,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.141 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.142 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2841,6 +2849,24 @@ const GX_SKUS = {
   time_5h:  { seconds: 5 * 3600,  grade: '5h',  labelKo: '5시간권',  labelEn: '5-hour pass',  price: '29000' },
   time_10h: { seconds: 10 * 3600, grade: '10h', labelKo: '10시간권', labelEn: '10-hour pass', price: '55000' }
 };
+/* Play 결제 모듈 사전 연결 (v1.13.142).
+   PaymentRequest.show()는 클릭 직후(user activation)에만 호출할 수 있는데,
+   클릭 시점에 getDigitalGoodsService()를 await하면 콜드 스타트가 느린 기기에서
+   그 사이 클릭 권한이 만료돼 결제창이 아예 뜨지 않는다(= 눌러도 무반응).
+   그래서 앱 시작 시 미리 연결해 두고, 클릭 때는 기다리지 않는다. */
+let gxServicePromise = null;
+function gxWarmBilling() {
+  if (gxServicePromise) return gxServicePromise;
+  if (!window.PaymentRequest || !('getDigitalGoodsService' in window)) return null;
+  gxServicePromise = window.getDigitalGoodsService('https://play.google.com/billing')
+    .catch(function (e) {
+      console.error('[구매] 결제 모듈 사전 연결 실패: ' + (e && e.message ? e.message : e));
+      gxServicePromise = null;   // 다음 시도에서 재연결
+      return null;
+    });
+  return gxServicePromise;
+}
+
 async function bmBuy(sku) {
   const item = GX_SKUS[sku];
   if (!item) return;
@@ -2849,21 +2875,22 @@ async function bmBuy(sku) {
     alert(en ? 'Purchases are available only in the Play Store app.' : '구매는 Play 스토어에서 설치한 앱에서만 가능합니다.');
     return;
   }
+  gxWarmBilling();   // 아직 연결 전이면 지금 시작 (아래에서 기다리지는 않음)
+  const t0 = Date.now();
   try {
-    // 결제 모듈 연결이 무한 대기하는 기기(기본 브라우저가 Chrome이 아닌 경우 등)를 위해 8초 타임아웃 (v1.13.127)
-    const service = await Promise.race([
-      window.getDigitalGoodsService('https://play.google.com/billing'),
-      new Promise((_, rej) => setTimeout(() => rej(new Error(en
-        ? 'Payment module not responding. Please set Chrome as the default browser, update Chrome, then reopen the app.'
-        : '결제 모듈이 응답하지 않습니다. 폰의 기본 브라우저를 Chrome으로 설정하고 Chrome을 최신으로 업데이트한 뒤 앱을 다시 열어 주세요.')), 8000))
-    ]);
+    // ★ 클릭 권한이 살아 있는 동안 결제창부터 띄운다 — 이 앞에 await를 두면 안 된다.
     const request = new PaymentRequest(
       [{ supportedMethods: 'https://play.google.com/billing', data: { sku: sku } }],
       { total: { label: en ? item.labelEn : item.labelKo, amount: { currency: 'KRW', value: item.price } } }
     );
     const response = await request.show();
+    // 결제창이 닫힌 뒤에는 클릭 권한이 필요 없으므로 여기서 결제 모듈을 기다린다.
+    const service = await Promise.race([
+      gxWarmBilling(),
+      new Promise((res) => setTimeout(() => res(null), 8000))
+    ]);
     const token = response.details && response.details.purchaseToken;
-    try { if (token) await service.consume(token); } catch (e) { console.error('[구매] consume 실패: ' + e.message); }
+    try { if (token && service) await service.consume(token); } catch (e) { console.error('[구매] consume 실패: ' + e.message); }
     await response.complete('success');
     // 서버 지갑에 원자적 적립 + 구매 기록 (v1.13.123). 서버 실패 시 로컬 적립 폴백(구매 유실 방지).
     try {
@@ -2883,8 +2910,27 @@ async function bmBuy(sku) {
     renderQuota();
     alert(en ? 'Purchase complete — time added!' : '구매 완료 — 시간이 충전되었습니다!');
   } catch (e) {
-    if (e && (e.name === 'AbortError' || /cancel/i.test(e.message || ''))) return;   // 사용자 취소
-    alert((en ? 'Purchase failed: ' : '구매에 실패했습니다: ') + (e && e.message ? e.message : e));
+    const name = (e && e.name) || '';
+    const msg  = (e && e.message) || String(e);
+    const dt   = Date.now() - t0;
+    console.error('[구매] 실패 (' + dt + 'ms) ' + name + ': ' + msg);
+    // 클릭 권한 만료 — 결제창이 아예 뜨지 않은 경우 (v1.13.142)
+    if (name === 'NotAllowedError' || /user (gesture|activation)/i.test(msg)) {
+      alert(en
+        ? 'The payment window could not open (the tap timed out). Please tap the button once more.'
+        : '결제창을 열지 못했습니다(버튼 입력 시간이 만료됨). 버튼을 한 번 더 눌러 주세요.');
+      return;
+    }
+    // 취소 계열: 결제창이 실제로 떴다가 사용자가 닫은 경우만 조용히 넘긴다.
+    // 400ms도 안 돼서 취소로 끝났다면 창이 뜨지 못한 것이므로 원인을 알린다.
+    if (name === 'AbortError' || /cancel/i.test(msg)) {
+      if (dt >= 400) return;   // 사용자가 직접 닫음
+      alert(en
+        ? 'The Play payment window did not open. Check that the app was installed from the Play Store and that Google Play services are up to date.\n(' + name + ': ' + msg + ')'
+        : 'Play 결제창이 열리지 않았습니다. 앱을 Play 스토어에서 설치했는지, Google Play 서비스가 최신인지 확인해 주세요.\n(' + name + ': ' + msg + ')');
+      return;
+    }
+    alert((en ? 'Purchase failed: ' : '구매에 실패했습니다: ') + msg);
   }
 }
 
@@ -5228,6 +5274,8 @@ window.__syncPanelLayout = function() {
   // 사용권 구매 버튼 (갤럭시 전용 그룹 — 웹에서는 CSS로 숨겨져 클릭 불가) (v1.13.112)
   if ($('buy5hBtn')) $('buy5hBtn').onclick = () => bmBuy('time_5h');
   if ($('buy10hBtn')) $('buy10hBtn').onclick = () => bmBuy('time_10h');
+  // Play 결제 모듈 사전 연결 — 클릭 시 대기 없이 바로 결제창을 띄우기 위함 (v1.13.142)
+  try { gxWarmBilling(); } catch (e) {}
   // 메인 화면 '사용권 구매' 버튼 → 설정 열고 구매 그룹으로 스크롤
   if ($('gxBuyBtn')) $('gxBuyBtn').onclick = () => {
     if (!panel.classList.contains('open')) $('mcOptBtn').click();

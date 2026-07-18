@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.144 → v1.13.145) — 소비되지 않은 이전 구매 확인 (진단 3차):
+  - v1.13.144 진단 결과: ref=android-app://kr.co.boothmate.online/ · TWA=Y · service=OK ·
+    items=time_5h,time_10h → TWA/결제위임/상품등록은 모두 정상. show()만 Invalid state로 거부.
+  - 남은 유력 원인: 소모성 상품을 이미 보유(미소비) 중이면 재구매가 거부된다.
+    구버전이 실패를 조용히 삼켰으므로, Play에선 구매가 성립했는데 consume()이 실행되지 않고
+    끝난 잔여물이 남았을 가능성. (개발자 폰은 구매가 끝까지 진행돼 consume 되므로 잔여물 없음)
+  - listPurchases()로 보유 목록을 진단에 추가: owned=(없음) 이면 이 가설도 배제된다.
   변경점 (v1.13.143 → v1.13.144) — 구매 실패 진단값 표시 (앱 아이콘으로 실행해도 동일 증상):
   - v1.13.143의 '브라우저로 열어서'라는 추정도 빗나갔다. 앱(TWA)으로 실행해도 AbortError: Invalid state.
   - 더 추측하지 않고 gxDiagnose()로 실제 값을 뽑는다: 결제 모듈 연결 여부 + getDetails() 상품 조회 결과.
@@ -2233,7 +2240,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.144 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.145 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2904,6 +2911,16 @@ async function gxDiagnose() {
         out.push('items=' + (d && d.length ? d.map(function (x) { return x.itemId; }).join(',') : '(0개)'));
       } catch (e) {
         out.push('getDetails=' + ((e && e.name) || '') + ':' + ((e && e.message) || e));
+      }
+      // 소비되지 않은 이전 구매 확인 (v1.13.145).
+      // 소모성 상품은 보유 중이면 재구매가 거부된다(= Invalid state). 예전 실패가 잔여물을 남겼는지 본다.
+      if (typeof svc.listPurchases === 'function') {
+        try {
+          const p = await svc.listPurchases();
+          out.push('owned=' + (p && p.length ? p.map(function (x) { return x.itemId; }).join(',') : '(없음)'));
+        } catch (e) {
+          out.push('listPurchases=' + ((e && e.name) || '') + ':' + ((e && e.message) || e));
+        }
       }
     }
   } catch (e) {

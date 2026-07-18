@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.143 → v1.13.144) — 구매 실패 진단값 표시 (앱 아이콘으로 실행해도 동일 증상):
+  - v1.13.143의 '브라우저로 열어서'라는 추정도 빗나갔다. 앱(TWA)으로 실행해도 AbortError: Invalid state.
+  - 더 추측하지 않고 gxDiagnose()로 실제 값을 뽑는다: 결제 모듈 연결 여부 + getDetails() 상품 조회 결과.
+    · service=FAIL           → 앱 빌드에 Play 결제 위임이 빠짐
+    · items=(0개)            → 이 계정에서 인앱 상품이 안 보임(상품 비활성/트랙 미참여)
+    · items=time_5h,time_10h → 상품 정상. 계정·결제수단 쪽 문제
+  - referrer는 앱 내 새로고침 시 사라질 수 있어 TWA 판별만으로 단정하지 않고 원본값(ref=)을 그대로 표시.
   변경점 (v1.13.142 → v1.13.143) — 구매 실패 원인 확정용 판별 (테스터 스크린샷: AbortError: Invalid state):
   - v1.13.142의 user-activation 가설은 빗나갔다. 실제 오류는 400ms 내 'AbortError: Invalid state' —
     Play 결제 자체를 쓸 수 없는 실행 환경이라는 뜻.
@@ -2226,7 +2233,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.143 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.144 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2878,6 +2885,33 @@ const GX_LAUNCH_REF = (function () {
 function gxIsTWA() { return /^android-app:\/\//i.test(GX_LAUNCH_REF); }
 function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(none)'; }
 
+/* 구매 실패 시 원인을 좁히기 위한 진단 (v1.13.144).
+   결제 모듈 연결 여부와 상품 조회 결과까지 확인해, 남은 원인들을 갈라준다.
+     service=FAIL          → 앱 빌드에 Play 결제가 포함되지 않음(TWA 결제 위임 누락)
+     items=(0개)           → 이 계정에서 인앱 상품이 보이지 않음(상품 비활성/트랙 미참여/계정 문제)
+     items=time_5h,time_10h → 상품은 정상. 결제 거부는 계정·결제수단 쪽 문제 */
+async function gxDiagnose() {
+  const out = ['ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
+  try {
+    const svc = await Promise.race([
+      gxWarmBilling(),
+      new Promise((res) => setTimeout(() => res(null), 8000))
+    ]);
+    out.push('service=' + (svc ? 'OK' : 'FAIL'));
+    if (svc && typeof svc.getDetails === 'function') {
+      try {
+        const d = await svc.getDetails(Object.keys(GX_SKUS));
+        out.push('items=' + (d && d.length ? d.map(function (x) { return x.itemId; }).join(',') : '(0개)'));
+      } catch (e) {
+        out.push('getDetails=' + ((e && e.name) || '') + ':' + ((e && e.message) || e));
+      }
+    }
+  } catch (e) {
+    out.push('diag=' + ((e && e.message) || e));
+  }
+  return out.join(' / ');
+}
+
 let gxServicePromise = null;
 function gxWarmBilling() {
   if (gxServicePromise) return gxServicePromise;
@@ -2949,17 +2983,13 @@ async function bmBuy(sku) {
     // 400ms도 안 돼서 취소로 끝났다면 창이 뜨지 못한 것이므로 원인을 알린다.
     if (name === 'AbortError' || /cancel/i.test(msg)) {
       if (dt >= 400) return;   // 사용자가 직접 닫음
-      // 브라우저에서 연 것인지, Play로 설치한 앱(TWA)으로 실행 중인지 구분 (v1.13.143).
-      // TWA로 실행하면 referrer가 android-app://<패키지> 다. 브라우저면 Play 결제를 쓸 수 없다.
-      if (!gxIsTWA()) {
-        alert(en
-          ? 'Purchases only work in the app installed from the Play Store.\nYou are currently viewing this in a web browser. Please open the BoothmateG app icon on your home screen and try again.'
-          : '구매는 Play 스토어에서 설치한 앱에서만 가능합니다.\n지금은 인터넷 브라우저로 보고 계십니다. 홈 화면의 BoothmateG 앱 아이콘으로 실행한 뒤 다시 시도해 주세요.');
-        return;
-      }
-      alert(en
-        ? 'The Play payment window did not open. Your installed app version may not support purchases — please update it in the Play Store.\n(' + name + ': ' + msg + ' / ref=' + gxLaunchRef() + ')'
-        : 'Play 결제창이 열리지 않았습니다. 설치된 앱 버전이 구매를 지원하지 않을 수 있습니다 — Play 스토어에서 앱을 업데이트해 주세요.\n(' + name + ': ' + msg + ' / ref=' + gxLaunchRef() + ')');
+      // 결제창이 뜨지 못한 경우 — 원인을 좁히기 위해 진단값을 함께 보여준다 (v1.13.144).
+      // referrer는 앱 안에서 새로고침하면 사라질 수 있어 TWA 판별만으로 단정하지 않는다.
+      const diag = await gxDiagnose();
+      alert((en
+        ? 'The Play payment window did not open.\nPlease send this screen to the developer.\n\n'
+        : 'Play 결제창이 열리지 않았습니다.\n이 화면을 개발자에게 보내 주세요.\n\n')
+        + name + ': ' + msg + '\n' + diag);
       return;
     }
     alert((en ? 'Purchase failed: ' : '구매에 실패했습니다: ') + msg);

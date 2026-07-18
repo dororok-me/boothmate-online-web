@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.142 → v1.13.143) — 구매 실패 원인 확정용 판별 (테스터 스크린샷: AbortError: Invalid state):
+  - v1.13.142의 user-activation 가설은 빗나갔다. 실제 오류는 400ms 내 'AbortError: Invalid state' —
+    Play 결제 자체를 쓸 수 없는 실행 환경이라는 뜻.
+  - getDigitalGoodsService는 안드로이드 Chrome이면 브라우저에도 존재해 기존 가드를 통과한다.
+    실제 결제는 Play로 설치한 앱(TWA)에서만 되므로, 브라우저로 연 경우와 구분이 필요.
+  - gxIsTWA(): 최초 문서 referrer가 android-app:// 인지로 판별(앱 내 페이지 이동에 대비해 sessionStorage에 최초값 보관).
+    · 브라우저 → '앱 아이콘으로 실행하라' 안내
+    · TWA인데도 실패 → 설치된 앱 버전이 구매 미지원일 가능성 안내 + referrer 표시
   변경점 (v1.13.141 → v1.13.142) — 구매 버튼 무반응 수정 (테스터 기기에서만 발생):
   - 원인: 클릭 핸들러에서 getDigitalGoodsService()를 await한 뒤 PaymentRequest.show()를 호출했다.
     show()는 클릭 직후(user activation)에만 허용되는데, 결제 모듈 콜드 스타트가 느린 기기에서는
@@ -2218,7 +2226,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.142 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.143 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2854,6 +2862,22 @@ const GX_SKUS = {
    클릭 시점에 getDigitalGoodsService()를 await하면 콜드 스타트가 느린 기기에서
    그 사이 클릭 권한이 만료돼 결제창이 아예 뜨지 않는다(= 눌러도 무반응).
    그래서 앱 시작 시 미리 연결해 두고, 클릭 때는 기다리지 않는다. */
+/* Play 스토어로 설치한 앱(TWA)으로 실행 중인지 판별 (v1.13.143).
+   TWA로 띄우면 최초 문서의 referrer가 android-app://<패키지> 다.
+   브라우저(Chrome 탭)에서는 Play 결제를 쓸 수 없어 show()가 AbortError: Invalid state 로 즉시 거부된다.
+   ※ 앱 안에서 페이지 이동이 일어나면 referrer가 바뀌므로 최초 1회 값을 저장해 둔다. */
+const GX_LAUNCH_REF = (function () {
+  try {
+    const saved = sessionStorage.getItem('bm_launch_ref');
+    if (saved !== null) return saved;
+    const ref = document.referrer || '';
+    sessionStorage.setItem('bm_launch_ref', ref);
+    return ref;
+  } catch (e) { return document.referrer || ''; }
+})();
+function gxIsTWA() { return /^android-app:\/\//i.test(GX_LAUNCH_REF); }
+function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(none)'; }
+
 let gxServicePromise = null;
 function gxWarmBilling() {
   if (gxServicePromise) return gxServicePromise;
@@ -2925,9 +2949,17 @@ async function bmBuy(sku) {
     // 400ms도 안 돼서 취소로 끝났다면 창이 뜨지 못한 것이므로 원인을 알린다.
     if (name === 'AbortError' || /cancel/i.test(msg)) {
       if (dt >= 400) return;   // 사용자가 직접 닫음
+      // 브라우저에서 연 것인지, Play로 설치한 앱(TWA)으로 실행 중인지 구분 (v1.13.143).
+      // TWA로 실행하면 referrer가 android-app://<패키지> 다. 브라우저면 Play 결제를 쓸 수 없다.
+      if (!gxIsTWA()) {
+        alert(en
+          ? 'Purchases only work in the app installed from the Play Store.\nYou are currently viewing this in a web browser. Please open the BoothmateG app icon on your home screen and try again.'
+          : '구매는 Play 스토어에서 설치한 앱에서만 가능합니다.\n지금은 인터넷 브라우저로 보고 계십니다. 홈 화면의 BoothmateG 앱 아이콘으로 실행한 뒤 다시 시도해 주세요.');
+        return;
+      }
       alert(en
-        ? 'The Play payment window did not open. Check that the app was installed from the Play Store and that Google Play services are up to date.\n(' + name + ': ' + msg + ')'
-        : 'Play 결제창이 열리지 않았습니다. 앱을 Play 스토어에서 설치했는지, Google Play 서비스가 최신인지 확인해 주세요.\n(' + name + ': ' + msg + ')');
+        ? 'The Play payment window did not open. Your installed app version may not support purchases — please update it in the Play Store.\n(' + name + ': ' + msg + ' / ref=' + gxLaunchRef() + ')'
+        : 'Play 결제창이 열리지 않았습니다. 설치된 앱 버전이 구매를 지원하지 않을 수 있습니다 — Play 스토어에서 앱을 업데이트해 주세요.\n(' + name + ': ' + msg + ' / ref=' + gxLaunchRef() + ')');
       return;
     }
     alert((en ? 'Purchase failed: ' : '구매에 실패했습니다: ') + msg);

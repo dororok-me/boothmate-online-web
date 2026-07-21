@@ -1,5 +1,12 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.153 → v1.13.154) — 카카오·네이버 로그인 추가 (키 등록 전 준비 단계):
+  - 로그인 게이트에 카카오/네이버 버튼 추가. 구글과 동일하게 이메일 기반으로 화이트리스트·세션 공유.
+  - 카카오: SDK 없이 REST 방식(authorize 리다이렉트 → kauth 토큰 교환 → kapi 프로필 조회, 모두 CORS 지원).
+  - 네이버: 공식 JS SDK(naveridlogin_js_sdk_2.0.2) 사용 — 프로필 조회가 JSONP라 정적 사이트에서 동작하는 유일한 방식.
+  - KAKAO_REST_KEY / NAVER_CLIENT_ID 상수가 비어 있으면 버튼 클릭 시 "준비 중" 안내만 표시(사이트 무해).
+    developers.kakao.com / developers.naver.com에서 앱 등록 후 키를 채우면 활성화.
+  - 공통 로그인 마무리 로직을 completeLogin()으로 추출(구글 콜백도 이걸 사용).
   변경점 (v1.13.152 → v1.13.153) — 테스트 계정 1개 추가 + 시간 부여:
   - jinsil.choi1991@gmail.com → ALLOWED_EMAILS 등록 + TIME_GRANTS 3시간(grantId jinsil-choi1991-3h-20260720). (총 57명)
   변경점 (v1.13.151 → v1.13.152) — 테스트 계정 1개 추가 + 시간 부여:
@@ -2001,12 +2008,17 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   }
 </style>
 <script>
-/* 구글 로그인 스크립트는 웹(브라우저)에서만 로드. 앱모드에서는 네이티브 로그인을 쓰므로 스킵(로딩 속도 개선). */
+/* 구글·네이버 로그인 스크립트는 웹(브라우저)에서만 로드. 앱모드에서는 네이티브 로그인을 쓰므로 스킵(로딩 속도 개선).
+   카카오는 SDK 불필요(REST 방식) — 아무것도 안 불러옴. */
 if (!document.documentElement.classList.contains('bm-app')) {
   var _gsi = document.createElement('script');
   _gsi.src = 'https://accounts.google.com/gsi/client';
   _gsi.async = true; _gsi.defer = true;
   document.head.appendChild(_gsi);
+  var _nvl = document.createElement('script');
+  _nvl.src = 'https://static.nid.naver.com/js/naveridlogin_js_sdk_2.0.2.js';
+  _nvl.async = true; _nvl.defer = true;
+  document.head.appendChild(_nvl);
 }
 </script>
 </head>
@@ -2067,8 +2079,19 @@ if (!document.documentElement.classList.contains('bm-app')) {
 <div id="authGate" style="position:fixed; inset:0; z-index:9999; background:#FFFFFF; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;">
   <img src="logo.png" alt="Boothmate" style="height:46px; width:auto; margin-bottom:22px;">
   <div id="gateTitle" style="font-size:26px; font-weight:700; color:#0F172A; margin-bottom:8px; letter-spacing:-0.3px;">Boothmate Online</div>
-  <div style="font-size:14px; color:#64748B; margin-bottom:30px;">실시간 통역 자막 · 시작하려면 구글로 로그인하세요</div>
+  <div style="font-size:14px; color:#64748B; margin-bottom:30px;">실시간 통역 자막 · 시작하려면 로그인하세요</div>
   <div id="googleSignInBtn"></div>
+  <!-- 카카오 로그인 (브랜드 가이드: 배경 #FEE500, 글자 #191919, 말풍선 심볼) -->
+  <button id="kakaoLoginBtn" type="button" style="width:260px; height:40px; margin-top:10px; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:#FEE500; color:#191919; border:none; border-radius:20px; font-size:14px; font-weight:600; cursor:pointer;">
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#191919" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.8 1.86 5.26 4.66 6.66l-.95 3.5c-.08.3.26.55.53.38l4.16-2.75c.52.07 1.05.11 1.6.11 5.52 0 10-3.54 10-7.9S17.52 3 12 3z"/></svg>
+    카카오로 로그인
+  </button>
+  <!-- 네이버 로그인 (브랜드 가이드: 배경 #03C75A, 흰 글자, N 심볼). SDK 기본 버튼은 숨기고 우리 버튼이 대신 클릭 -->
+  <div id="naverIdLogin" style="display:none;" aria-hidden="true"></div>
+  <button id="naverLoginBtn" type="button" style="width:260px; height:40px; margin-top:10px; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:#03C75A; color:#FFFFFF; border:none; border-radius:20px; font-size:14px; font-weight:600; cursor:pointer;">
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="#FFFFFF" d="M14.9 4v8.6L9.1 4H4v16h5.1v-8.6L14.9 20H20V4h-5.1z"/></svg>
+    네이버로 로그인
+  </button>
   <div id="authGateMsg" style="font-size:12px; color:#B45309; margin-top:16px; min-height:18px;"></div>
   <div id="inAppWarn" style="display:none; max-width:340px; margin-top:18px; padding:12px 14px; background:#FEF3C7; border:1px solid #F59E0B; border-radius:10px; font-size:13px; line-height:1.65; color:#92400E; text-align:center;">
     <b>카카오톡 등 인앱 브라우저에서는 구글 로그인이 되지 않습니다.</b><br>
@@ -2272,7 +2295,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.153 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.154 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -6300,14 +6323,24 @@ window.__syncPanelLayout = function() {
 })();
 </script>
 <script>
-/* ───────── 구글 로그인 시스템 (v0.9.86) ─────────
+/* ───────── 로그인 시스템: 구글·카카오·네이버 (v1.13.154) ─────────
    - 로그인 안 하면 게이트가 화면을 덮어 통역 차단
-   - 구글 로그인만 하면 누구나 통과 (베타)
+   - 세 공급자 모두 이메일 기반 → 같은 이메일이면 같은 계정(화이트리스트·설정·잔여시간 공유)
+   - 카카오: REST 방식(SDK 없음). authorize 리다이렉트 → kauth 토큰 교환 → kapi 프로필. 모두 CORS 허용.
+   - 네이버: 공식 JS SDK. 프로필 조회가 JSONP라 정적 사이트에서 동작하는 유일한 방식.
    - 나중에 허용 이메일만 통과하려면 ALLOWED_EMAILS에 추가하면 됨
 */
 (function(){
   // 구글 클라우드 콘솔에서 발급받은 클라이언트 ID (공개돼도 안전)
   const GOOGLE_CLIENT_ID = '883406789347-icq75vmu99fb88rd4kd679p676ibc1h1.apps.googleusercontent.com';
+  // ── 카카오·네이버 키 (둘 다 공개돼도 안전한 값) ──
+  // 비어 있으면 해당 버튼은 클릭 시 "준비 중" 안내만 표시.
+  // 카카오: developers.kakao.com 앱의 "REST API 키" (JavaScript 키 아님!)
+  const KAKAO_REST_KEY = '';
+  // 네이버: developers.naver.com 애플리케이션의 "Client ID"
+  const NAVER_CLIENT_ID = '';
+  // 카카오 Redirect URI·네이버 Callback URL — 개발자 콘솔에 이 주소를 그대로 등록해야 함
+  const SOCIAL_REDIRECT_URI = location.origin + '/';
 
   // ── 출시 전 잠금 (PRE-LAUNCH LOCK) ──
   // 허용 이메일 목록. 비어있으면 = 누구나 통과.
@@ -6363,9 +6396,8 @@ window.__syncPanelLayout = function() {
     showApp(user);
   };
 
-  // 구글이 로그인 성공 시 호출하는 콜백
-  window.__onGoogleCredential = function(response){
-    const user = decodeJwt(response.credential);
+  // 공급자 공통 마무리: 화이트리스트 검사 → 세션 저장 → (필요 시) 계정 네임스페이스 reload
+  function completeLogin(user){
     if (!user || !user.email){
       showGate('로그인 정보를 읽지 못했습니다. 다시 시도해 주세요.');
       return;
@@ -6381,6 +6413,11 @@ window.__syncPanelLayout = function() {
     // (boothmate_user를 방금 저장했으므로 reload 후 restoreSession이 자동 로그인 상태로 복원)
     if (window.__settingsEmail !== user.email) { location.reload(); return; }
     showApp(user);
+  }
+
+  // 구글이 로그인 성공 시 호출하는 콜백
+  window.__onGoogleCredential = function(response){
+    completeLogin(decodeJwt(response.credential));
   };
 
   // 로그아웃 (버튼은 설정 패널 '👤 계정' 그룹 안)
@@ -6426,11 +6463,87 @@ window.__syncPanelLayout = function() {
     return false;
   }
 
-  // 시작: 이전 로그인 있으면 복원, 없으면 게이트 + 구글 버튼
+  // ── 카카오 로그인 (REST 방식, SDK 없음) ──
+  // 버튼 클릭 → kauth 인가 페이지로 리다이렉트 (state는 CSRF 방지용, sessionStorage에 보관)
+  const kakaoBtn = document.getElementById('kakaoLoginBtn');
+  if (kakaoBtn) kakaoBtn.onclick = function(){
+    if (!KAKAO_REST_KEY){ showGate('카카오 로그인은 준비 중입니다. 당분간 구글 로그인을 이용해 주세요.'); return; }
+    var st = 'kk' + Math.random().toString(36).slice(2);
+    try { sessionStorage.setItem('bm_kakao_state', st); } catch(e){}
+    location.href = 'https://kauth.kakao.com/oauth/authorize'
+      + '?client_id=' + KAKAO_REST_KEY
+      + '&redirect_uri=' + encodeURIComponent(SOCIAL_REDIRECT_URI)
+      + '&response_type=code&state=' + st;
+  };
+
+  // 카카오에서 돌아온 경우(?code=...&state=...): 토큰 교환 → 프로필 조회 → 공통 마무리
+  function handleKakaoReturn(){
+    if (window.__boothmateUser) return;   // 이미 로그인 복원됨 → 무시
+    var q = new URLSearchParams(location.search);
+    var code = q.get('code'), st = q.get('state');
+    var saved = null;
+    try { saved = sessionStorage.getItem('bm_kakao_state'); } catch(e){}
+    if (!code || !st || st !== saved) return;   // 우리가 보낸 카카오 요청이 아니면 무시
+    try { sessionStorage.removeItem('bm_kakao_state'); } catch(e){}
+    history.replaceState(null, '', location.pathname);   // 주소창에서 code 제거
+    showGate('카카오 로그인 처리 중…');
+    fetch('https://kauth.kakao.com/oauth/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8' },
+      body: 'grant_type=authorization_code&client_id=' + KAKAO_REST_KEY
+          + '&redirect_uri=' + encodeURIComponent(SOCIAL_REDIRECT_URI) + '&code=' + code
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(tok){
+      if (!tok.access_token) throw new Error('no token');
+      return fetch('https://kapi.kakao.com/v2/user/me', { headers: { 'Authorization': 'Bearer ' + tok.access_token } });
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(me){
+      var acc = me.kakao_account || {};
+      if (!acc.email){ showGate('카카오 계정의 이메일 제공에 동의해야 사용할 수 있습니다. 다시 로그인하며 동의해 주세요.'); return; }
+      completeLogin({ email: acc.email, name: (acc.profile && acc.profile.nickname) || '', provider: 'kakao' });
+    })
+    .catch(function(){ showGate('카카오 로그인에 실패했습니다. 다시 시도해 주세요.'); });
+  }
+
+  // ── 네이버 로그인 (공식 JS SDK) ──
+  // SDK가 숨김 컨테이너(#naverIdLogin)에 만든 진짜 버튼을 우리 스타일 버튼이 대신 클릭.
+  // 돌아오면 주소 해시(#access_token)를 SDK가 파싱 → getLoginStatus로 이메일 획득(JSONP라 CORS 없음).
+  var naverLogin = null;
+  function initNaver(){
+    if (!NAVER_CLIENT_ID) return;
+    if (!(window.naver && window.naver.LoginWithNaverId)){ setTimeout(initNaver, 200); return; }
+    naverLogin = new naver.LoginWithNaverId({
+      clientId: NAVER_CLIENT_ID,
+      callbackUrl: SOCIAL_REDIRECT_URI,
+      isPopup: false,
+      loginButton: { color: 'green', type: 3, height: 40 }
+    });
+    naverLogin.init();
+    naverLogin.getLoginStatus(function(status){
+      if (!status || window.__boothmateUser) return;
+      history.replaceState(null, '', location.pathname);   // 주소창에서 토큰 제거
+      var email = naverLogin.user && naverLogin.user.getEmail && naverLogin.user.getEmail();
+      if (!email){ showGate('네이버 계정의 이메일 제공에 동의해야 사용할 수 있습니다. 다시 로그인하며 동의해 주세요.'); return; }
+      completeLogin({ email: email, name: (naverLogin.user.getName && naverLogin.user.getName()) || '', provider: 'naver' });
+    });
+  }
+  const naverBtn = document.getElementById('naverLoginBtn');
+  if (naverBtn) naverBtn.onclick = function(){
+    if (!NAVER_CLIENT_ID){ showGate('네이버 로그인은 준비 중입니다. 당분간 구글 로그인을 이용해 주세요.'); return; }
+    var real = document.querySelector('#naverIdLogin a');
+    if (real) real.click();
+    else showGate('네이버 로그인 모듈을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');
+  };
+
+  // 시작: 이전 로그인 있으면 복원, 없으면 게이트 + 로그인 버튼들
   if (!restoreSession()){
     showGate('');
   }
   initGoogle();
+  handleKakaoReturn();
+  initNaver();
 })();
 </script>
 <script>

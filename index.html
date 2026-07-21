@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.154 → v1.13.155) — 카카오 REST API 키 등록 (카카오 로그인 활성화):
+  - KAKAO_REST_KEY에 카카오 개발자 앱(부스메이트, ID 1520187)의 REST API 키 '부스메이트 웹버전' 등록.
+  - 콘솔 설정: 카카오 로그인 ON, 로그인 리다이렉트 URI https://online.boothmate.co.kr/ 등록 완료.
+  - 남은 것: 해당 키의 클라이언트 시크릿 '사용 안 함' 전환(켜져 있으면 토큰 교환 KOE010 실패),
+    동의항목 카카오계정(이메일) 설정(비즈 앱 전환 필요할 수 있음).
   변경점 (v1.13.153 → v1.13.154) — 카카오·네이버 로그인 추가 (키 등록 전 준비 단계):
   - 로그인 게이트에 카카오/네이버 버튼 추가. 구글과 동일하게 이메일 기반으로 화이트리스트·세션 공유.
   - 카카오: SDK 없이 REST 방식(authorize 리다이렉트 → kauth 토큰 교환 → kapi 프로필 조회, 모두 CORS 지원).
@@ -2295,7 +2300,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.154 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.155 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -6335,8 +6340,8 @@ window.__syncPanelLayout = function() {
   const GOOGLE_CLIENT_ID = '883406789347-icq75vmu99fb88rd4kd679p676ibc1h1.apps.googleusercontent.com';
   // ── 카카오·네이버 키 (둘 다 공개돼도 안전한 값) ──
   // 비어 있으면 해당 버튼은 클릭 시 "준비 중" 안내만 표시.
-  // 카카오: developers.kakao.com 앱의 "REST API 키" (JavaScript 키 아님!)
-  const KAKAO_REST_KEY = '';
+  // 카카오: developers.kakao.com 앱(부스메이트, ID 1520187)의 REST API 키 "부스메이트 웹버전" (JavaScript 키 아님!)
+  const KAKAO_REST_KEY = 'b1e7edc26fe2415f0f037346381aafc0';
   // 네이버: developers.naver.com 애플리케이션의 "Client ID"
   const NAVER_CLIENT_ID = '';
   // 카카오 Redirect URI·네이버 Callback URL — 개발자 콘솔에 이 주소를 그대로 등록해야 함

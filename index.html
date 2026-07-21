@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.152 → v1.13.153) — 테스트 계정 1개 추가 + 시간 부여:
+  - jinsil.choi1991@gmail.com → ALLOWED_EMAILS 등록 + TIME_GRANTS 3시간(grantId jinsil-choi1991-3h-20260720). (총 57명)
   변경점 (v1.13.151 → v1.13.152) — 테스트 계정 1개 추가 + 시간 부여:
   - luzsohee@gmail.com → ALLOWED_EMAILS 등록 + TIME_GRANTS 3시간(grantId luzsohee-3h-20260720). (총 56명)
   변경점 (v1.13.150 → v1.13.151) — 시간 부여 1건:
@@ -2270,7 +2272,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.152 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.153 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2715,7 +2717,8 @@ const TIME_GRANTS = {
   'kimyiyun1004@gmail.com': { seconds: 3 * 3600, grantId: 'kimyiyun1004-3h-20260717' },
   'sorim126@gmail.com': { seconds: 3 * 3600, grantId: 'sorim126-3h-20260717' },
   'gayeonkim0630@gmail.com': { seconds: 3 * 3600, grantId: 'gayeonkim0630-3h-20260719' },
-  'luzsohee@gmail.com': { seconds: 3 * 3600, grantId: 'luzsohee-3h-20260720' }
+  'luzsohee@gmail.com': { seconds: 3 * 3600, grantId: 'luzsohee-3h-20260720' },
+  'jinsil.choi1991@gmail.com': { seconds: 3 * 3600, grantId: 'jinsil-choi1991-3h-20260720' }
 };
 
 const Ent = (function(){
@@ -2932,7 +2935,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.152';
+const GX_DIAG_VER = '1.13.153';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -6311,7 +6314,7 @@ window.__syncPanelLayout = function() {
   // ⚠️ 출시 전까지는 운영자(dororok)만 로그인 가능하게 잠가둠.
   //    → 나만 중계서버에 도달 가능 → 내 Gemini 비용 안전.
   // 출시할 때 이 배열을 비우면([]) 누구나 통과, 또는 일부만 받으려면 이메일 추가.
-  const ALLOWED_EMAILS = ['dororok@gmail.com', 'boothmatepro.review@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com', 'alicecha0114@gmail.com', 'heira.jung@gmail.com', 'topclasstrancc@gmail.com', 'itswonsun@gmail.com', 'janeyu0114@gmail.com', 'interpreterceci@gmail.com', 'min.interpreter@gmail.com', 'skch159@gmail.com', 'luckyeunji@gmail.com', 'myfate0429@gmail.com', 'sandra.jy.lim@gmail.com', 'luvange@gmail.com', 'jigojisn@gmail.com', 'sarahkim005@gmail.com', 'strangermisa10@gmail.com', 'twoamari@gmail.com', 'chloekim2014@gmail.com', 'jkang0604@gmail.com', 'syyou128@gmail.com', 'yujinsart@gmail.com', 'jessyessy.p@gmail.com', 'rcho0702@gmail.com', 'makingin@gmail.com', '91skwon@gmail.com', 'yoonsun125p@gmail.com', 'cktngus2339@gmail.com', 'sj.serena.im@gmail.com', 'gayeonkim0630@gmail.com', 'euijinjunesim@gmail.com', 'jinnyjeuu@gmail.com', 'moony8318@gmail.com', 'kimsuji0524@gmail.com', 'jaytheidealist@gmail.com', 'stellaseol0129@gmail.com', 'happylee.ssg@gmail.com', 'ty6891@gmail.com', 'beautyna88@gmail.com', 'shawnbae0099@gmail.com', 'kimyiyun1004@gmail.com', 'sorim126@gmail.com', 'hahaworld0216@gmail.com', 'choibk297@gmail.com', 'hyohyunc@gmail.com', 'hgold93@gmail.com', 'sumanlee3406@gmail.com', 'jongyeonkim3406@gmail.com', 'luzsohee@gmail.com'];
+  const ALLOWED_EMAILS = ['dororok@gmail.com', 'boothmatepro.review@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com', 'alicecha0114@gmail.com', 'heira.jung@gmail.com', 'topclasstrancc@gmail.com', 'itswonsun@gmail.com', 'janeyu0114@gmail.com', 'interpreterceci@gmail.com', 'min.interpreter@gmail.com', 'skch159@gmail.com', 'luckyeunji@gmail.com', 'myfate0429@gmail.com', 'sandra.jy.lim@gmail.com', 'luvange@gmail.com', 'jigojisn@gmail.com', 'sarahkim005@gmail.com', 'strangermisa10@gmail.com', 'twoamari@gmail.com', 'chloekim2014@gmail.com', 'jkang0604@gmail.com', 'syyou128@gmail.com', 'yujinsart@gmail.com', 'jessyessy.p@gmail.com', 'rcho0702@gmail.com', 'makingin@gmail.com', '91skwon@gmail.com', 'yoonsun125p@gmail.com', 'cktngus2339@gmail.com', 'sj.serena.im@gmail.com', 'gayeonkim0630@gmail.com', 'euijinjunesim@gmail.com', 'jinnyjeuu@gmail.com', 'moony8318@gmail.com', 'kimsuji0524@gmail.com', 'jaytheidealist@gmail.com', 'stellaseol0129@gmail.com', 'happylee.ssg@gmail.com', 'ty6891@gmail.com', 'beautyna88@gmail.com', 'shawnbae0099@gmail.com', 'kimyiyun1004@gmail.com', 'sorim126@gmail.com', 'hahaworld0216@gmail.com', 'choibk297@gmail.com', 'hyohyunc@gmail.com', 'hgold93@gmail.com', 'sumanlee3406@gmail.com', 'jongyeonkim3406@gmail.com', 'luzsohee@gmail.com', 'jinsil.choi1991@gmail.com'];
 
   const gate = document.getElementById('authGate');
   const bar = document.getElementById('authBar');   // v1.6.1: 설정 패널로 이동 → null일 수 있음(가드 처리)

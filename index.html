@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.155 → v1.13.156) — 네이버 Client ID 등록 (네이버 로그인 활성화):
+  - NAVER_CLIENT_ID에 네이버 개발자 앱 '부스메이트'의 Client ID 등록.
+  - 콘솔 설정: 네이버 로그인 API, 이메일 필수 제공, PC 웹 환경(Callback https://online.boothmate.co.kr/) 등록 완료.
+  - 개발 상태 '개발 중' — 정식 검수 전까지는 개발자 본인·멤버관리 등록 계정만 네이버 로그인 가능(현 테스트 단계엔 충분).
   변경점 (v1.13.154 → v1.13.155) — 카카오 REST API 키 등록 (카카오 로그인 활성화):
   - KAKAO_REST_KEY에 카카오 개발자 앱(부스메이트, ID 1520187)의 REST API 키 '부스메이트 웹버전' 등록.
   - 콘솔 설정: 카카오 로그인 ON, 로그인 리다이렉트 URI https://online.boothmate.co.kr/ 등록 완료.
@@ -2300,7 +2304,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.155 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.156 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -6342,8 +6346,8 @@ window.__syncPanelLayout = function() {
   // 비어 있으면 해당 버튼은 클릭 시 "준비 중" 안내만 표시.
   // 카카오: developers.kakao.com 앱(부스메이트, ID 1520187)의 REST API 키 "부스메이트 웹버전" (JavaScript 키 아님!)
   const KAKAO_REST_KEY = 'b1e7edc26fe2415f0f037346381aafc0';
-  // 네이버: developers.naver.com 애플리케이션의 "Client ID"
-  const NAVER_CLIENT_ID = '';
+  // 네이버: developers.naver.com 애플리케이션 "부스메이트"의 Client ID
+  const NAVER_CLIENT_ID = 'QiTPa5ktzYBkdAball8z';
   // 카카오 Redirect URI·네이버 Callback URL — 개발자 콘솔에 이 주소를 그대로 등록해야 함
   const SOCIAL_REDIRECT_URI = location.origin + '/';
 

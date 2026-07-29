@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.165 → v1.13.166) — 글로서리 플레이스홀더 예시 교체:
+  - 용어 1 예시 patient → subject, 용어 1 별칭 예시 participant, subject → participant, patient.
+  - 아래 설명 문장·app-i18n.js 번역 키도 동일하게 갱신 (참가자·환자 → subject로 교체 설명).
   변경점 (v1.13.164 → v1.13.165) — 테스트 계정 1개 추가 + 시간 부여:
   - sangsook.ko@gmail.com → ALLOWED_EMAILS 등록 + TIME_GRANTS 3시간(grantId sangsook-ko-3h-20260720). (총 61명)
   변경점 (v1.13.163 → v1.13.164) — 시간 부여 갱신 1건:
@@ -2330,7 +2333,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.165 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.166 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2996,7 +2999,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.165';
+const GX_DIAG_VER = '1.13.166';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5796,17 +5799,17 @@ window.__syncPanelLayout = function() {
     '<div id="gTabMain">' +
     '<div class="g-add">' +
       '<div class="g-add-terms">' +
-        '<input type="text" id="gInA" placeholder="용어 1 (예: patient)">' +
+        '<input type="text" id="gInA" placeholder="용어 1 (예: subject)">' +
         '<span class="g-arrow">⇄</span>' +
         '<input type="text" id="gInB" placeholder="용어 2 (예: 피험자)">' +
       '</div>' +
       '<div class="g-add-syns">' +
-        '<input type="text" id="gInSynA" placeholder="용어 1 별칭 — 쉼표 구분 (예: participant, subject)">' +
+        '<input type="text" id="gInSynA" placeholder="용어 1 별칭 — 쉼표 구분 (예: participant, patient)">' +
         '<span class="g-arrow g-ghost">⇄</span>' +
         '<input type="text" id="gInSynB" placeholder="용어 2 별칭 — 쉼표 구분 (예: 참가자, 환자)">' +
       '</div>' +
       '<div class="g-add-foot">' +
-        '<div style="flex:1 1 0; font-size:11px; color:var(--t-muted); line-height:1.4;">별칭은 각 용어와 <b>같은 언어</b>의 변이형입니다. participant·subject가 들리면 <b>피험자</b>로, 참가자·환자가 들리면 <b>patient</b>로 번역·교체됩니다.</div>' +
+        '<div style="flex:1 1 0; font-size:11px; color:var(--t-muted); line-height:1.4;">별칭은 각 용어와 <b>같은 언어</b>의 변이형입니다. participant·patient가 들리면 <b>피험자</b>로, 참가자·환자가 들리면 <b>subject</b>로 번역·교체됩니다.</div>' +
         '<button id="gAddBtn">추가</button>' +
       '</div>' +
     '</div>' +

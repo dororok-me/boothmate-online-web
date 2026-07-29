@@ -152,7 +152,7 @@
     '로그인 계정과 남은 시간이 표시됩니다.': 'Shows your account and remaining time.',
     '키는 이 브라우저에만 저장되며 외부로 전송되지 않습니다.': 'The key is stored only in this browser and is never sent externally.',
     '발급받은 티켓을 입력하면 바로 통역이 시작됩니다. 남은 시간이 차감됩니다.': 'Enter your ticket to start interpreting right away. Remaining time will be deducted.',
-    '세션은 정지/새 시작 시 자동 저장(최대 50개). 내보내기는 현재 화면 자막을 txt로 저장합니다.': 'Sessions are auto-saved on stop/new start (up to 50). Export saves the current on-screen subtitles as a txt file.',
+    '세션은 통역 중 30초마다·정지 시 자동 저장(최대 50개). 내보내기는 현재 화면 자막을 txt로, 전체 삭제는 저장된 세션을 모두 지웁니다. 목록에서 세션 위에 마우스를 올리면(또는 눌러서 고정) 내용을 미리 볼 수 있습니다.': 'Sessions are auto-saved every 30s while interpreting and on stop (up to 50). Export saves the current on-screen subtitles as txt; Delete all removes every saved session. Hover over a session in the list (or tap to pin) to preview its contents.',
     '별칭은 각 용어와 같은 언어의 변이형입니다. participant·patient가 들리면 피험자로, 참가자·환자가 들리면 subject로 번역·교체됩니다.': 'Aliases are variants in the same language as each term. If participant·patient is heard it is translated·replaced as 피험자, and if 참가자·환자 is heard it becomes subject.',
     '양방향 자동: 들어온 말의 언어를 감지해 반대 언어로 자동 번역 · 단방향: 선택한 방향으로만 번역 (강연 등 한 사람만 말할 때 방향 오전환 방지)': 'Auto (bidirectional): detects the incoming language and translates to the other · One-way: translates only in the chosen direction (prevents wrong direction switches when only one person speaks, e.g. a lecture)',
     'Enter = 저장 · Shift+Enter = 줄바꿈 · Esc = 취소 · 저장 시 오버레이에도 즉시 반영됩니다': 'Enter = Save · Shift+Enter = New line · Esc = Cancel · Saving is reflected in the overlay instantly',

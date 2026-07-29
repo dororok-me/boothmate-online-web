@@ -1,5 +1,7 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.167 → v1.13.168) — 시간 부여 1건:
+  - alicecha0114@gmail.com → TIME_GRANTS 10시간(grantId alicecha0114-10h-20260720). ALLOWED_EMAILS에는 이미 등록돼 있던 계정.
   변경점 (v1.13.166 → v1.13.167) — 사용 기록 닫기 ✕ + 저장된 세션 미리 보기(교수님 요청):
   - '사용 기록 보기' 옆에 ✕ 버튼: 목록이 열리면 나타나고, 누르면 목록·버튼 함께 숨김.
   - 저장된 세션 목록: 항목에 마우스를 올리면 원문·번역(↳) 미리 보기가 아래에 펼쳐짐(최대 180px 스크롤).
@@ -2338,7 +2340,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.167 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.168 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2787,7 +2789,8 @@ const TIME_GRANTS = {
   'jinsil.choi1991@gmail.com': { seconds: 3 * 3600, grantId: 'jinsil-choi1991-3h-20260720' },
   'dongyimon@gmail.com': { seconds: 3 * 3600, grantId: 'dongyimon-3h-20260720' },
   'makingin@gmail.com': { seconds: 3 * 3600, grantId: 'makingin-3h-20260720' },
-  'sangsook.ko@gmail.com': { seconds: 3 * 3600, grantId: 'sangsook-ko-3h-20260720' }
+  'sangsook.ko@gmail.com': { seconds: 3 * 3600, grantId: 'sangsook-ko-3h-20260720' },
+  'alicecha0114@gmail.com': { seconds: 10 * 3600, grantId: 'alicecha0114-10h-20260720' }
 };
 
 const Ent = (function(){
@@ -3004,7 +3007,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.167';
+const GX_DIAG_VER = '1.13.168';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {

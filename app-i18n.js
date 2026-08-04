@@ -71,6 +71,7 @@
     '📖 Glossary(양방향)': '📖 Glossary (bidirectional)',
     '✏️ 용어 추가': '✏️ Add term',
     '💭 클라우드 용어집': '💭 Cloud glossary',
+    '← 용어 목록으로': '← Back to term list',
     '👤 계정': '👤 Account',
     '🔌 연결 방식': '🔌 Connection',
     '🔑 Gemini API 키 (직접 연결용)': '🔑 Gemini API key (for direct connection)',

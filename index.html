@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.188 → v1.13.189) — 단방향 모드: 타겟 언어 화자 무시 강화 (교수님 보고: SBS 놀란 인터뷰,
+  한국어 앵커 발언이 원문=영어/번역=한국어 전사로 뒤집혀 표시되고 이후 영어 발화 번역이 안 뜸):
+  - 프롬프트: "입력은 무조건 원어"라는 단정이 원인 — 모델이 한국어 음성을 원문 전사부터 영어로 번역해
+    클라이언트 필터가 원어 발화로 오인함. 이제 "오디오에 양쪽 언어 화자가 섞여 있다(인터뷰 등)"를 명시하고
+    ① 원문 전사는 실제 들린 언어 그대로 ② 타겟 언어 발화엔 출력 없이 침묵 ③ 역방향(타겟→원어) 번역 금지
+    ④ 무시한 뒤에도 다음 원어 발화는 계속 번역(멈추지 말 것)을 지시.
+  - 클라이언트: 타겟 언어로 숨긴 묶음 뒤에 턴 경계 없이 원어 조각이 이어지면(화자 교대) 숨긴 묶음을 닫고
+    원어부터 새 묶음으로 분리 — 뒤 원어 발화까지 통째로 숨겨져 번역이 안 뜨던 증상 방지.
   변경점 (v1.13.187 → v1.13.188) — 단방향 모드 강제 잠금 (교수님 보고: 단방향인데 원문 메아리·방향 혼동):
   - 세션 프롬프트: 단방향일 때 '양방향 통역사' 틀에 한 줄 덧붙이던 방식(모순 지시)을 버리고
     단방향 전용 프롬프트로 교체 — 원어만 입력으로 받고, 메아리(원문 그대로 출력)는 치명적 오류로 명시.
@@ -2442,7 +2450,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.188 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.189 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3115,7 +3123,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.188';
+const GX_DIAG_VER = '1.13.189';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -4573,7 +4581,7 @@ function scheduleIdleFlush() {
 function appendSrc(t) {
   clearErr();   // 실제 자막이 들어오기 시작하면 이전 에러 메시지 제거
   noteSpeech(); // 무음 자동 정지 타이머 리셋 (실제 음성 인식 입력이 들어옴)
-  const p = getCurrentPair();
+  let p = getCurrentPair();   // 단방향 잠금이 묶음을 분리하면 새 묶음으로 교체됨 (v1.13.189)
   srcBuf += t.replace(/\n+/g, ' ');
   // 이번 턴 원문 누적 (로그 트리거어 표시용). 과도 성장 방지로 뒤 800자만 유지.
   turnSrcText += t.replace(/\n+/g, ' ');
@@ -4589,9 +4597,24 @@ function appendSrc(t) {
   if (!p._offpair && getDirMode() !== 'auto') {
     const pr = getPair();
     const det = detectLang(srcBuf, pr.a, pr.b);
-    if (det && langPrefix(det) === langPrefix(curTarget)) { p._offpair = true; p.el.classList.add('offpair'); }
+    if (det && langPrefix(det) === langPrefix(curTarget)) { p._offpair = true; p._onewayHidden = true; p.el.classList.add('offpair'); }
   }
-  if (p._offpair) return;   // 숨긴 묶음 — 화면/오버레이에 표시 안 함
+  if (p._offpair) {
+    // 단방향 잠금(v1.13.189): 숨긴 묶음 뒤에 원어 발화가 이어지면(턴 경계 없이 화자 교대)
+    // 숨긴 묶음을 닫고 원어 조각부터 새 묶음으로 시작 — 안 그러면 뒤 원어 발화까지 통째로 숨겨져
+    // "타겟 언어 발언 후 번역이 안 뜨는" 증상이 생김.
+    if (p._onewayHidden && getDirMode() !== 'auto') {
+      const pr = getPair();
+      const srcLangCode = (langPrefix(curTarget) === langPrefix(pr.a)) ? pr.b : pr.a;
+      const detChunk = detectLang(t, pr.a, pr.b);
+      if (detChunk && langPrefix(detChunk) === langPrefix(srcLangCode)) {
+        curPair = null;                       // 숨긴 묶음 닫기
+        srcBuf = t.replace(/\n+/g, ' ');      // 이번 원어 조각부터 새로 시작
+        transBuf = ''; turnRawTrans = '';     // 숨긴 묶음의 잔여 출력(전사 등) 버림
+        p = getCurrentPair();                 // 새(보이는) 묶음
+      } else return;                          // 여전히 타겟 언어 — 계속 숨김
+    } else return;   // 숨긴 묶음 — 화면/오버레이에 표시 안 함
+  }
   if (!p.srcLine) {
     p.srcLine = document.createElement('div');
     p.srcLine.className = 'srcline';
@@ -5086,13 +5109,15 @@ function connectWS() {
     const _other = (langPrefix(TARGET_LANGUAGE) === langPrefix(_pa)) ? _pb : _pa;
     const _oneWayMode = (getDirMode() !== 'auto');
     const roleIntro = _oneWayMode
-      ? 'You are a strict ONE-WAY simultaneous interpreter. The ONLY input language you accept is ' + langName(_other) +
-        '. Translate every ' + langName(_other) + ' utterance into ' + langName(TARGET_LANGUAGE) +
-        '. Your output must be ' + langName(TARGET_LANGUAGE) + ' ONLY, with no exceptions.' +
-        ' NEVER repeat or echo the ' + langName(_other) + ' input text back — echoing the input verbatim instead of translating it is a critical failure.' +
-        ' If an utterance is spoken in ' + langName(TARGET_LANGUAGE) + ' or in ANY language other than ' + langName(_other) +
-        ', IGNORE it completely and output nothing for it; do NOT translate it, do NOT transcribe it.' +
-        ' Never output any language other than ' + langName(TARGET_LANGUAGE) + '.'
+      ? 'You are a simultaneous interpreter working on a ONE-WAY channel: ' + langName(_other) + ' → ' + langName(TARGET_LANGUAGE) + '.' +
+        ' The audio may contain speakers of both ' + langName(_other) + ' and ' + langName(TARGET_LANGUAGE) + ' (for example an interview with a host and a guest), and possibly other languages.' +
+        ' Always transcribe the input EXACTLY in the language actually spoken — if the speaker spoke ' + langName(TARGET_LANGUAGE) +
+        ', the input transcription must be ' + langName(TARGET_LANGUAGE) + ' text; NEVER translate inside the input transcription.' +
+        ' TRANSLATE ONLY ' + langName(_other) + ' utterances into ' + langName(TARGET_LANGUAGE) + '.' +
+        ' For any utterance spoken in ' + langName(TARGET_LANGUAGE) + ' or in any other language: produce NO translation output at all — stay completely silent for it and wait for the next ' + langName(_other) + ' utterance.' +
+        ' NEVER translate ' + langName(TARGET_LANGUAGE) + ' into ' + langName(_other) + ' — the reverse direction is forbidden, no matter who is speaking.' +
+        ' Your translation output must only ever be ' + langName(TARGET_LANGUAGE) + '; never repeat the ' + langName(_other) + ' input verbatim.' +
+        ' After ignoring a ' + langName(TARGET_LANGUAGE) + ' utterance, keep translating the following ' + langName(_other) + ' utterances normally — never stop working.'
       : 'You are a simultaneous interpreter between ' + langName(_pa) + ' and ' + langName(_pb) +
         '. The expected input is ' + langName(_other) + '. Translate every input utterance into ' +
         langName(TARGET_LANGUAGE) + '. Output ONLY ' + langName(TARGET_LANGUAGE) +

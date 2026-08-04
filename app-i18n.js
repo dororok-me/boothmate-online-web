@@ -48,7 +48,6 @@
     '자막 내보내기': 'Export subtitles',
     '자막 리셋하기': 'Reset subtitles',
     '저장된 세션': 'Saved sessions',
-    '💾 현재 리스트를 클라우드에 저장': '💾 Save current list to cloud',
     '수정': 'Edit',
     '삭제': 'Delete',
     '이 파일을 용어집에 보내기': 'Send this file to glossary',
@@ -142,7 +141,8 @@
     '용어 2 별칭 — 쉼표 구분': 'Term 2 aliases — comma separated',
 
     // 옵션/정렬
-    '이 리스트 내보내기': 'Export this list',
+    '내보내기': 'Export',
+    '클라우드': 'Cloud',
     '최신순': 'Newest',
     'ABC순': 'A–Z',
     '가나다순': 'Korean (가나다)',
@@ -154,7 +154,7 @@
     '등록된 용어가 없습니다.': 'No terms registered.',
     '이미 등록된 비슷한 용어 — 클릭하면 입력칸에 채워져 수정할 수 있습니다': 'Similar term already registered — click to fill the input and edit',
     '이름을 붙여 보관하고, 행사마다 골라 불러옵니다': 'Save with a name and load it per event',
-    '저장된 용어집이 없습니다. 위 버튼으로 현재 용어집을 이름 붙여 보관하세요.': 'No saved glossaries. Use the button above to save the current glossary with a name.',
+    "저장된 용어집이 없습니다. 용어 목록의 '내보내기 → 클라우드'로 현재 리스트를 보관하세요.": "No saved glossaries. Use 'Export → Cloud' in the term list to save the current list.",
     '저장된 세션이 없습니다.': 'No saved sessions.',
     '로그인 계정과 남은 시간이 표시됩니다.': 'Shows your account and remaining time.',
     '키는 이 브라우저에만 저장되며 외부로 전송되지 않습니다.': 'The key is stored only in this browser and is never sent externally.',

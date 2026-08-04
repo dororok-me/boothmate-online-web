@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.181 → v1.13.182) — 내보내기 메뉴에 클라우드 통합 + 도구줄 정리 (교수님 요청):
+  - '이 리스트 내보내기' → '내보내기'. 메뉴: CSV/TXT/Excel 아래 '클라우드' 추가 —
+    선택하면 현재 리스트를 클라우드 용어집으로 저장(saveListToCloud, 이름 입력 후
+    클라우드 화면으로 전환). 클라우드 화면의 '💾 현재 리스트를 클라우드에 저장' 버튼 제거
+    (gSaveSetBtn → 함수로 추출, entitlement 목록에서도 제거). 빈 목록 안내문 갱신.
+  - '전체 삭제' 버튼 → 🗑 아이콘(title로 설명 유지).
+  - 내보내기(셀렉트)와 불러오기(버튼) 디자인 통일: .g-sel에 appearance:none·글자 가운데
+    정렬 — 네이티브 화살표·테두리 제거로 .g-tool 버튼과 같은 모양.
   변경점 (v1.13.180 → v1.13.181) — 추가 버튼 보라 복귀(글자만 밝게) + 별칭 문구 (교수님 요청):
   - '+ 용어 추가' 버튼: 배경 보라(#4F46E5) 복귀, 글자('+ 용어 추가')는 흰색으로 밝게.
     (문제였던 것은 보라로 렌더되는 ➕이모지 — 텍스트 '+'라 흰색으로 잘 보임)
@@ -1837,7 +1845,12 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   #glossaryPanel .g-sets-empty { font-size: 12px; color: var(--t-muted, #7a8ba8); font-style: italic; padding: 2px 0; }
   #glossaryPanel .g-count { color: #7a8ba8; font-size: 12px; margin-left: 4px; }
   #glossaryPanel .g-explabel { color: #9fb0cc; font-size: 12px; }
-  #glossaryPanel .g-sel { padding: 6px 12px; background: #2a3a55; border: none; border-radius: 6px; color: #cfe0ff; font-size: 12px; cursor: pointer; }
+  /* 셀렉트도 버튼(.g-tool)과 같은 모양으로 — 네이티브 화살표·테두리 제거, 글자 가운데 (v1.13.182) */
+  #glossaryPanel .g-sel {
+    padding: 6px 12px; background: #2a3a55; border: none; border-radius: 6px;
+    color: #cfe0ff; font-size: 12px; cursor: pointer;
+    -webkit-appearance: none; appearance: none; text-align: center; text-align-last: center;
+  }
 
   /* 텔레프롬프터 줄: 마침표 단위 한 줄, 오래되면 위로 흐르며 페이드 */
   /* ── 원문+번역 묶음 박스 (한 세트로 항상 함께) ── */
@@ -2405,7 +2418,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.181 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.182 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3078,7 +3091,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.181';
+const GX_DIAG_VER = '1.13.182';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -3223,7 +3236,7 @@ function applyEntitlementUI() {
   const canG = Ent.canUseGlossary();
   const canX = Ent.canExport();
   // 용어집 추가 (체험중·5h+ 가능, 1h 잠금)
-  ['gAddOpenBtn', 'gAddBtn', 'gInA', 'gInB', 'gInSynA', 'gInSynB', 'gSaveSetBtn'].forEach(id => {
+  ['gAddOpenBtn', 'gAddBtn', 'gInA', 'gInB', 'gInSynA', 'gInSynB'].forEach(id => {
     const el = document.getElementById(id); if (!el) return;
     el.disabled = !canG;
     el.style.opacity = canG ? '' : '0.5';
@@ -5920,12 +5933,14 @@ window.__syncPanelLayout = function() {
       '<div class="g-list" id="gList"></div>' +
       // 도구줄(내보내기·불러오기·전체 삭제·개수·동기화)과 클라우드 용어집 버튼은 리스트 하단으로 (v1.13.178)
       '<div class="g-tools g-foot">' +
+        // 내보내기 메뉴에 '클라우드'(클라우드 용어집으로 저장) 포함, 전체 삭제는 🗑 아이콘 (v1.13.182)
         '<select id="gExportFmt" class="g-sel">' +
-          '<option value="" selected>이 리스트 내보내기</option>' +
+          '<option value="" selected>내보내기</option>' +
           '<option value="csv">CSV</option><option value="txt">TXT</option><option value="xlsx">Excel (.xlsx)</option>' +
+          '<option value="cloud">클라우드</option>' +
         '</select>' +
         '<button id="gImportBtn" class="g-tool">불러오기</button>' +
-        '<button id="gResetBtn" class="g-tool g-danger">전체 삭제</button>' +
+        '<button id="gResetBtn" class="g-tool g-danger" title="전체 삭제">🗑</button>' +
         '<input type="file" id="gFileInput" accept=".txt,.csv,.xlsx,.xls,text/plain,text/csv" style="display:none;">' +
         '<span id="gCount" class="g-count"></span>' +
         '<span id="gCloudStat" class="g-count"></span>' +
@@ -5933,10 +5948,9 @@ window.__syncPanelLayout = function() {
       '<button type="button" id="gTabBtnSets" class="g-tool g-cloudbtn">💭 클라우드 용어집</button>' +
     '</div>' +
     '<div id="gTabSets" style="display:none;">' +
+      // 저장 버튼 제거 — 용어 목록의 '내보내기 → 클라우드'로 통합 (v1.13.182)
       '<div class="g-tools">' +
         '<button id="gBackToMain" class="g-tool">← 용어 목록으로</button>' +
-        '<button id="gSaveSetBtn" class="g-tool g-primary">💾 현재 리스트를 클라우드에 저장</button>' +
-        '<span class="g-count">이름을 붙여 보관하고, 행사마다 골라 불러옵니다</span>' +
       '</div>' +
       '<div id="gSetsBox" class="g-sets">' +
         '<div class="g-sets-ttl">💭 저장된 클라우드 용어집 — 불러올 때 \'삭제 후 불러오기 / 이어 붙이기\'를 선택합니다</div>' +
@@ -6229,6 +6243,8 @@ window.__syncPanelLayout = function() {
   $('gExportFmt').addEventListener('change', () => {
     const fmt = $('gExportFmt').value;
     if (!fmt) return;
+    // '클라우드' = 현재 리스트를 클라우드 용어집으로 저장 (v1.13.182)
+    if (fmt === 'cloud') { $('gExportFmt').value = ''; saveListToCloud(); return; }
     const list = loadGlossary();
     if (!list.length) { alert('내보낼 용어가 없습니다.'); $('gExportFmt').value = ''; return; }
     if (fmt === 'xlsx') {
@@ -6416,7 +6432,7 @@ window.__syncPanelLayout = function() {
     if (!box) return;
     box.innerHTML = '';
     if (!sets.length) {
-      box.innerHTML = '<div class="g-sets-empty">저장된 용어집이 없습니다. 위 버튼으로 현재 용어집을 이름 붙여 보관하세요.</div>';
+      box.innerHTML = '<div class="g-sets-empty">저장된 용어집이 없습니다. 용어 목록의 \'내보내기 → 클라우드\'로 현재 리스트를 보관하세요.</div>';
       return;
     }
     sets.forEach(function (st, i) {
@@ -6458,7 +6474,8 @@ window.__syncPanelLayout = function() {
       box.appendChild(row);
     });
   }
-  $('gSaveSetBtn').onclick = () => {
+  // 현재 리스트를 클라우드 용어집으로 저장 — '내보내기 → 클라우드'에서 호출 (v1.13.182)
+  function saveListToCloud() {
     const list = loadGlossary();
     if (!list.length) { alert('저장할 용어가 없습니다. 먼저 용어를 등록하세요.'); return; }
     const defName = '용어집 ' + fmtDate(Date.now());
@@ -6474,9 +6491,9 @@ window.__syncPanelLayout = function() {
       sets.push({ name: name, savedAt: Date.now(), list: JSON.parse(JSON.stringify(list)) });
     }
     saveGlossarySets(sets);
-    gSwitchTab('sets');   // 저장 직후 '내 용어집' 탭으로 전환해 바로 보여줌
+    gSwitchTab('sets');   // 저장 직후 클라우드 용어집 화면으로 전환해 바로 보여줌
     renderSets();
-  };
+  }
   // 화면 전환: 용어 목록 ⇄ 클라우드 용어집 — 탭 대신 하단 버튼·돌아가기 (v1.13.178)
   function gSwitchTab(tab) {
     const isMain = tab !== 'sets';

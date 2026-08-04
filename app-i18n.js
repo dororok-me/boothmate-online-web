@@ -132,8 +132,8 @@
     // placeholder
     '용어 1 (예: subject)': 'Term 1 (e.g. subject)',
     '용어 2 (예: 피험자)': 'Term 2 (e.g. subject)',
-    '용어 1 별칭 — 쉼표 구분 (예: participant, patient)': 'Term 1 aliases — comma separated (e.g. participant, patient)',
-    '용어 2 별칭 — 쉼표 구분 (예: 참가자, 환자)': 'Term 2 aliases — comma separated (e.g. 참가자, 환자)',
+    '위 원어의 별칭 — 쉼표 구분 (예: participant, patient)': 'Aliases of the source term above — comma separated (e.g. participant, patient)',
+    '위 번역어의 별칭 — 쉼표 구분 (예: 참가자, 환자)': 'Aliases of the target term above — comma separated (e.g. 참가자, 환자)',
     '🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다': '🔍 Search terms — similar words are shown',
     'Gemini API 키를 붙여넣으세요': 'Paste your Gemini API key',
     '중계 서버 주소 (운영자용)': 'Relay server address (for operator)',

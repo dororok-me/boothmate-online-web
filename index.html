@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.184 → v1.13.185) — 등록 직후 별칭 안내문이 이전 단어로 남던 문제 (교수님 보고):
+  - 플로팅 박스에서 [추가]로 등록한 직후: 입력값은 비워졌지만 펼쳐진 별칭칸과 동적
+    안내문('…부속품으로, …component로 번역됩니다')이 그대로 남아 다음 용어 입력 때
+    혼동. add() 성공 시 별칭칸 접기 + 버튼 active 해제 + updateSynHint()로 기본 설명 복귀.
   변경점 (v1.13.183 → v1.13.184) — 별칭 안내문 동적 표시 + '+별칭' 문구 (교수님 요청):
   - 별칭칸을 펼치면 하단 안내문이 '별칭에 단어를 등록하면 ○○로 번역됩니다'로 교체 —
     ○○은 반대쪽 입력칸의 실제 단어(원어 별칭→번역어, 번역어 별칭→원어. 비어 있으면
@@ -2426,7 +2430,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.184 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.185 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3099,7 +3103,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.184';
+const GX_DIAG_VER = '1.13.185';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -6110,6 +6114,12 @@ window.__syncPanelLayout = function() {
     }
     saveGlossary(cur);
     $('gInA').value = ''; $('gInB').value = ''; $('gInSynA').value = ''; $('gInSynB').value = '';
+    // 등록 직후 별칭칸 접고 안내문도 기본으로 — 이전 단어 문구가 남던 문제 (v1.13.185)
+    [['gSynBtnA', 'gInSynA'], ['gSynBtnB', 'gInSynB']].forEach(([b, i]) => {
+      $(i).style.display = 'none';
+      $(b).classList.remove('active');
+    });
+    updateSynHint();
     $('gInA').focus();
     render();
   }

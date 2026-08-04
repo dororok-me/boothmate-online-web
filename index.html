@@ -1,5 +1,14 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.178 → v1.13.179) — 용어 추가를 플로팅 박스로 (교수님 요청, 모바일 확대 방지):
+  - 패널의 인라인 입력 폼(용어1/2·별칭 4칸) 삭제 → '➕ 용어 추가' 버튼 하나만.
+    누르면 화면 중앙에 플로팅 박스(gAddModal, body 직속)가 뜸. 입력 글자 16px —
+    iOS 등 모바일에서 입력 포커스 시 화면이 자동 확대되던 문제 방지(16px 미만이 줌 트리거).
+  - 박스 안: '원어 (예: subject)' + [별칭] 버튼 / '번역어 (예: 피험자)' + [별칭] 버튼을
+    한 박스(g-am-group)로 그룹핑. [별칭] 누르면 해당 별칭 입력칸이 아래로 펼쳐짐(토글).
+  - 닫기: 닫기 버튼·바깥(어두운 배경) 클릭·Esc. 추가 후엔 박스 유지(연속 등록, 원어칸 포커스).
+  - Enter: 원어→번역어→(펼쳐진 별칭칸 순서대로)→추가. 유사어 드롭다운(g-sug)·입력칸 색·
+    entitlement 잠금(gAddOpenBtn 추가)·영어 번역 모두 새 구조로 이관.
   변경점 (v1.13.177 → v1.13.178) — 용어집 패널 개편: 탭 제거·용어+별칭 한 카드·도구줄 하단 (교수님 요청):
   - 상단 "용어 추가/클라우드 용어집" 탭 줄 삭제. 클라우드 용어집은 리스트 하단의 전체폭
     버튼(gTabBtnSets 유지 — 개수 표시 코드 호환)으로 진입, 세트 화면에 "← 용어 목록으로" 추가.
@@ -1614,21 +1623,20 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   /* 검색 + 정렬 한 줄 */
   #glossaryPanel .g-listbar { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
   #glossaryPanel .g-listbar .g-search { flex: 1 1 auto; width: auto; margin-bottom: 0; }
-  /* 용어1/2 입력 중 유사 용어 자동 표시 드롭다운 (v1.13.83) */
-  #glossaryPanel .g-add-terms { position: relative; }
-  #glossaryPanel .g-sug {
+  /* 원어/번역어 입력 중 유사 용어 자동 표시 드롭다운 — 추가 플로팅 박스 안 (v1.13.179) */
+  #gAddModal .g-sug {
     position: absolute; top: 100%; margin-top: 2px; z-index: 40; display: none;
     max-height: 180px; overflow-y: auto; box-sizing: border-box;
     background: var(--t-panel-bg, #101626); border: 1px solid var(--t-border, #2a3a55);
     border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
   }
-  #glossaryPanel .g-sug.show { display: block; }
-  #glossaryPanel .g-sug-item {
+  #gAddModal .g-sug.show { display: block; }
+  #gAddModal .g-sug-item {
     padding: 6px 10px; font-size: 12px; cursor: pointer;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  #glossaryPanel .g-sug-item:hover { background: rgba(79,70,229,0.18); }
-  #glossaryPanel .g-sug-hint {
+  #gAddModal .g-sug-item:hover { background: rgba(79,70,229,0.18); }
+  #gAddModal .g-sug-hint {
     padding: 4px 10px; font-size: 10px; color: var(--t-muted, #7a8ba8);
     border-top: 1px solid var(--t-border, #2a3a55);
   }
@@ -1668,29 +1676,15 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   }
   #panelScrollHintBtn:hover { background: #4338CA; }
   @keyframes hintBounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
+  /* 용어 추가: 패널엔 열기 버튼만, 입력은 플로팅 박스(gAddModal)로 (v1.13.179) */
   #glossaryPanel .g-add { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
-  #glossaryPanel .g-add-terms, #glossaryPanel .g-add-foot { display: flex; gap: 8px; align-items: center; }
-  #glossaryPanel .g-add .g-arrow, #glossaryPanel .g-add button { flex: 0 0 auto; }
-  #glossaryPanel .g-add input {
-    padding: 7px 10px; border: 1px solid #2a3a55; border-radius: 6px;
-    color: #e2e8f0; font-size: 13px; flex: 1 1 0; min-width: 0; width: auto;
+  #glossaryPanel .g-addopen {
+    width: 100%; box-sizing: border-box; padding: 9px 12px;
+    background: #4F46E5; color: #fff; font-size: 13px; font-weight: 700;
+    border: none; border-radius: 8px; cursor: pointer;
   }
-  /* 추가 폼: 용어+별칭이 모서리·테두리를 공유하는 한 카드 (v1.13.178) */
-  #glossaryPanel .g-add-cell { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
-  #glossaryPanel .g-add-cell input { flex: 0 0 auto; box-sizing: border-box; }
-  #glossaryPanel .g-add-cell input:first-child { border-radius: 6px 6px 0 0; }
-  #glossaryPanel .g-add-cell input:last-child { border-radius: 0 0 6px 6px; margin-top: -1px; }
-  /* 용어1 = 흰색 계열, 용어2 = 앰버(노랑) 계열로 칸 색을 확실히 구별 */
-  #glossaryPanel #gInA { background: #d9e6f8; border-color: #9dbde6; color: #14294d; }
-  #glossaryPanel #gInB { background: #f4e2b2; border-color: #dcc079; color: #4d3a12; }
-  #glossaryPanel #gInA::placeholder { color: #7a869b; }
-  #glossaryPanel #gInB::placeholder { color: #9a824d; }
-  /* 별칭 입력칸 — 각 용어 칸의 연한 톤(용어1=연파랑, 용어2=연앰버)으로 열 소속을 표시 */
-  #glossaryPanel #gInSynA { background: #e9f1fc; border-color: #c2d7f0; color: #1c2842; font-weight: 500; }
-  #glossaryPanel #gInSynB { background: #faf3df; border-color: #e6d5a8; color: #4d3a12; font-weight: 500; }
-  #glossaryPanel #gInSynA::placeholder { color: #8a95a8; font-weight: 400; }
-  #glossaryPanel #gInSynB::placeholder { color: #ab9668; font-weight: 400; }
-  /* 별칭 줄의 화살표 자리(정렬용, 보이지 않음) */
+  #glossaryPanel .g-addopen:hover { background: #4338CA; }
+  /* 유령 자리 채움(정렬용, 보이지 않음) */
   #glossaryPanel .g-ghost { visibility: hidden; }
   #glossaryPanel .g-search {
     width: 100%; box-sizing: border-box; padding: 8px 12px; margin-bottom: 8px;
@@ -1698,11 +1692,55 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     color: var(--t-text); font-size: 13px;
   }
   #glossaryPanel .g-search::placeholder { color: var(--t-muted); }
-  #glossaryPanel .g-add .g-arrow { color: #7dd3fc; font-size: 16px; }
-  #glossaryPanel .g-add button {
-    padding: 7px 16px; font-size: 13px; background: #378ADD; color: #fff;
-    border-radius: 6px; border: none; cursor: pointer;
+  /* ── 용어 추가 플로팅 박스 (v1.13.179) — body 직속, 화면 중앙에 뜸.
+     입력 글자 16px: iOS 등 모바일에서 포커스 시 화면 자동 확대(줌)되는 것을 방지 ── */
+  #gAddModal {
+    display: none; position: fixed; inset: 0; z-index: 300;
+    background: rgba(0,0,0,0.55); align-items: center; justify-content: center; padding: 16px;
   }
+  #gAddModal.show { display: flex; }
+  #gAddModal .g-am-box {
+    width: min(480px, 100%); box-sizing: border-box; padding: 14px 16px;
+    background: var(--t-panel-bg, #101626); border: 1px solid var(--t-border, #2a3a55);
+    border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    color: var(--t-text, #e2e8f0); font-size: 13px;
+  }
+  #gAddModal .g-am-ttl { font-size: 14px; font-weight: 700; color: var(--t-accent, #7dd3fc); margin-bottom: 10px; }
+  #gAddModal .g-add-terms { position: relative; }
+  /* 원어·번역어(+별칭)를 한 박스로 그룹핑 */
+  #gAddModal .g-am-group {
+    display: flex; flex-direction: column; gap: 8px; padding: 10px;
+    border: 1px solid var(--t-border, #2a3a55); border-radius: 10px; background: var(--t-area-bg, #0f1626);
+  }
+  #gAddModal .g-am-row { display: flex; gap: 8px; align-items: center; }
+  #gAddModal input {
+    flex: 1 1 0; min-width: 0; box-sizing: border-box;
+    padding: 9px 12px; border: 1px solid #2a3a55; border-radius: 8px; font-size: 16px;
+  }
+  #gAddModal .g-am-synbtn {
+    flex: 0 0 auto; padding: 9px 12px; font-size: 13px; font-weight: 600;
+    border: none; border-radius: 8px; background: #2a3a55; color: #cfe0ff; cursor: pointer;
+  }
+  #gAddModal .g-am-synbtn.active { background: #4F46E5; color: #fff; }
+  #gAddModal .g-am-hint { font-size: 11px; color: var(--t-muted, #7a8ba8); line-height: 1.4; margin-top: 8px; }
+  #gAddModal .g-am-foot { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+  #gAddModal .g-am-close {
+    padding: 8px 14px; font-size: 13px; background: #2a3a55; color: #cfe0ff;
+    border: none; border-radius: 8px; cursor: pointer;
+  }
+  #gAddModal #gAddBtn {
+    padding: 8px 18px; font-size: 13px; font-weight: 700; background: #378ADD; color: #fff;
+    border: none; border-radius: 8px; cursor: pointer;
+  }
+  /* 원어 = 파랑 계열, 번역어 = 앰버(노랑) 계열, 별칭칸은 각 연한 톤 */
+  #gAddModal #gInA { background: #d9e6f8; border-color: #9dbde6; color: #14294d; }
+  #gAddModal #gInB { background: #f4e2b2; border-color: #dcc079; color: #4d3a12; }
+  #gAddModal #gInA::placeholder { color: #7a869b; }
+  #gAddModal #gInB::placeholder { color: #9a824d; }
+  #gAddModal #gInSynA { background: #e9f1fc; border-color: #c2d7f0; color: #1c2842; font-weight: 500; }
+  #gAddModal #gInSynB { background: #faf3df; border-color: #e6d5a8; color: #4d3a12; font-weight: 500; }
+  #gAddModal #gInSynA::placeholder { color: #8a95a8; font-weight: 400; }
+  #gAddModal #gInSynB::placeholder { color: #ab9668; font-weight: 400; }
   /* 리스트만 스크롤: 고정 높이 대신 남는 공간을 채우고 넘치면 내부 스크롤 (v1.13.83) */
   #glossaryPanel .g-list { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   #glossaryPanel .g-item {
@@ -2370,7 +2408,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.178 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.179 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3043,7 +3081,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.178';
+const GX_DIAG_VER = '1.13.179';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -3188,7 +3226,7 @@ function applyEntitlementUI() {
   const canG = Ent.canUseGlossary();
   const canX = Ent.canExport();
   // 용어집 추가 (체험중·5h+ 가능, 1h 잠금)
-  ['gAddBtn', 'gInA', 'gInB', 'gInSynA', 'gInSynB', 'gSaveSetBtn'].forEach(id => {
+  ['gAddOpenBtn', 'gAddBtn', 'gInA', 'gInB', 'gInSynA', 'gInSynB', 'gSaveSetBtn'].forEach(id => {
     const el = document.getElementById(id); if (!el) return;
     el.disabled = !canG;
     el.style.opacity = canG ? '' : '0.5';
@@ -5869,23 +5907,9 @@ window.__syncPanelLayout = function() {
   panel.innerHTML =
     '<div class="g-head"><div class="g-ttl">📖 Glossary(양방향)</div></div>' +
     '<div id="gTabMain">' +
+    // 인라인 입력 폼 제거 → 버튼 하나. 입력은 플로팅 박스(gAddModal)에서 (v1.13.179)
     '<div class="g-add">' +
-      // 용어+별칭을 한 카드(위=용어, 아래=별칭)로 묶어 소속을 직관적으로 (v1.13.178)
-      '<div class="g-add-terms">' +
-        '<div class="g-add-cell">' +
-          '<input type="text" id="gInA" placeholder="용어 1 (예: subject)">' +
-          '<input type="text" id="gInSynA" placeholder="용어 1 별칭 — 쉼표 구분 (예: participant, patient)">' +
-        '</div>' +
-        '<span class="g-arrow">⇄</span>' +
-        '<div class="g-add-cell">' +
-          '<input type="text" id="gInB" placeholder="용어 2 (예: 피험자)">' +
-          '<input type="text" id="gInSynB" placeholder="용어 2 별칭 — 쉼표 구분 (예: 참가자, 환자)">' +
-        '</div>' +
-      '</div>' +
-      '<div class="g-add-foot">' +
-        '<div style="flex:1 1 0; font-size:11px; color:var(--t-muted); line-height:1.4;">별칭은 각 용어와 <b>같은 언어</b>의 변이형입니다. participant·patient가 들리면 <b>피험자</b>로, 참가자·환자가 들리면 <b>subject</b>로 번역·교체됩니다.</div>' +
-        '<button id="gAddBtn">추가</button>' +
-      '</div>' +
+      '<button type="button" id="gAddOpenBtn" class="g-addopen">➕ 용어 추가</button>' +
     '</div>' +
       // 검색 + 정렬(최신순 기본) 한 줄 — 상단 고정, 아래 리스트만 스크롤 (v1.13.83)
       '<div class="g-listbar">' +
@@ -5922,6 +5946,34 @@ window.__syncPanelLayout = function() {
         '<div id="gSetsList"></div>' +
       '</div>' +
     '</div>';
+
+  // ── 용어 추가 플로팅 박스 — body 직속(패널 overflow·레이아웃 영향 없음), 입력 16px로 모바일 확대 방지 (v1.13.179) ──
+  const addModal = document.createElement('div');
+  addModal.id = 'gAddModal';
+  addModal.innerHTML =
+    '<div class="g-am-box">' +
+      '<div class="g-am-ttl">✏️ 용어 추가</div>' +
+      '<div class="g-add-terms">' +   // 유사어 드롭다운(g-sug) 부착점 (position:relative)
+        '<div class="g-am-group">' +
+          '<div class="g-am-row">' +
+            '<input type="text" id="gInA" placeholder="원어 (예: subject)">' +
+            '<button type="button" id="gSynBtnA" class="g-am-synbtn">별칭</button>' +
+          '</div>' +
+          '<input type="text" id="gInSynA" placeholder="용어 1 별칭 — 쉼표 구분 (예: participant, patient)" style="display:none;">' +
+          '<div class="g-am-row">' +
+            '<input type="text" id="gInB" placeholder="번역어 (예: 피험자)">' +
+            '<button type="button" id="gSynBtnB" class="g-am-synbtn">별칭</button>' +
+          '</div>' +
+          '<input type="text" id="gInSynB" placeholder="용어 2 별칭 — 쉼표 구분 (예: 참가자, 환자)" style="display:none;">' +
+        '</div>' +
+      '</div>' +
+      '<div class="g-am-hint">별칭은 각 용어와 <b>같은 언어</b>의 변이형입니다. participant·patient가 들리면 <b>피험자</b>로, 참가자·환자가 들리면 <b>subject</b>로 번역·교체됩니다.</div>' +
+      '<div class="g-am-foot">' +
+        '<button type="button" id="gAddCloseBtn" class="g-am-close">닫기</button>' +
+        '<button id="gAddBtn">추가</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(addModal);
 
   // 용어집 패널 닫기 (설정 쪽에서도 호출 — 동시 열림 방지, v1.13.83)
   window.__closeGlossaryPanel = () => {
@@ -6079,10 +6131,47 @@ window.__syncPanelLayout = function() {
     render();
   }
   $('gAddBtn').onclick = add;
-  $('gInSynB').addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
+  // ── 용어 추가 플로팅 박스 열기/닫기 (v1.13.179) ──
+  function openAddModal() {
+    addModal.classList.add('show');
+    setTimeout(() => $('gInA').focus(), 50);
+  }
+  function closeAddModal() {
+    addModal.classList.remove('show');
+    hideSug();
+  }
+  $('gAddOpenBtn').onclick = openAddModal;
+  $('gAddCloseBtn').onclick = closeAddModal;
+  addModal.addEventListener('click', (e) => { if (e.target === addModal) closeAddModal(); });   // 바깥(어두운 배경) 클릭 = 닫기
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && addModal.classList.contains('show')) closeAddModal();
+  });
+  // '별칭' 버튼: 해당 별칭 입력칸 펼치기/접기
+  function bindSynToggle(btnId, inputId) {
+    $(btnId).onclick = () => {
+      const inp = $(inputId);
+      const show = inp.style.display === 'none';
+      inp.style.display = show ? '' : 'none';
+      $(btnId).classList.toggle('active', show);
+      if (show) inp.focus();
+    };
+  }
+  bindSynToggle('gSynBtnA', 'gInSynA');
+  bindSynToggle('gSynBtnB', 'gInSynB');
+  // Enter 이동: 원어 → 번역어 → (별칭칸이 펼쳐져 있으면 그쪽, 아니면 바로 추가)
   $('gInA').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('gInB').focus(); });
-  $('gInB').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('gInSynA').focus(); });
-  $('gInSynA').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('gInSynB').focus(); });
+  $('gInB').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    if ($('gInSynA').style.display !== 'none') $('gInSynA').focus();
+    else if ($('gInSynB').style.display !== 'none') $('gInSynB').focus();
+    else add();
+  });
+  $('gInSynA').addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    if ($('gInSynB').style.display !== 'none') $('gInSynB').focus();
+    else add();
+  });
+  $('gInSynB').addEventListener('keydown', (e) => { if (e.key === 'Enter') add(); });
   // 검색창 + 추가 입력칸 입력 시 목록을 비슷한 용어로 실시간 필터
   if ($('gSearch')) $('gSearch').addEventListener('input', render);
   $('gInA').addEventListener('input', render);

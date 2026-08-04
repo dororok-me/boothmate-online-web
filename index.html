@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.183 → v1.13.184) — 별칭 안내문 동적 표시 + '+별칭' 문구 (교수님 요청):
+  - 별칭칸을 펼치면 하단 안내문이 '별칭에 단어를 등록하면 ○○로 번역됩니다'로 교체 —
+    ○○은 반대쪽 입력칸의 실제 단어(원어 별칭→번역어, 번역어 별칭→원어. 비어 있으면
+    '원어/번역어'). 받침 따라 로/으로 자동, 입력 중에도 즉시 갱신(input 리스너).
+    양쪽 다 펼치면 '원어 별칭의 단어는 ○○로, 번역어 별칭의 단어는 ○○로' 한 줄.
+    모두 접으면 기존 설명문 복귀. 별칭 버튼 문구 '별칭' → '+별칭'(영어 +Alias).
   변경점 (v1.13.182 → v1.13.183) — 🗑 아이콘 → '전체 리셋' 문구로 (교수님 요청):
   - gResetBtn: 쓰레기통 아이콘이 의미 전달이 약해 '전체 리셋' 텍스트로 복귀(영어 사전 추가).
   변경점 (v1.13.181 → v1.13.182) — 내보내기 메뉴에 클라우드 통합 + 도구줄 정리 (교수님 요청):
@@ -2420,7 +2426,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.183 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.184 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3093,7 +3099,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.183';
+const GX_DIAG_VER = '1.13.184';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5970,17 +5976,17 @@ window.__syncPanelLayout = function() {
         '<div class="g-am-group">' +
           '<div class="g-am-row">' +
             '<input type="text" id="gInA" placeholder="원어 (예: subject)">' +
-            '<button type="button" id="gSynBtnA" class="g-am-synbtn">별칭</button>' +
+            '<button type="button" id="gSynBtnA" class="g-am-synbtn">+별칭</button>' +
           '</div>' +
           '<input type="text" id="gInSynA" placeholder="위 원어의 별칭 — 쉼표 구분 (예: participant, patient)" style="display:none;">' +
           '<div class="g-am-row">' +
             '<input type="text" id="gInB" placeholder="번역어 (예: 피험자)">' +
-            '<button type="button" id="gSynBtnB" class="g-am-synbtn">별칭</button>' +
+            '<button type="button" id="gSynBtnB" class="g-am-synbtn">+별칭</button>' +
           '</div>' +
           '<input type="text" id="gInSynB" placeholder="위 번역어의 별칭 — 쉼표 구분 (예: 참가자, 환자)" style="display:none;">' +
         '</div>' +
       '</div>' +
-      '<div class="g-am-hint">별칭은 각 용어와 <b>같은 언어</b>의 변이형입니다. participant·patient가 들리면 <b>피험자</b>로, 참가자·환자가 들리면 <b>subject</b>로 번역·교체됩니다.</div>' +
+      '<div class="g-am-hint" id="gAddHint">별칭은 각 용어와 <b>같은 언어</b>의 변이형입니다. participant·patient가 들리면 <b>피험자</b>로, 참가자·환자가 들리면 <b>subject</b>로 번역·교체됩니다.</div>' +
       '<div class="g-am-foot">' +
         '<button type="button" id="gAddCloseBtn" class="g-am-close">닫기</button>' +
         '<button id="gAddBtn">추가</button>' +
@@ -6125,6 +6131,7 @@ window.__syncPanelLayout = function() {
       $(i).style.display = show ? '' : 'none';
       $(b).classList.toggle('active', show);
     });
+    updateSynHint();
     $('gAddModalTtl').textContent = editIdx >= 0 ? '✏️ 용어 수정' : '✏️ 용어 추가';
     $('gAddBtn').textContent = editIdx >= 0 ? '저장' : '추가';
     addModal.classList.add('show');
@@ -6142,18 +6149,48 @@ window.__syncPanelLayout = function() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && addModal.classList.contains('show')) closeAddModal();
   });
-  // '별칭' 버튼: 해당 별칭 입력칸 펼치기/접기
+  // '+별칭' 버튼: 해당 별칭 입력칸 펼치기/접기
   function bindSynToggle(btnId, inputId) {
     $(btnId).onclick = () => {
       const inp = $(inputId);
       const show = inp.style.display === 'none';
       inp.style.display = show ? '' : 'none';
       $(btnId).classList.toggle('active', show);
+      updateSynHint();
       if (show) inp.focus();
     };
   }
   bindSynToggle('gSynBtnA', 'gInSynA');
   bindSynToggle('gSynBtnB', 'gInSynB');
+  // 별칭칸이 열려 있으면 안내문을 '별칭에 단어를 등록하면 ○○로 번역됩니다'로 동적 교체 (v1.13.184)
+  const gHintEl = $('gAddHint');
+  const gHintDefault = gHintEl.innerHTML;
+  function koRo(w) {   // 마지막 글자 받침에 따라 '로/으로' (ㄹ 받침·받침 없음·비한글 = 로)
+    const ch = w.charCodeAt(w.length - 1);
+    if (ch >= 0xAC00 && ch <= 0xD7A3) {
+      const jong = (ch - 0xAC00) % 28;
+      if (jong !== 0 && jong !== 8) return '으로';
+    }
+    return '로';
+  }
+  function updateSynHint() {
+    const aOn = $('gInSynA').style.display !== 'none';
+    const bOn = $('gInSynB').style.display !== 'none';
+    if (!aOn && !bOn) { gHintEl.innerHTML = gHintDefault; return; }
+    const a = $('gInA').value.trim() || '원어';
+    const b = $('gInB').value.trim() || '번역어';
+    if (aOn && bOn) {
+      gHintEl.innerHTML = '원어 별칭의 단어는 <b>' + escapeHtml(b) + '</b>' + koRo(b) +
+        ', 번역어 별칭의 단어는 <b>' + escapeHtml(a) + '</b>' + koRo(a) + ' 번역됩니다.';
+    } else if (aOn) {
+      gHintEl.innerHTML = '별칭에 단어를 등록하면 <b>' + escapeHtml(b) + '</b>' + koRo(b) + ' 번역됩니다.';
+    } else {
+      gHintEl.innerHTML = '별칭에 단어를 등록하면 <b>' + escapeHtml(a) + '</b>' + koRo(a) + ' 번역됩니다.';
+    }
+  }
+  // 원어/번역어를 고치면 열려 있는 안내문의 ○○도 즉시 갱신
+  $('gInA').addEventListener('input', updateSynHint);
+  $('gInB').addEventListener('input', updateSynHint);
   // Enter 이동: 원어 → 번역어 → (별칭칸이 펼쳐져 있으면 그쪽, 아니면 바로 추가)
   $('gInA').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('gInB').focus(); });
   $('gInB').addEventListener('keydown', (e) => {

@@ -76,6 +76,7 @@
     '+ 용어 추가': '+ Add term',
     '✏️ 용어 수정': '✏️ Edit term',
     '별칭': 'Alias',
+    '+별칭': '+Alias',
     '원어 (예: subject)': 'Source term (e.g. subject)',
     '번역어 (예: 피험자)': 'Target term (e.g. 피험자)',
     '👤 계정': '👤 Account',

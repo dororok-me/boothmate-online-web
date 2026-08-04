@@ -44,6 +44,7 @@
     '추가': 'Add',
     '불러오기': 'Import',
     '전체 삭제': 'Delete all',
+    '전체 리셋': 'Reset all',
     '내보내기': 'Export',
     '자막 내보내기': 'Export subtitles',
     '자막 리셋하기': 'Reset subtitles',

@@ -1,5 +1,8 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.186 → v1.13.187) — 별칭 기본 안내문 예시 문장 삭제 (교수님 요청):
+  - gAddHint 기본 문구에서 'participant·patient가 들리면 피험자로…' 예시 제거 →
+    '별칭은 각 용어와 같은 언어의 변이형입니다.'만 남김(영어 사전 동일).
   변경점 (v1.13.185 → v1.13.186) — 입력칸 placeholder 예시 제거 (교수님 요청):
   - '원어 (예: subject)' → '원어', '번역어 (예: 피험자)' → '번역어',
     별칭칸 '위 원어의 별칭 — 쉼표 구분 (예: …)' → '위 원어의 별칭'(번역어쪽 동일).
@@ -2434,7 +2437,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.186 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.187 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3107,7 +3110,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.186';
+const GX_DIAG_VER = '1.13.187';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5994,7 +5997,7 @@ window.__syncPanelLayout = function() {
           '<input type="text" id="gInSynB" placeholder="위 번역어의 별칭" style="display:none;">' +
         '</div>' +
       '</div>' +
-      '<div class="g-am-hint" id="gAddHint">별칭은 각 용어와 <b>같은 언어</b>의 변이형입니다. participant·patient가 들리면 <b>피험자</b>로, 참가자·환자가 들리면 <b>subject</b>로 번역·교체됩니다.</div>' +
+      '<div class="g-am-hint" id="gAddHint">별칭은 각 용어와 <b>같은 언어</b>의 변이형입니다.</div>' +
       '<div class="g-am-foot">' +
         '<button type="button" id="gAddCloseBtn" class="g-am-close">닫기</button>' +
         '<button id="gAddBtn">추가</button>' +

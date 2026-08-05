@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.189 → v1.13.190) — 용어집 입력칸 자동 대문자화 끔 (교수님 요청):
+  - 모바일 키보드가 첫 글자를 자동으로 대문자로 바꿔 'subject'가 'Subject'로 등록되던 문제.
+  - #gInA/#gInB/#gInSynA/#gInSynB/#gSearch에 autocapitalize="none"(+autocorrect·자동완성·맞춤법 끔) 추가 →
+    shift로 직접 친 대문자만 남고, 그냥 치면 소문자 그대로 입력·저장된다.
   변경점 (v1.13.188 → v1.13.189) — 단방향 모드: 타겟 언어 화자 무시 강화 (교수님 보고: SBS 놀란 인터뷰,
   한국어 앵커 발언이 원문=영어/번역=한국어 전사로 뒤집혀 표시되고 이후 영어 발화 번역이 안 뜸):
   - 프롬프트: "입력은 무조건 원어"라는 단정이 원인 — 모델이 한국어 음성을 원문 전사부터 영어로 번역해
@@ -2450,7 +2454,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.189 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.190 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3123,7 +3127,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.189';
+const GX_DIAG_VER = '1.13.190';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -6017,7 +6021,7 @@ window.__syncPanelLayout = function() {
     '</div>' +
       // 검색 + 정렬(최신순 기본) 한 줄 — 상단 고정, 아래 리스트만 스크롤 (v1.13.83)
       '<div class="g-listbar">' +
-        '<input type="text" id="gSearch" class="g-search" placeholder="🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다">' +
+        '<input type="text" id="gSearch" class="g-search" placeholder="🔍 등록된 용어 검색 — 비슷한 단어가 표시됩니다" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">' +
         '<select id="gSortSel" class="g-sel" title="용어 정렬 순서">' +
           '<option value="recent">최신순</option>' +
           '<option value="abc">ABC순</option>' +
@@ -6053,6 +6057,8 @@ window.__syncPanelLayout = function() {
     '</div>';
 
   // ── 용어 추가 플로팅 박스 — body 직속(패널 overflow·레이아웃 영향 없음), 입력 16px로 모바일 확대 방지 (v1.13.179) ──
+  // 입력칸은 autocapitalize="none" (v1.13.190): 모바일 키보드가 첫 글자를 멋대로 대문자로 바꾸지 않도록 —
+  // shift로 직접 친 대문자(AI, Oppenheimer 등)만 남고, 그냥 치면 소문자 그대로 저장된다.
   const addModal = document.createElement('div');
   addModal.id = 'gAddModal';
   addModal.innerHTML =
@@ -6061,15 +6067,15 @@ window.__syncPanelLayout = function() {
       '<div class="g-add-terms">' +   // 유사어 드롭다운(g-sug) 부착점 (position:relative)
         '<div class="g-am-group">' +
           '<div class="g-am-row">' +
-            '<input type="text" id="gInA" placeholder="원어">' +
+            '<input type="text" id="gInA" placeholder="원어" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">' +
             '<button type="button" id="gSynBtnA" class="g-am-synbtn">+별칭</button>' +
           '</div>' +
-          '<input type="text" id="gInSynA" placeholder="위 원어의 별칭" style="display:none;">' +
+          '<input type="text" id="gInSynA" placeholder="위 원어의 별칭" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" style="display:none;">' +
           '<div class="g-am-row">' +
-            '<input type="text" id="gInB" placeholder="번역어">' +
+            '<input type="text" id="gInB" placeholder="번역어" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">' +
             '<button type="button" id="gSynBtnB" class="g-am-synbtn">+별칭</button>' +
           '</div>' +
-          '<input type="text" id="gInSynB" placeholder="위 번역어의 별칭" style="display:none;">' +
+          '<input type="text" id="gInSynB" placeholder="위 번역어의 별칭" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" style="display:none;">' +
         '</div>' +
       '</div>' +
       '<div class="g-am-hint" id="gAddHint">별칭은 각 용어와 <b>같은 언어</b>의 변이형입니다.</div>' +

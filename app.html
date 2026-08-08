@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>부스메이트(Boothmate) 앱 소개</title>
+  <meta name="description" content="부스메이트(Boothmate) — 통역사의 두뇌를 학습한 실시간 동시통역 자막 앱. 앱 소개 및 APK 다운로드.">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      --ink: #0F172A; --body: #1e293b; --muted: #64748B;
+      --brand: #4F46E5; --card: #F1F5F9; --line: #E2E8F0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Malgun Gothic', sans-serif;
+      max-width: 800px; margin: 0 auto; padding: 48px 20px 60px;
+      color: var(--body); line-height: 1.75; font-size: 15px;
+    }
+    header { text-align: center; margin-bottom: 40px; }
+    header img.logo { width: 88px; height: 88px; border-radius: 20px; }
+    h1 { font-size: 28px; margin: 14px 0 4px; color: var(--ink); letter-spacing: -0.02em; }
+    .tagline { font-size: 17px; color: var(--muted); margin: 0; }
+    h2 { font-size: 18px; margin: 40px 0 10px; color: var(--ink); }
+    .card { background: var(--card); border-radius: 12px; padding: 18px 20px; }
+    ul.features { padding-left: 0; list-style: none; margin: 0; }
+    ul.features li { margin: 10px 0; padding-left: 30px; position: relative; }
+    ul.features li::before { content: "✓"; position: absolute; left: 6px; color: var(--brand); font-weight: 700; }
+    table.spec { width: 100%; border-collapse: collapse; font-size: 14px; }
+    table.spec th, table.spec td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    table.spec th { color: var(--muted); font-weight: 500; white-space: nowrap; width: 140px; }
+    .price-grid { display: flex; gap: 12px; flex-wrap: wrap; }
+    .price { flex: 1; min-width: 160px; background: var(--card); border-radius: 12px; padding: 16px 18px; text-align: center; }
+    .price .name { font-size: 13px; color: var(--muted); }
+    .price .amount { font-size: 20px; font-weight: 700; color: var(--ink); margin-top: 4px; }
+    .dl-btn {
+      display: block; text-align: center; background: var(--brand); color: #fff !important;
+      font-size: 17px; font-weight: 700; padding: 16px 20px; border-radius: 12px;
+      text-decoration: none; margin: 18px 0 10px;
+    }
+    .dl-note { font-size: 13px; color: var(--muted); text-align: center; margin: 0 0 18px; }
+    a { color: var(--brand); }
+    .biz { background: var(--card); border-radius: 10px; padding: 14px 18px; font-size: 13px; color: #334155; }
+    .biz b { color: var(--ink); }
+    footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line); color: #94A3B8; font-size: 12px; }
+    @media (prefers-color-scheme: dark) {
+      :root { --ink: #e2e8f0; --card: #1a2336; --line: #253048; }
+      body { background: #0f1626; color: #cbd5e1; }
+      .biz { color: #9fb0cc; }
+      a { color: #93C5FD; }
+      .dl-btn { color: #fff !important; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <img class="logo" src="logo.png" alt="Boothmate 로고">
+  <h1>부스메이트 (Boothmate)</h1>
+  <p class="tagline">통역사의 두뇌를 학습한 실시간 동시통역 자막 앱</p>
+</header>
+
+<h2>앱 소개</h2>
+<p>
+  부스메이트(Boothmate)는 국제회의 동시통역사가 직접 설계한 <b>실시간 통역 자막 서비스</b>입니다.
+  마이크로 입력된 음성을 실시간으로 인식하고, 통역사의 두뇌 프로세스를 학습한 AI 번역 엔진이
+  문장이 끝나기를 기다리지 않고 의미가 확정된 부분부터 즉시 번역 자막으로 보여줍니다.
+  전시회 부스 상담, 국제회의, 강연, 비즈니스 미팅 등 언어가 다른 상대와 대화해야 하는
+  모든 현장에서 사용할 수 있습니다.
+</p>
+<p>
+  본 앱(BoothmatePro)은 웹 서비스 <a href="https://online.boothmate.co.kr">online.boothmate.co.kr</a>와
+  동일한 기능을 제공하는 안드로이드용 앱입니다.
+</p>
+
+<h2>주요 기능</h2>
+<div class="card">
+  <ul class="features">
+    <li><b>실시간 동시통역 자막</b> — 문장이 끝나기 전에 의미 단위로 먼저 번역하는 동시통역 방식</li>
+    <li><b>양방향·단방향 통역 모드</b> — 두 언어 화자의 대화를 자동 감지해 각자의 언어로 번역</li>
+    <li><b>개입형 용어집</b> — 회사명·제품명·전문용어를 등록하면 번역에 실시간 반영</li>
+    <li><b>환율·단위 자동 환산</b> — 자막 속 금액과 단위를 상대 화폐·단위로 자동 표기</li>
+    <li><b>오버레이 자막</b> — 별도 창으로 자막만 띄워 발표·상담 화면과 함께 사용</li>
+    <li><b>다국어 지원</b> — 한국어·영어를 비롯한 다수 언어 조합 지원</li>
+  </ul>
+</div>
+
+<h2>이용 요금</h2>
+<div class="price-grid">
+  <div class="price">
+    <div class="name">무료 체험</div>
+    <div class="amount">30분 무료</div>
+  </div>
+  <div class="price">
+    <div class="name">5시간 이용권</div>
+    <div class="amount">₩29,000</div>
+  </div>
+  <div class="price">
+    <div class="name">10시간 이용권</div>
+    <div class="amount">₩55,000</div>
+  </div>
+</div>
+<p style="font-size:13px; color:var(--muted); margin-top:8px;">
+  회원 가입(구글 로그인) 후 무료 체험이 제공되며, 이용권은 앱/웹 내 결제로 구매할 수 있습니다.
+  환불 및 청약철회 기준은 <a href="terms.html">이용약관</a>을 따릅니다.
+</p>
+
+<h2>APK 다운로드</h2>
+<a class="dl-btn" href="BoothmatePro.apk" download>BoothmatePro APK 다운로드 (v1.1.2)</a>
+<p class="dl-note">아래 버튼이 동작하지 않으면 이 주소를 직접 열어 주세요:<br>
+  <a href="https://online.boothmate.co.kr/BoothmatePro.apk">https://online.boothmate.co.kr/BoothmatePro.apk</a></p>
+
+<table class="spec">
+  <tr><th>앱 이름</th><td>BoothmatePro (부스메이트)</td></tr>
+  <tr><th>패키지명</th><td>kr.co.boothmate.online</td></tr>
+  <tr><th>버전</th><td>1.1.2 (versionCode 4)</td></tr>
+  <tr><th>파일 크기</th><td>약 4.3 MB</td></tr>
+  <tr><th>지원 기기</th><td>Android 7.0 (API 24) 이상</td></tr>
+  <tr><th>개발사</th><td>부스메이트 (dororok AI Lab)</td></tr>
+</table>
+
+<h2>설치 방법</h2>
+<ol>
+  <li>안드로이드 기기에서 위 다운로드 버튼을 눌러 APK 파일을 내려받습니다.</li>
+  <li>다운로드한 <b>BoothmatePro.apk</b> 파일을 엽니다.</li>
+  <li>"출처를 알 수 없는 앱 설치" 허용을 묻는 경우, 브라우저(크롬 등)에 설치 권한을 허용해 주세요.</li>
+  <li>설치 완료 후 앱을 실행하고 구글 계정으로 로그인하면 바로 사용할 수 있습니다.</li>
+</ol>
+
+<h2>고객센터</h2>
+<div class="biz">
+  <b>부스메이트(Boothmate)</b><br>
+  대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고번호: 2026-부산해운대-0752<br>
+  주소: 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스)<br>
+  전화: 051-703-6006 · 이메일: <a href="mailto:dororok@gmail.com">dororok@gmail.com</a><br>
+  <a href="terms.html">이용약관</a> · <a href="privacy.html">개인정보처리방침</a> · <a href="https://online.boothmate.co.kr">웹 버전 바로가기</a>
+</div>
+
+<footer>
+  © 2026 Boothmate · dororok AI Lab. All rights reserved.
+</footer>
+
+</body>
+</html>

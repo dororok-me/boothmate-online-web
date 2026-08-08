@@ -1,5 +1,16 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.190 → v1.13.191) — 토스페이먼츠 카드사 심사 대비: 웹 결제창·심사용 계정·유효기간 표기:
+  - 웹 결제창: bmBuy가 Play 결제 불가 환경(웹 브라우저)이면 토스페이먼츠 결제창(bmTossPay)으로 분기.
+    SDK v2(standard)를 클릭 시 lazy 로드, 문서용 테스트 클라이언트 키 사용(실제 청구 없음 — 가이드상
+    테스트 결제창도 심사 가능). 정식 오픈 전 라이브 키 교체 + 중계서버 승인(/toss/confirm) 연동 필요.
+    돌아온 ?tossPay=success/fail은 안내 알림만(승인 API 연동 전 임시).
+  - 사용권 구매 그룹(#grpBuy)을 웹에도 표시(기존 갤럭시 전용). iOS 앱(bm-app)에서는 계속 숨김(IAP 정책).
+  - 심사용 테스트 계정: 로그인 게이트에 '심사용 테스트 계정 로그인' 링크 → ID/PW 폼(tossreview /
+    boothmate2026!). 카드사 심사는 소셜 로그인 불가 규정이라 필요. toss-review@boothmate.online으로
+    completeLogin — ALLOWED_EMAILS에 등록(총 69명). 무료 체험과 동일 권한.
+  - 이용권 유효기간(구매일로부터 12개월) 문구를 구매 그룹·app.html 요금 안내에 명시
+    (토스 정책: 서비스 제공기간 12개월 초과 시 입점 불가 + 상품 페이지 내 기재 의무).
   변경점 (v1.13.189 → v1.13.190) — 용어집 입력칸 자동 대문자화 끔 (교수님 요청):
   - 모바일 키보드가 첫 글자를 자동으로 대문자로 바꿔 'subject'가 'Subject'로 등록되던 문제.
   - #gInA/#gInB/#gInSynA/#gInSynB/#gSearch에 autocapitalize="none"(+autocorrect·자동완성·맞춤법 끔) 추가 →
@@ -1475,8 +1486,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
 /* .icon-btn의 color:var(--t-muted)!important를 이겨야 하므로 여기도 !important */
 .bm-galaxy #gxBuyBtn{display:inline-flex; align-items:center; justify-content:center; color:#E0B968 !important;}
 .bm-galaxy #gxBuyBtn:hover{color:#EBC98A !important;}
-#grpBuy{display:none;}
-.bm-galaxy #grpBuy{display:block;}
+/* 사용권 구매: 웹·갤럭시 표시. iOS 앱(bm-app)만 숨김 — 애플 IAP 정책상 외부 결제 노출 금지 (v1.13.191) */
+#grpBuy{display:block;}
+.bm-app #grpBuy{display:none !important;}
 /* 설정 맨 아래 버전 표시 — 갤럭시 앱에서만(추적용). 웹은 푸터에 버전이 있으므로 숨김 (v1.13.118) */
 #gxVersion{display:none;}
 .bm-galaxy #gxVersion{display:block;}</style>
@@ -2251,6 +2263,15 @@ if (!document.documentElement.classList.contains('bm-app')) {
     <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="#FFFFFF" d="M14.9 4v8.6L9.1 4H4v16h5.1v-8.6L14.9 20H20V4h-5.1z"/></svg>
     네이버로 로그인
   </button>
+  <!-- 카드사·PG 심사용 테스트 계정 로그인 (ID/PW) — 심사 규정상 소셜 로그인 불가라 필요 (v1.13.191) -->
+  <div style="margin-top:14px;">
+    <a href="#" id="testLoginToggle" style="font-size:12px; color:#94A3B8;">심사용 테스트 계정 로그인</a>
+  </div>
+  <div id="testLoginForm" style="display:none; margin-top:10px; width:260px;">
+    <input id="testLoginId" type="text" placeholder="아이디" autocomplete="off" autocapitalize="none" style="width:100%; box-sizing:border-box; height:38px; padding:0 12px; border:1px solid #CBD5E1; border-radius:8px; font-size:14px; margin-bottom:6px;">
+    <input id="testLoginPw" type="password" placeholder="비밀번호" style="width:100%; box-sizing:border-box; height:38px; padding:0 12px; border:1px solid #CBD5E1; border-radius:8px; font-size:14px; margin-bottom:8px;">
+    <button id="testLoginBtn" type="button" style="width:100%; height:38px; background:#334155; color:#FFFFFF; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">로그인</button>
+  </div>
   <div id="authGateMsg" style="font-size:12px; color:#B45309; margin-top:16px; min-height:18px;"></div>
   <div id="inAppWarn" style="display:none; max-width:340px; margin-top:18px; padding:12px 14px; background:#FEF3C7; border:1px solid #F59E0B; border-radius:10px; font-size:13px; line-height:1.65; color:#92400E; text-align:center;">
     <b>카카오톡 등 인앱 브라우저에서는 구글 로그인이 되지 않습니다.</b><br>
@@ -2454,7 +2475,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.190 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.191 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3098,6 +3119,71 @@ const GX_SKUS = {
   time_5h:  { seconds: 5 * 3600,  grade: '5h',  labelKo: '5시간권',  labelEn: '5-hour pass',  price: '29000' },
   time_10h: { seconds: 10 * 3600, grade: '10h', labelKo: '10시간권', labelEn: '10-hour pass', price: '55000' }
 };
+
+/* ── 웹 결제: 토스페이먼츠 결제창 (v1.13.191) ──
+   갤럭시 앱(TWA)은 Google Play 결제, 웹 브라우저는 토스 결제창으로 분기(bmBuy 상단).
+   ⚠️ 지금은 카드사 심사용 문서 테스트 키 — 결제창은 정상으로 뜨지만 실제 청구는 없다.
+   정식 오픈 전에 ① 개발자센터 라이브 클라이언트 키로 교체 ② successUrl에서 중계서버가
+   시크릿 키로 승인 API(/v1/payments/confirm)를 호출해 시간 충전까지 잇는 연동이 필요. */
+const TOSS_CLIENT_KEY = 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+let bmTossSdkPromise = null;
+function bmLoadTossSdk() {
+  if (window.TossPayments) return Promise.resolve();
+  if (bmTossSdkPromise) return bmTossSdkPromise;
+  bmTossSdkPromise = new Promise(function (res, rej) {
+    const s = document.createElement('script');
+    s.src = 'https://js.tosspayments.com/v2/standard';
+    s.onload = res;
+    s.onerror = function () { bmTossSdkPromise = null; rej(new Error('토스 SDK 로드 실패')); };
+    document.head.appendChild(s);
+  });
+  return bmTossSdkPromise;
+}
+async function bmTossPay(sku) {
+  const item = GX_SKUS[sku];
+  if (!item) return;
+  const en = bmEN();
+  try {
+    await bmLoadTossSdk();
+    // customerKey: 이메일처럼 유추 가능한 값 금지(토스 규격) → 브라우저별 랜덤 키를 만들어 보관
+    let ck = '';
+    try { ck = localStorage.getItem('bm_toss_customer_key') || ''; } catch (e) {}
+    if (!ck) {
+      ck = 'bm-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      try { localStorage.setItem('bm_toss_customer_key', ck); } catch (e) {}
+    }
+    const payment = TossPayments(TOSS_CLIENT_KEY).payment({ customerKey: ck });
+    await payment.requestPayment({
+      method: 'CARD',   // 카드 및 간편결제
+      amount: { currency: 'KRW', value: Number(item.price) },
+      orderId: 'bm-' + sku + '-' + Date.now(),
+      orderName: '부스메이트 ' + item.labelKo,
+      successUrl: location.origin + location.pathname + '?tossPay=success',
+      failUrl: location.origin + location.pathname + '?tossPay=fail',
+      customerEmail: cloudEmail() || undefined,
+      card: { useEscrow: false, flowMode: 'DEFAULT', useCardPoint: false, useAppCardOnly: false }
+    });
+  } catch (e) {
+    const code = (e && e.code) || '';
+    if (code === 'PAY_PROCESS_CANCELED' || code === 'USER_CANCEL') return;   // 사용자가 결제창을 닫음
+    console.error('[구매] 토스 결제창 실패: ' + ((e && e.message) || e));
+    alert(en ? 'Could not open the payment window. Please try again.' : '결제창을 열지 못했습니다. 잠시 후 다시 시도해 주세요.');
+  }
+}
+// 결제창에서 돌아온 경우(?tossPay=success/fail) — 승인 API 연동 전 임시 안내 (v1.13.191)
+(function () {
+  try {
+    const q = new URLSearchParams(location.search);
+    const t = q.get('tossPay');
+    if (!t) return;
+    history.replaceState(null, '', location.pathname);
+    setTimeout(function () {
+      alert(t === 'success'
+        ? '결제 요청이 접수되었습니다. (현재 테스트 결제 단계 — 실제 청구 없음)\n정식 오픈 시 결제 승인과 시간 충전이 자동으로 처리됩니다.'
+        : '결제가 취소되었거나 실패했습니다.');
+    }, 300);
+  } catch (e) {}
+})();
 /* Play 결제 모듈 사전 연결 (v1.13.142).
    PaymentRequest.show()는 클릭 직후(user activation)에만 호출할 수 있는데,
    클릭 시점에 getDigitalGoodsService()를 await하면 콜드 스타트가 느린 기기에서
@@ -3127,7 +3213,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.190';
+const GX_DIAG_VER = '1.13.191';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -3194,7 +3280,7 @@ async function bmBuy(sku) {
   if (!item) return;
   const en = bmEN();
   if (!window.PaymentRequest || !('getDigitalGoodsService' in window)) {
-    alert(en ? 'Purchases are available only in the Play Store app.' : '구매는 Play 스토어에서 설치한 앱에서만 가능합니다.');
+    bmTossPay(sku);   // 웹 브라우저 — 토스페이먼츠 결제창으로 분기 (v1.13.191)
     return;
   }
   const t0 = Date.now();
@@ -5563,7 +5649,7 @@ window.__syncPanelLayout = function() {
         '<button id="buy5hBtn" onclick="bmBuy(\'time_5h\')" style="flex:1; min-width:130px; background:#4f46e5; color:#fff; font-weight:700; padding:10px 12px; border-radius:8px;">5시간권 ₩29,000</button>' +
         '<button id="buy10hBtn" onclick="bmBuy(\'time_10h\')" style="flex:1; min-width:130px; background:#4f46e5; color:#fff; font-weight:700; padding:10px 12px; border-radius:8px;">10시간권 ₩55,000</button>' +
       '</div>' +
-      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">Google Play로 결제되며, 구매 즉시 남은 시간에 더해집니다.</div>' +
+      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">갤럭시 앱은 Google Play, 웹은 토스페이먼츠 결제창으로 결제됩니다. 구매 즉시 남은 시간에 더해지며, 이용권은 구매일로부터 12개월 이내 사용할 수 있습니다.</div>' +
     '</div>' +
     // 🧾 사용 기록 — 기기별 통역 사용·구매 내역 (웹·갤럭시 공통, 서버 user_usage) (v1.13.123)
     '<div class="grp" id="grpUsage"><div class="grp-ttl">🧾 사용 기록</div>' +
@@ -6721,7 +6807,7 @@ window.__syncPanelLayout = function() {
   // ⚠️ 출시 전까지는 운영자(dororok)만 로그인 가능하게 잠가둠.
   //    → 나만 중계서버에 도달 가능 → 내 Gemini 비용 안전.
   // 출시할 때 이 배열을 비우면([]) 누구나 통과, 또는 일부만 받으려면 이메일 추가.
-  const ALLOWED_EMAILS = ['dororok@gmail.com', 'boothmatepro.review@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com', 'alicecha0114@gmail.com', 'heira.jung@gmail.com', 'topclasstrancc@gmail.com', 'itswonsun@gmail.com', 'janeyu0114@gmail.com', 'interpreterceci@gmail.com', 'min.interpreter@gmail.com', 'skch159@gmail.com', 'luckyeunji@gmail.com', 'myfate0429@gmail.com', 'sandra.jy.lim@gmail.com', 'luvange@gmail.com', 'jigojisn@gmail.com', 'sarahkim005@gmail.com', 'strangermisa10@gmail.com', 'twoamari@gmail.com', 'chloekim2014@gmail.com', 'jkang0604@gmail.com', 'syyou128@gmail.com', 'yujinsart@gmail.com', 'jessyessy.p@gmail.com', 'rcho0702@gmail.com', 'makingin@gmail.com', '91skwon@gmail.com', 'yoonsun125p@gmail.com', 'cktngus2339@gmail.com', 'sj.serena.im@gmail.com', 'gayeonkim0630@gmail.com', 'euijinjunesim@gmail.com', 'jinnyjeuu@gmail.com', 'moony8318@gmail.com', 'kimsuji0524@gmail.com', 'jaytheidealist@gmail.com', 'stellaseol0129@gmail.com', 'happylee.ssg@gmail.com', 'ty6891@gmail.com', 'beautyna88@gmail.com', 'shawnbae0099@gmail.com', 'kimyiyun1004@gmail.com', 'sorim126@gmail.com', 'hahaworld0216@gmail.com', 'choibk297@gmail.com', 'hyohyunc@gmail.com', 'hgold93@gmail.com', 'sumanlee3406@gmail.com', 'jongyeonkim3406@gmail.com', 'luzsohee@gmail.com', 'jinsil.choi1991@gmail.com', 'all4him@hanmail.net', 'dongyimon@gmail.com', 'herbalife2215@gmail.com', 'sangsook.ko@gmail.com', 'dkfmagu1622@gmail.com', 'yoojin.choi90@gmail.com', 'skymakingin@naver.com', 'ansgoems7@gmail.com', 'msmsufs23@gmail.com', 'yeonubfc@gmail.com', 'ghyos0930@gmail.com'];
+  const ALLOWED_EMAILS = ['dororok@gmail.com', 'boothmatepro.review@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'chaeswb@naver.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com', 'alicecha0114@gmail.com', 'heira.jung@gmail.com', 'topclasstrancc@gmail.com', 'itswonsun@gmail.com', 'janeyu0114@gmail.com', 'interpreterceci@gmail.com', 'min.interpreter@gmail.com', 'skch159@gmail.com', 'luckyeunji@gmail.com', 'myfate0429@gmail.com', 'sandra.jy.lim@gmail.com', 'luvange@gmail.com', 'jigojisn@gmail.com', 'sarahkim005@gmail.com', 'strangermisa10@gmail.com', 'twoamari@gmail.com', 'chloekim2014@gmail.com', 'jkang0604@gmail.com', 'syyou128@gmail.com', 'yujinsart@gmail.com', 'jessyessy.p@gmail.com', 'rcho0702@gmail.com', 'makingin@gmail.com', '91skwon@gmail.com', 'yoonsun125p@gmail.com', 'cktngus2339@gmail.com', 'sj.serena.im@gmail.com', 'gayeonkim0630@gmail.com', 'euijinjunesim@gmail.com', 'jinnyjeuu@gmail.com', 'moony8318@gmail.com', 'kimsuji0524@gmail.com', 'jaytheidealist@gmail.com', 'stellaseol0129@gmail.com', 'happylee.ssg@gmail.com', 'ty6891@gmail.com', 'beautyna88@gmail.com', 'shawnbae0099@gmail.com', 'kimyiyun1004@gmail.com', 'sorim126@gmail.com', 'hahaworld0216@gmail.com', 'choibk297@gmail.com', 'hyohyunc@gmail.com', 'hgold93@gmail.com', 'sumanlee3406@gmail.com', 'jongyeonkim3406@gmail.com', 'luzsohee@gmail.com', 'jinsil.choi1991@gmail.com', 'all4him@hanmail.net', 'dongyimon@gmail.com', 'herbalife2215@gmail.com', 'sangsook.ko@gmail.com', 'dkfmagu1622@gmail.com', 'yoojin.choi90@gmail.com', 'skymakingin@naver.com', 'ansgoems7@gmail.com', 'msmsufs23@gmail.com', 'yeonubfc@gmail.com', 'ghyos0930@gmail.com', 'toss-review@boothmate.online'];
 
   const gate = document.getElementById('authGate');
   const bar = document.getElementById('authBar');   // v1.6.1: 설정 패널로 이동 → null일 수 있음(가드 처리)
@@ -6836,6 +6922,32 @@ window.__syncPanelLayout = function() {
     } catch(e){}
     return false;
   }
+
+  // ── 심사용 테스트 계정 (ID/PW) — 토스페이먼츠·카드사 심사역 전용 (v1.13.191) ──
+  // 카드사 심사는 소셜 로그인 테스트 계정을 인정하지 않아 ID/PW 방식이 필요.
+  // 소스에 노출되지만 무료 체험과 동일 권한만 가지므로 위험 없음. 심사 종료 후 제거 가능.
+  const TEST_LOGIN_ID = 'tossreview';
+  const TEST_LOGIN_PW = 'boothmate2026!';
+  const TEST_LOGIN_EMAIL = 'toss-review@boothmate.online';
+  const tlToggle = document.getElementById('testLoginToggle');
+  const tlForm = document.getElementById('testLoginForm');
+  if (tlToggle && tlForm) tlToggle.onclick = function(){
+    tlForm.style.display = tlForm.style.display === 'none' ? 'block' : 'none';
+    return false;
+  };
+  function tlSubmit(){
+    const id = (document.getElementById('testLoginId').value || '').trim().toLowerCase();
+    const pw = document.getElementById('testLoginPw').value || '';
+    if ((id === TEST_LOGIN_ID || id === TEST_LOGIN_EMAIL) && pw === TEST_LOGIN_PW){
+      completeLogin({ email: TEST_LOGIN_EMAIL, name: '심사용 테스트 계정', provider: 'test' });
+    } else {
+      showGate('아이디 또는 비밀번호가 올바르지 않습니다.');
+    }
+  }
+  const tlBtn = document.getElementById('testLoginBtn');
+  if (tlBtn) tlBtn.onclick = tlSubmit;
+  const tlPw = document.getElementById('testLoginPw');
+  if (tlPw) tlPw.onkeydown = function(e){ if (e.key === 'Enter') tlSubmit(); };
 
   // ── 카카오 로그인 (REST 방식, SDK 없음) ──
   // 버튼 클릭 → kauth 인가 페이지로 리다이렉트 (state는 CSRF 방지용, sessionStorage에 보관)

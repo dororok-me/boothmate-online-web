@@ -1,5 +1,16 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.191 → v1.13.192) — 원문 자막 사라짐·섞임 수정 + 원문·번역 문장 1:1 짝짓기 (사용자 리뷰):
+  - 리뷰: "중간중간 원문이 화면에서 사라진다", "원문이 가끔 섞인다", "영어 문장 끊기와 번역이
+    안 맞아 대조하며 읽기 불편하다".
+  - 사라짐 원인: 번역 문장이 완성돼 묶음을 닫을 때 원문에 마침표가 없으면 보이던 원문 줄을
+    remove()하고 버퍼에만 이월(v1.13.92) → 다음 원문 조각이 올 때까지 화면에서 소실.
+    수정: 묶음을 닫은 직후 이월 원문을 새 묶음에 같은 프레임에 즉시 다시 그림 — 항상 화면에 유지.
+  - 섞임·불일치 원인: 첫 번역 문장이 원문 완성 문장을 전부 가져가(join) 뒤 번역 문장들은 원문
+    없이 남고, 이월 원문이 다음 발화 원문과 한 줄에 붙었음.
+    수정: 원문 완성 문장을 큐로 만들어 번역 문장과 1:1 배분 — 번역이 진행 중(rest 있음)이면
+    1문장씩 짝짓고 남는 원문은 다음 번역 문장 몫으로 보류, 이 청크로 번역이 끝나면 균등 배분해 소진.
+  - 원문만 이월된 묶음(srcLine 없던 케이스)도 완성 문장이 있으면 번역과 짝지어 표시.
   변경점 (v1.13.190 → v1.13.191) — 토스페이먼츠 카드사 심사 대비: 웹 결제창·심사용 계정·유효기간 표기:
   - 웹 결제창: bmBuy가 Play 결제 불가 환경(웹 브라우저)이면 토스페이먼츠 결제창(bmTossPay)으로 분기.
     SDK v2(standard)를 클릭 시 lazy 로드, 문서용 테스트 클라이언트 키 사용(실제 청구 없음 — 가이드상
@@ -2475,7 +2486,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.191 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.192 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3213,7 +3224,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.191';
+const GX_DIAG_VER = '1.13.192';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -4755,7 +4766,14 @@ function appendTrans(t) {
   }
   const shown = shownTrans(transBuf);
   const { done, rest } = splitToSentences(shown);
-  for (const sent of done) {
+  // 원문 완성 문장을 큐로 만들어 번역 문장과 1:1 배분 (v1.13.192): 기존엔 첫 번역 문장이
+  // 원문 완성 문장을 전부 가져가 뒤 번역 문장들이 원문 없이 남고, 이월 원문이 다음 발화와
+  // 한 줄에 붙어 "원문이 섞이고 번역과 짝이 안 맞는" 문제가 있었음.
+  const sAll = srcBuf.trim() ? splitToSentences(srcBuf) : { done: [], rest: '' };
+  const srcQueue = sAll.done.slice();
+  const restPending = !!rest.trim();   // 번역이 아직 진행 중 → 원문도 문장 1개씩만 짝지음
+  for (let di = 0; di < done.length; di++) {
+    const sent = done[di];
     const p = getCurrentPair();
     if (!p.transLine) {
       p.transLine = document.createElement('div');
@@ -4767,25 +4785,47 @@ function appendTrans(t) {
     p.transLine.innerHTML = tokenize(sent);
     // 원문은 마침표(·?·!) 기준으로만 확정 (v1.13.92): 완성 문장은 이 묶음에 담고,
     // 미완성 나머지("이해가" 등)는 버퍼에 남겨 다음 묶음으로 이월 → 줄 바꿈이 문장 단위로 일정
-    if (srcBuf.trim()) {
-      const sres = splitToSentences(srcBuf);
-      if (p.srcLine && sres.done.length) {
-        p.srcLine.textContent = tidyNumbers(sres.done.join(' ')).trim();
-        p.srcLine.classList.remove('pending');
-        // rest는 trim돼 있어 뒤 공백 하나를 되살림 — 다음 조각과 안 붙게 ("해야"+"되는지" 방지)
-        srcBuf = sres.rest ? sres.rest + ' ' : '';
-      } else if (p.srcLine) {
-        // 완성 문장이 하나도 없으면 이 묶음의 원문 줄을 비우고 전부 다음 묶음으로
-        p.srcLine.remove();
-        p.srcLine = null;
+    if (srcQueue.length) {
+      const remaining = done.length - di;
+      // 번역 진행 중이면 1문장씩(남는 원문은 다음 번역 문장 몫), 이 청크로 번역이 끝나면 균등 배분해 소진
+      const take = restPending ? 1
+                 : (remaining === 1 ? srcQueue.length : Math.ceil(srcQueue.length / remaining));
+      const mySrc = srcQueue.splice(0, take).join(' ');
+      if (!p.srcLine) {
+        p.srcLine = document.createElement('div');
+        p.srcLine.className = 'srcline';
+        if (p.transLine) p.el.insertBefore(p.srcLine, p.transLine);
+        else p.el.appendChild(p.srcLine);
       }
-      // p.srcLine이 없으면(이월분만 있음) 버퍼 그대로 유지 → 다음 묶음에서 표시
+      p.srcLine.textContent = tidyNumbers(mySrc).trim();
+      p.srcLine.classList.remove('pending');
+    } else if (p.srcLine) {
+      // 완성 원문 문장이 없으면 이 묶음의 원문 줄은 다음 묶음으로 넘김
+      // (아래 이월분 즉시 표시가 같은 프레임에 새 묶음에 다시 그리므로 화면에서 사라지지 않음)
+      p.srcLine.remove();
+      p.srcLine = null;
     }
     curPair = null;         // 묶음 닫음 → 다음 문장은 새 묶음(원문·번역 함께 새로)
   }
   if (done.length) {
+    // 배분하고 남은 원문(완성 문장 + 미완성 나머지)을 버퍼로 되돌림.
+    // 뒤 공백 하나를 되살림 — 다음 조각과 안 붙게 ("해야"+"되는지" 방지)
+    srcBuf = srcQueue.concat(sAll.rest ? [sAll.rest] : []).join(' ');
+    if (srcBuf) srcBuf += ' ';
     transBuf = rest ? recoverRaw(rest) : "";
     turnLogged.clear();   // 문장 확정 → 다음 문장은 같은 용어도 매번 다시 기록 (인식마다 추적)
+  }
+  // 원문 이월분 즉시 표시 (v1.13.192): 이월분을 버퍼로만 옮기면 다음 원문 조각이 올 때까지
+  // 화면에서 원문이 사라졌다 나타남("원문이 갑자기 사라져요") → 새 묶음에 바로 그려 항상 보이게.
+  if (done.length && srcBuf.trim()) {
+    const p = getCurrentPair();
+    if (!p.srcLine) {
+      p.srcLine = document.createElement('div');
+      p.srcLine.className = 'srcline';
+      if (p.transLine) p.el.insertBefore(p.srcLine, p.transLine);
+      else p.el.appendChild(p.srcLine);
+    }
+    p.srcLine.textContent = tidyNumbers(srcBuf).trim();
   }
   // 진행 중 나머지 번역은 현재(새) 묶음의 임시 번역 줄로
   if (rest) {

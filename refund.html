@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>환불 정책 · Boothmate</title>
+<meta name="description" content="Boothmate 이용권(시간권)의 청약철회 및 환불 기준, 사용 시간 산정 방법, 환불 절차 안내">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+  :root{
+    --ink:#14161c;
+    --ink-soft:#4a5060;
+    --line:#e2e5ec;
+    --paper:#ffffff;
+    --tint:#f5f7fb;
+    --mark:#1f5fd4;
+    --warn:#b45309;
+    --warn-bg:#fff8ed;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Pretendard Variable",Pretendard,-apple-system,BlinkMacSystemFont,system-ui,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    font-size:16px;
+    line-height:1.75;
+    word-break:keep-all;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px 96px}
+
+  header.page{padding:64px 0 32px;border-bottom:1px solid var(--line)}
+  .eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--mark);font-weight:600;margin:0 0 12px}
+  h1{font-size:34px;line-height:1.25;margin:0 0 16px;letter-spacing:-.02em;font-weight:700}
+  .meta{font-size:14px;color:var(--ink-soft);margin:0}
+
+  .lead{font-size:17px;color:var(--ink-soft);margin:32px 0 0}
+
+  section{margin-top:44px}
+  h2{
+    font-size:19px;font-weight:700;letter-spacing:-.01em;margin:0 0 14px;
+    padding-bottom:10px;border-bottom:1px solid var(--line);
+  }
+  h3{font-size:16px;font-weight:700;margin:24px 0 8px}
+  p{margin:0 0 12px}
+  ul,ol{margin:0 0 12px;padding-left:20px}
+  li{margin-bottom:8px}
+  li::marker{color:var(--ink-soft)}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0 16px;font-size:15px}
+  th,td{border:1px solid var(--line);padding:12px 14px;text-align:left;vertical-align:top}
+  th{background:var(--tint);font-weight:600}
+  td.amount{font-weight:600;white-space:nowrap}
+  .sub{display:inline-block;margin-top:4px;font-size:13px;font-weight:400;color:var(--ink-soft)}
+
+  .note{
+    background:var(--tint);border-left:3px solid var(--mark);
+    padding:16px 18px;margin:16px 0;font-size:15px;color:var(--ink-soft);
+  }
+  .note strong{color:var(--ink)}
+
+  .fill{
+    background:var(--warn-bg);color:var(--warn);
+    border-bottom:1px dashed currentColor;
+    padding:0 3px;font-weight:600;
+  }
+
+  dl.biz{margin:0;font-size:15px}
+  dl.biz div{display:flex;gap:16px;padding:10px 0;border-bottom:1px solid var(--line)}
+  dl.biz dt{flex:0 0 130px;color:var(--ink-soft);margin:0}
+  dl.biz dd{margin:0}
+
+  footer.page{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);font-size:14px;color:var(--ink-soft)}
+  a{color:var(--mark)}
+
+  @media (max-width:520px){
+    header.page{padding:44px 0 24px}
+    h1{font-size:27px}
+    dl.biz div{flex-direction:column;gap:2px}
+    th,td{padding:10px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page">
+    <p class="eyebrow">Boothmate</p>
+    <h1>환불 정책</h1>
+    <p class="meta">시행일 2026년 8월 8일 · 최종 개정 2026년 8월 8일</p>
+  </header>
+
+  <p class="lead">
+    이 정책은 부스메이트(Boothmate)가 제공하는 실시간 통역 자막 서비스 이용권의
+    청약철회 및 환불 기준을 안내합니다.
+    「전자상거래 등에서의 소비자보호에 관한 법률」과 「콘텐츠이용자보호지침」을 따릅니다.
+  </p>
+
+  <section>
+    <h2>1. 이용권 상품과 유효기간</h2>
+    <p>
+      Boothmate는 구매한 시간만큼 통역 자막 기능을 사용하는 <strong>시간제 이용권</strong>으로 판매합니다.
+      월 자동결제나 정기구독이 아니며, 구매한 시간을 모두 사용하면 결제가 자동으로 이루어지지 않습니다.
+    </p>
+    <table>
+      <tr>
+        <th>이용권</th>
+        <th>제공 시간</th>
+        <th>판매 가격</th>
+        <th>유효기간</th>
+      </tr>
+      <tr>
+        <td>5시간권</td>
+        <td>5시간 (300분)</td>
+        <td>29,000원 (부가세 포함)</td>
+        <td>구매일로부터 12개월</td>
+      </tr>
+      <tr>
+        <td>10시간권</td>
+        <td>10시간 (600분)</td>
+        <td>55,000원 (부가세 포함)</td>
+        <td>구매일로부터 12개월</td>
+      </tr>
+    </table>
+    <p>
+      유효기간이 지나면 남은 시간은 소멸하며, 소멸한 시간은 환불 대상이 아닙니다.
+      유효기간 만료 30일 전과 7일 전에 이메일로 안내해 드립니다.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. 사용 시간 산정 기준</h2>
+    <ul>
+      <li>사용 시간은 통역 세션을 <strong>시작한 시점부터 종료한 시점까지</strong> 실제로 서비스가 작동한 시간을 분 단위로 합산합니다.</li>
+      <li>회사의 서버 장애나 오류로 서비스가 정상 작동하지 않은 시간은 사용 시간에서 제외하고 이용권에 복원합니다.</li>
+      <li>이용자는 언제든지 서비스 화면에서 남은 시간과 사용 내역을 확인할 수 있습니다.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. 환불 기준</h2>
+    <p>
+      환불액은 <strong>구매한 총 시간 대비 사용한 시간의 비율</strong>에 따라 아래와 같이 정합니다.
+      구간별 금액에는 결제 대행 수수료와 위약금이 반영되어 있습니다.
+    </p>
+
+    <table>
+      <tr>
+        <th>사용 비율</th>
+        <th>5시간권 기준</th>
+        <th>10시간권 기준</th>
+        <th>환불액</th>
+      </tr>
+      <tr>
+        <td>미사용<br>(결제일로부터 7일 이내)</td>
+        <td>0분</td>
+        <td>0분</td>
+        <td class="amount">결제 금액 전액<br><span class="sub">5시간권 29,000원<br>10시간권 55,000원</span></td>
+      </tr>
+      <tr>
+        <td>20% 미만 사용</td>
+        <td>1시간 미만</td>
+        <td>2시간 미만</td>
+        <td class="amount">결제 금액의 70%<br><span class="sub">5시간권 20,300원<br>10시간권 38,500원</span></td>
+      </tr>
+      <tr>
+        <td>20% 이상 50% 미만 사용</td>
+        <td>1시간 이상<br>2시간 30분 미만</td>
+        <td>2시간 이상<br>5시간 미만</td>
+        <td class="amount">결제 금액의 50%<br><span class="sub">5시간권 14,500원<br>10시간권 27,500원</span></td>
+      </tr>
+      <tr>
+        <td>50% 이상 사용</td>
+        <td>2시간 30분 이상</td>
+        <td>5시간 이상</td>
+        <td class="amount">환불 불가</td>
+      </tr>
+    </table>
+
+    <div class="note">
+      <strong>예시</strong> — 10시간권(55,000원)을 구매하고 1시간 30분(15%)을 사용한 뒤 환불을 요청하면,
+      결제 금액의 70%인 38,500원을 환불해 드립니다. 환불이 완료되면 남은 시간은 함께 소멸합니다.
+    </div>
+
+    <p>
+      결제일로부터 7일이 지났더라도 이용권을 한 번도 사용하지 않았다면,
+      유효기간 내에 한해 결제 금액의 90%(5시간권 26,100원, 10시간권 49,500원)를 환불해 드립니다.
+    </p>
+  </section>
+
+  <section>
+    <h2>4. 전액 환불하는 경우</h2>
+    <p>다음의 경우에는 사용 비율과 관계없이 사용하지 않은 시간에 해당하는 금액을 위약금 공제 없이 환불합니다.</p>
+    <ul>
+      <li>회사의 귀책으로 서비스를 연속 4시간 이상 또는 1개월 누적 24시간 이상 이용할 수 없었던 경우</li>
+      <li>표시·광고한 내용과 서비스 내용이 다르거나, 서비스에 하자가 있어 정상적으로 이용할 수 없는 경우</li>
+      <li>회사가 서비스를 종료하는 경우</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5. 환불이 제한되는 경우</h2>
+    <ul>
+      <li>유효기간이 지나 소멸한 시간</li>
+      <li>이벤트·프로모션으로 무상 지급되었거나 할인 코드로 추가 제공된 시간</li>
+      <li>이용약관 위반으로 이용이 제한된 계정에서 발생한 결제</li>
+      <li>이용자가 계정 정보를 타인과 공유해 사용한 시간</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>6. 앱스토어에서 구매한 경우</h2>
+    <p>
+      App Store 또는 Google Play의 인앱 결제로 구매한 상품은 각 스토어의 환불 정책과 절차를 따르며,
+      환불 처리 권한도 해당 스토어에 있습니다. 아래 문의처로 연락 주시면 신청 방법을 안내해 드립니다.
+      이 페이지의 기준은 Boothmate 웹사이트에서 직접 결제한 이용권에 적용됩니다.
+    </p>
+  </section>
+
+  <section>
+    <h2>7. 환불 절차와 소요 기간</h2>
+    <ol>
+      <li>아래 문의처로 환불을 요청합니다. 결제에 사용한 계정 이메일, 결제일, 사유를 함께 알려주세요.</li>
+      <li>접수일로부터 <strong>3영업일 이내</strong>에 사용 시간과 환불 금액을 확인해 회신합니다.</li>
+      <li>확인이 끝나면 <strong>3영업일 이내</strong>에 결제 수단으로 환불을 요청합니다.</li>
+    </ol>
+    <p>
+      신용카드 결제는 카드사 승인 취소로 처리되며, 카드사 사정에 따라 취소가 반영되기까지
+      영업일 기준 3~5일이 더 걸릴 수 있습니다. 계좌이체·가상계좌 결제는 이용자가 알려준 계좌로 입금합니다.
+    </p>
+  </section>
+
+  <section>
+    <h2>8. 문의처</h2>
+    <dl class="biz">
+      <div><dt>이메일</dt><dd><a href="mailto:dororok@gmail.com">dororok@gmail.com</a></dd></div>
+      <div><dt>전화</dt><dd>051-703-6006 (평일 10:00–17:00, 12:00–13:00 제외)</dd></div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>9. 사업자 정보</h2>
+    <dl class="biz">
+      <div><dt>상호명</dt><dd>부스메이트(Boothmate)</dd></div>
+      <div><dt>대표자명</dt><dd>이성득</dd></div>
+      <div><dt>사업자등록번호</dt><dd>804-04-00278</dd></div>
+      <div><dt>통신판매업 신고번호</dt><dd>2026-부산해운대-0752</dd></div>
+      <div><dt>사업장 주소</dt><dd>부산광역시 해운대구 마린시티2로 33, 104동 9층 901호, 902호 (우동, 해운대두산위브더제니스)</dd></div>
+      <div><dt>유선번호</dt><dd>051-703-6006</dd></div>
+    </dl>
+  </section>
+
+  <footer class="page">
+    이 환불 정책은 Boothmate <a href="https://online.boothmate.co.kr/terms.html">이용약관</a>의 일부를 구성합니다.
+    정책이 변경되는 경우 시행일 7일 전(이용자에게 불리한 변경은 30일 전)에 서비스 내 공지로 알려드립니다.
+  </footer>
+
+</div>
+</body>
+</html>

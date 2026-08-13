@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.201 → v1.13.202) — 저장된 자막 모바일 조작 (교수님 요청):
+  - 항목(제목 줄)을 누르면 첫 5줄 미리 보기가 열리고(기존 고정 토글), 열린 내용 창을 누르면 닫힘.
+    데스크톱에서 내용을 긁어 복사하는 클릭은 닫지 않음(텍스트 선택 중이면 무시).
+  - 안내문·영어 번역(app-i18n.js) 문구 갱신.
   변경점 (v1.13.200 → v1.13.201) — 마이크 스트림 이어받기 (교수님 보고 "권한 칩이 자주 뜬다"):
   - 크롬 권한 칩("마이크 액세스가 허용됨")은 페이지가 마이크를 '새로 잡을 때'마다 다시 뜨는
     브라우저 UI(위치 이동 불가). 기존엔 대기 미터↔통역이 시작·정지마다 마이크를 놓았다 다시 잡아
@@ -2549,7 +2553,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.201 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.202 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -5946,7 +5950,7 @@ window.__syncPanelLayout = function() {
         '<button id="sessListBtn" class="g-tool">저장된 자막</button>' +
       '</div>' +
       '<div id="sessList" style="margin-top:8px;"></div>' +
-      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">자막은 통역 중 30초마다·정지 시 자동 저장(최대 50개). 내보내기는 현재 화면 자막을 txt로, 전체 삭제는 저장된 자막을 모두 지웁니다. 목록에서 항목 위에 마우스를 올리면 첫 5줄이 미리 보이고(제목 줄을 누르면 고정), 전체 내용은 내보내기로 확인합니다.</div>' +
+      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">자막은 통역 중 30초마다·정지 시 자동 저장(최대 50개). 내보내기는 현재 화면 자막을 txt로, 전체 삭제는 저장된 자막을 모두 지웁니다. 항목 위에 마우스를 올리거나 제목 줄을 누르면 첫 5줄이 미리 보이고, 열린 내용 창을 누르면 닫힙니다. 전체 내용은 내보내기로 확인합니다.</div>' +
     '</div>' +
     // 갤럭시 앱 전용: 설정 맨 아래 버전 표시(추적용). 웹은 CSS로 숨김. 버전은 #appFooter에서 읽어 단일 출처. (v1.13.118)
     '<div id="gxVersion" style="text-align:center; color:var(--t-muted); font-size:10px; opacity:0.6; padding:10px 0 4px; letter-spacing:0.3px; line-height:1.6;"></div>';
@@ -6218,6 +6222,12 @@ window.__syncPanelLayout = function() {
       item.onmouseenter = function(){ hover = true; fillPv(); updPv(); };
       item.onmouseleave = function(){ hover = false; updPv(); };
       row.onclick = function(){ pinned = !pinned; fillPv(); updPv(); };
+      // 모바일 (v1.13.202, 교수님 요청): 항목을 누르면 5줄이 보이고, 열린 내용 창을 누르면 닫힘.
+      // 데스크톱에서 텍스트를 긁어 복사하는 클릭은 닫지 않음(선택 중이면 무시).
+      pv.onclick = function(){
+        if (window.getSelection && !window.getSelection().isCollapsed) return;
+        pinned = false; hover = false; updPv();
+      };
       row.appendChild(label); row.appendChild(dl);
       item.appendChild(row); item.appendChild(pv);
       sessListEl.appendChild(item);

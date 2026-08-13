@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.203 → v1.13.204) — 언어 태그를 자막 줄에서 헤더 배지로 이동 (교수님 요청):
+  - 자막 줄 앞 (K)/(E) 태그 제거(v1.13.198~199 되돌림) — setSrcLine은 텍스트만, setTransTag·CSS 삭제.
+  - Play 버튼 왼쪽에 설정된 언어쌍을 작게 표시(#langBadge): 양방향 자동 = K⇄E, 단방향 = K→E/E→K.
+    글자 = 영어명 첫 글자(중국어 계열은 C), 호버 시 전체 이름 툴팁.
+    클러스터 중앙 정렬을 흔들지 않게 Play 왼쪽 바깥 절대배치. 언어쌍·방향 변경 시 즉시 갱신.
   변경점 (v1.13.202 → v1.13.203) — 용어집 별칭 '속지(서랍)식' 표시 (교수님 선택 C안):
   - 리스트: 별칭 박스를 좌우 8px 안쪽으로 좁혀 용어 칩 아래로 접혀 들어간 모양(아래 모서리만 둥글게)
     → 별칭이 위 용어에 종속됨이 폭 차이로 바로 보임. 용어 칩은 z-index로 위에 유지.
@@ -1605,6 +1610,12 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   }
   /* 재생+일시정지 한 줄 묶음 — 갤럭시 세로 클러스터 안에서도 두 버튼은 가로로 (v1.13.130) */
   #playRow { display: inline-flex; align-items: center; gap: 8px; }
+  /* 언어쌍 배지 — Play 왼쪽 바깥에 절대배치(클러스터 중앙 정렬을 흔들지 않음), 작게 확인용 (v1.13.204) */
+  #langBadge {
+    position: absolute; right: 100%; margin-right: 8px; top: 50%; transform: translateY(-50%);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap;
+    color: var(--t-muted, #7a8ba8);
+  }
   /* 일시정지 버튼 — 통역 중에만 표시(.show). 일시정지 상태(.paused)면 초록 재개(▶)로 변신 */
   #pauseBtn {
     display: none; align-items: center; justify-content: center;
@@ -2002,11 +2013,6 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     line-height: 1.5; margin-bottom: var(--mc-src-gap);
     word-break: normal; overflow-wrap: normal;
     transition: opacity 0.4s;
-  }
-  /* 원문·번역 언어 태그 (K)/(E)/(J) — 굵고 작게, 확인용 (v1.13.198, 번역 줄 v1.13.199) */
-  .srcline[data-lang]::before, .transline[data-lang]::before {
-    content: '(' attr(data-lang) ') ';
-    font-weight: 800; font-size: 0.62em; opacity: 0.85; vertical-align: 1px;
   }
   .transline {
     font-size: var(--mc-trans-size); color: var(--mc-trans-color); font-weight: var(--mc-trans-weight);
@@ -2449,6 +2455,8 @@ if (!document.documentElement.classList.contains('bm-app')) {
   <div id="topLogo"><img src="logo.png" alt="Boothmate"><span class="logo-sub">online</span></div>
   <div id="headerActions">
     <div id="playCluster">
+      <!-- 언어쌍 배지: Play 왼쪽에 설정 언어·방향을 작게 표시 — K⇄E / K→E (v1.13.204) -->
+      <span id="langBadge" aria-label="설정된 언어쌍"></span>
       <!-- 재생+일시정지 한 줄(#playRow) — 갤럭시의 세로 배치(#playCluster column)에서도 두 버튼은 나란히 (v1.13.130) -->
       <div id="playRow">
         <button id="toggleBtn" title="시작 / 정지"><span id="toggleLabel">▶</span></button>
@@ -2569,7 +2577,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.203 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.204 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2729,28 +2737,27 @@ function detectLang(text, a, b) {
   return null;
 }
 
-/* 원문 언어 태그 (v1.13.198, 교수님 요청): 감지된 언어의 영어명 첫 글자 — (K)/(E)/(J)/(C)….
-   CSS ::before(data-lang)로 원문 줄 앞에만 굵고 작게 표시(번역 줄에는 안 붙임). 감지 실패 시 없음. */
-function srcLangTag(text) {
-  const pr = getPair();
-  const det = detectLang(text, pr.a, pr.b);
-  if (!det) return '';
-  if (langPrefix(det) === 'zh') return 'C';   // zh-TW(Traditional Chinese)도 C로 통일
-  return (langName(det).charAt(0) || '').toUpperCase();
-}
-/* 원문 줄 텍스트 설정 + 언어 태그 갱신 — srcLine.textContent 직접 대입 대신 이 함수 사용 */
+/* 원문 줄 텍스트 설정 — srcLine.textContent 직접 대입 대신 이 함수 사용(원문 줄 4곳 일원화).
+   v1.13.204: 줄 앞 (K)/(E) 태그는 제거(교수님 요청) — 언어 표시는 헤더 언어쌍 배지(#langBadge)로 이동. */
 function setSrcLine(p, text) {
   p.srcLine.textContent = text;
-  const tag = srcLangTag(text);
-  if (tag) p.srcLine.setAttribute('data-lang', tag);
-  else p.srcLine.removeAttribute('data-lang');
 }
-/* 번역 줄 언어 태그 (v1.13.199, 교수님 요청): 번역문에도 동일하게 표시.
-   innerHTML(tokenize) 설정 뒤 평문 텍스트로 감지해 data-lang만 갱신. */
-function setTransTag(el, text) {
-  const tag = srcLangTag(text);
-  if (tag) el.setAttribute('data-lang', tag);
-  else el.removeAttribute('data-lang');
+/* 언어 코드 → 한 글자 태그 (헤더 언어쌍 배지용): 영어명 첫 글자, 중국어 계열은 C 통일 */
+function langTagLetter(code) {
+  if (langPrefix(code) === 'zh') return 'C';
+  return (langName(code).charAt(0) || '').toUpperCase();
+}
+/* 헤더 Play 버튼 왼쪽의 언어쌍 배지 — 설정된 언어쌍·방향을 작게 표시 (v1.13.204, 교수님 요청).
+   양방향 자동 = K⇄E, 단방향 = K→E / E→K. 언어쌍·방향이 바뀔 때마다 갱신. */
+function updateLangBadge() {
+  const el = document.getElementById('langBadge'); if (!el) return;
+  const { a, b } = getPair();
+  const m = getDirMode();
+  const A = langTagLetter(a), B = langTagLetter(b);
+  if (m === 'ab') el.textContent = A + '→' + B;
+  else if (m === 'ba') el.textContent = B + '→' + A;
+  else el.textContent = A + '⇄' + B;
+  el.title = langLabel(a) + ' ⇄ ' + langLabel(b) + (m === 'auto' ? ' (양방향 자동)' : ' (단방향)');
 }
 
 /* 언어 쌍 잠금(v1.10.0): 원문 텍스트가 쌍의 두 언어가 '아닌' 다른 언어인지 판별.
@@ -2910,6 +2917,7 @@ function onPairChange() {
   if ($('targetLang')) $('targetLang').value = t;
   updateTargetLangHint();
   updateDirModeHint();
+  updateLangBadge();                               // 헤더 언어쌍 배지 갱신 (v1.13.204)
   broadcast('config', { target_lang: t });
   if (running && !userStopped) connectWS();        // 통역 중이면 새 쌍으로 재연결
 }
@@ -2924,6 +2932,7 @@ if ($('dirMode')) {
     curTarget = t;
     if ($('targetLang')) $('targetLang').value = t;
     updateDirModeHint();
+    updateLangBadge();                             // 헤더 언어쌍 배지 갱신 (v1.13.204)
     broadcast('config', { target_lang: t });
     if (running && !userStopped) connectWS();      // 통역 중이면 새 방향으로 재연결
   });
@@ -2933,6 +2942,7 @@ if ($('dirMode')) {
 updateDirModeLabels();
 updateDirModeHint();
 updateTargetLangHint();
+updateLangBadge();   // 초기 표시 (v1.13.204)
 
 /* (구) 번역 방향 박스 동기화 — 박스는 숨김 처리됨. 호환 위해 함수만 유지. */
 function syncLangBoxes() {
@@ -4899,7 +4909,6 @@ function appendTrans(t) {
     }
     p.transLine.classList.remove('pending');
     p.transLine.innerHTML = tokenize(sent);
-    setTransTag(p.transLine, sent);
     // 원문은 마침표(·?·!) 기준으로만 확정 (v1.13.92): 완성 문장은 이 묶음에 담고,
     // 미완성 나머지("이해가" 등)는 버퍼에 남겨 다음 묶음으로 이월 → 줄 바꿈이 문장 단위로 일정
     if (srcQueue.length) {
@@ -4955,7 +4964,6 @@ function appendTrans(t) {
     }
     p.transLine.classList.add('pending');
     p.transLine.innerHTML = tokenize(rest);
-    setTransTag(p.transLine, rest);
   }
   trimLines(combinedEl, 'transline');
   pushMirror();
@@ -4994,9 +5002,7 @@ function finishSegment() {
       p.el.appendChild(p.transLine);
     }
     p.transLine.classList.remove('pending');
-    const finTrans = shownTrans(transBuf).trim();
-    p.transLine.innerHTML = tokenize(finTrans);
-    setTransTag(p.transLine, finTrans);
+    p.transLine.innerHTML = tokenize(shownTrans(transBuf).trim());
   }
   transBuf = "";
   if (curPair && (curPair.srcLine || curPair.transLine)) curPair = null;

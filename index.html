@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.198 → v1.13.199) — 번역 줄에도 언어 태그 (교수님 요청):
+  - 원문에만 붙던 (K)/(E)/(J) 언어 태그를 번역 줄에도 동일하게 표시.
+    setTransTag 헬퍼: tokenize(innerHTML) 설정 뒤 평문으로 감지해 data-lang만 갱신(번역 줄 3곳).
+    CSS 셀렉터에 .transline[data-lang]::before 추가 — 스타일은 원문 태그와 동일.
   변경점 (v1.13.197 → v1.13.198) — 언어 리스트 영어명 통일 + 원문 언어 태그 (K)/(E)/(J) (교수님 요청):
   - 언어 선택 리스트(언어쌍 langA/langB·targetLang)의 표기를 원어(한국어/日本語/Español…)에서
     영어명(Korean/Japanese/Spanish…)으로 통일. langLabel도 영어명 반환 → 방향 옵션·안내 문구 동일 적용.
@@ -1958,8 +1962,8 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     word-break: normal; overflow-wrap: normal;
     transition: opacity 0.4s;
   }
-  /* 원문 언어 태그 (K)/(E)/(J) — 굵고 작게, 확인용 (v1.13.198) */
-  .srcline[data-lang]::before {
+  /* 원문·번역 언어 태그 (K)/(E)/(J) — 굵고 작게, 확인용 (v1.13.198, 번역 줄 v1.13.199) */
+  .srcline[data-lang]::before, .transline[data-lang]::before {
     content: '(' attr(data-lang) ') ';
     font-weight: 800; font-size: 0.62em; opacity: 0.85; vertical-align: 1px;
   }
@@ -2524,7 +2528,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.198 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.199 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2699,6 +2703,13 @@ function setSrcLine(p, text) {
   const tag = srcLangTag(text);
   if (tag) p.srcLine.setAttribute('data-lang', tag);
   else p.srcLine.removeAttribute('data-lang');
+}
+/* 번역 줄 언어 태그 (v1.13.199, 교수님 요청): 번역문에도 동일하게 표시.
+   innerHTML(tokenize) 설정 뒤 평문 텍스트로 감지해 data-lang만 갱신. */
+function setTransTag(el, text) {
+  const tag = srcLangTag(text);
+  if (tag) el.setAttribute('data-lang', tag);
+  else el.removeAttribute('data-lang');
 }
 
 /* 언어 쌍 잠금(v1.10.0): 원문 텍스트가 쌍의 두 언어가 '아닌' 다른 언어인지 판별.
@@ -4847,6 +4858,7 @@ function appendTrans(t) {
     }
     p.transLine.classList.remove('pending');
     p.transLine.innerHTML = tokenize(sent);
+    setTransTag(p.transLine, sent);
     // 원문은 마침표(·?·!) 기준으로만 확정 (v1.13.92): 완성 문장은 이 묶음에 담고,
     // 미완성 나머지("이해가" 등)는 버퍼에 남겨 다음 묶음으로 이월 → 줄 바꿈이 문장 단위로 일정
     if (srcQueue.length) {
@@ -4902,6 +4914,7 @@ function appendTrans(t) {
     }
     p.transLine.classList.add('pending');
     p.transLine.innerHTML = tokenize(rest);
+    setTransTag(p.transLine, rest);
   }
   trimLines(combinedEl, 'transline');
   pushMirror();
@@ -4940,7 +4953,9 @@ function finishSegment() {
       p.el.appendChild(p.transLine);
     }
     p.transLine.classList.remove('pending');
-    p.transLine.innerHTML = tokenize(shownTrans(transBuf).trim());
+    const finTrans = shownTrans(transBuf).trim();
+    p.transLine.innerHTML = tokenize(finTrans);
+    setTransTag(p.transLine, finTrans);
   }
   transBuf = "";
   if (curPair && (curPair.srcLine || curPair.transLine)) curPair = null;

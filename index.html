@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.202 → v1.13.203) — 용어집 별칭 '속지(서랍)식' 표시 (교수님 선택 C안):
+  - 리스트: 별칭 박스를 좌우 8px 안쪽으로 좁혀 용어 칩 아래로 접혀 들어간 모양(아래 모서리만 둥글게)
+    → 별칭이 위 용어에 종속됨이 폭 차이로 바로 보임. 용어 칩은 z-index로 위에 유지.
+  - 별칭 추가 폼(gAddModal): +별칭으로 열리는 별칭 입력칸도 동일하게 위 용어 입력칸 아래로
+    접혀 들어간 모양(-9px 마진으로 1px 겹침, 좌우 14px 인셋, 아래 모서리만 둥글게).
+  - 행 높이 변화 없음. 시안 비교(A 꺾인화살표/B 트리가지선/C 속지/D 결합) 후 C안 채택.
   변경점 (v1.13.201 → v1.13.202) — 저장된 자막 모바일 조작 (교수님 요청):
   - 항목(제목 줄)을 누르면 첫 5줄 미리 보기가 열리고(기존 고정 토글), 열린 내용 창을 누르면 닫힘.
     데스크톱에서 내용을 긁어 복사하는 클릭은 닫지 않음(텍스트 선택 중이면 무시).
@@ -1855,7 +1861,11 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     display: flex; flex-direction: column; gap: 8px; padding: 10px;
     border: 1px solid var(--t-border, #2a3a55); border-radius: 10px; background: var(--t-area-bg, #0f1626);
   }
-  #gAddModal .g-am-row { display: flex; gap: 8px; align-items: center; }
+  #gAddModal .g-am-row { display: flex; gap: 8px; align-items: flex-start; }
+  /* 용어+별칭 세로 묶음(v1.13.203 속지식) — 별칭 입력칸이 위 용어 입력칸 폭 안에서만 접히게 */
+  #gAddModal .g-am-cell { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+  #gAddModal .g-am-cell input { flex: 0 0 auto; width: 100%; }
+  #gAddModal .g-am-cell input:first-child { position: relative; z-index: 1; }
   #gAddModal input {
     flex: 1 1 0; min-width: 0; box-sizing: border-box;
     padding: 9px 12px; border: 1px solid #2a3a55; border-radius: 8px; font-size: 16px;
@@ -1884,6 +1894,11 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   #gAddModal #gInSynB { background: #faf3df; border-color: #e6d5a8; color: #4d3a12; font-weight: 500; }
   #gAddModal #gInSynA::placeholder { color: #8a95a8; font-weight: 400; }
   #gAddModal #gInSynB::placeholder { color: #ab9668; font-weight: 400; }
+  /* 별칭 입력칸도 속지식 (v1.13.203) — +별칭으로 열리면 위 용어 입력칸 아래로 접혀 들어간 모양.
+     1px 겹침 + 좌우 14px 안쪽으로 좁힘(셀 폭 기준 = 용어 입력칸 폭 기준). */
+  #gAddModal #gInSynA, #gAddModal #gInSynB {
+    width: calc(100% - 28px); margin: -1px 14px 0; border-radius: 0 0 10px 10px;
+  }
   /* 리스트만 스크롤: 고정 높이 대신 남는 공간을 채우고 넘치면 내부 스크롤 (v1.13.83) */
   #glossaryPanel .g-list { display: flex; flex-direction: column; gap: 6px; flex: 1 1 auto; min-height: 0; overflow-y: auto; }
   #glossaryPanel .g-item {
@@ -1927,11 +1942,12 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     padding: 3px 9px; font-size: 12px; cursor: pointer;
   }
   #glossaryPanel .g-item .g-edit:hover { background: #294a6e; }
-  /* 리스트 행: 용어+별칭 한 카드(위=용어, 아래=별칭) — 뒤에 배치해 개별 flex·radius를 덮어씀 (v1.13.178) */
+  /* 리스트 행: 용어+별칭 한 카드 — v1.13.203 '속지(서랍)식'(교수님 선택 C안): 별칭 박스를
+     좌우로 좁혀 용어 칩 아래로 접혀 들어간 모양 → 별칭이 위 용어에 종속됨을 시각적으로 표현 */
   #glossaryPanel .g-item .g-cell { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
   #glossaryPanel .g-item .g-cell > * { flex: 0 0 auto; width: auto; box-sizing: border-box; }
-  #glossaryPanel .g-item .g-cell > *:first-child { border-radius: 5px 5px 0 0; }
-  #glossaryPanel .g-item .g-cell > *:last-child { border-radius: 0 0 5px 5px; margin-top: -1px; }
+  #glossaryPanel .g-item .g-cell > *:first-child { border-radius: 5px 5px 0 0; position: relative; z-index: 1; }
+  #glossaryPanel .g-item .g-cell > *:last-child { border-radius: 0 0 6px 6px; margin: -1px 8px 0; }
   #glossaryPanel .g-item .g-btns { display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto; }
   #glossaryPanel .g-empty { color: #5a6b85; font-size: 12px; padding: 8px 0; }
   #glossaryPanel .g-hint { color: #7a8ba8; font-size: 11px; margin-top: 8px; }
@@ -2553,7 +2569,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.202 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.203 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -6382,15 +6398,19 @@ window.__syncPanelLayout = function() {
       '<div class="g-add-terms">' +   // 유사어 드롭다운(g-sug) 부착점 (position:relative)
         '<div class="g-am-group">' +
           '<div class="g-am-row">' +
-            '<input type="text" id="gInA" placeholder="원어" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">' +
+            '<div class="g-am-cell">' +
+              '<input type="text" id="gInA" placeholder="원어" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">' +
+              '<input type="text" id="gInSynA" placeholder="위 원어의 별칭" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" style="display:none;">' +
+            '</div>' +
             '<button type="button" id="gSynBtnA" class="g-am-synbtn">+별칭</button>' +
           '</div>' +
-          '<input type="text" id="gInSynA" placeholder="위 원어의 별칭" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" style="display:none;">' +
           '<div class="g-am-row">' +
-            '<input type="text" id="gInB" placeholder="번역어" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">' +
+            '<div class="g-am-cell">' +
+              '<input type="text" id="gInB" placeholder="번역어" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false">' +
+              '<input type="text" id="gInSynB" placeholder="위 번역어의 별칭" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" style="display:none;">' +
+            '</div>' +
             '<button type="button" id="gSynBtnB" class="g-am-synbtn">+별칭</button>' +
           '</div>' +
-          '<input type="text" id="gInSynB" placeholder="위 번역어의 별칭" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" style="display:none;">' +
         '</div>' +
       '</div>' +
       '<div class="g-am-hint" id="gAddHint">별칭은 각 용어와 <b>같은 언어</b>의 변이형입니다.</div>' +

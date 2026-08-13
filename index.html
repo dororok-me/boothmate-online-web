@@ -1,5 +1,14 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.199 → v1.13.200) — 시작·재연결 오디오 버퍼링 (교수님 보고 "시작이 빠릿하지 않다"):
+  - 원인 진단: 시작 버튼 → WS 연결(~0.5s) + 서버의 Gemini 세션 셋업(~1–2s) 동안
+    onaudioprocess가 오디오를 버려서(ws OPEN 아니면 즉시 반환) 첫 마디가 잘렸음.
+  - 수정: WS가 열리기 전(시작 직후·방향 전환·자동 재연결)의 다운샘플된 오디오 조각을
+    preOpenAudioBuf에 모아뒀다가(최대 96조각 ≈ 8초, 넘치면 오래된 것부터 버림)
+    연결이 열린 첫 콜백에서 순서대로 몰아 보낸 뒤 실시간 전송 재개.
+  - 일시정지·정지 상태에서는 버퍼링하지 않고 비움(일시정지 중 소리 미캡처 동작 유지).
+    start() 진입 시 이전 세션 잔여 버퍼 제거. setup 메시지는 onopen에서 먼저 전송되므로
+    순서 보장(readyState OPEN 전환과 onopen 디스패치는 같은 태스크).
   변경점 (v1.13.198 → v1.13.199) — 번역 줄에도 언어 태그 (교수님 요청):
   - 원문에만 붙던 (K)/(E)/(J) 언어 태그를 번역 줄에도 동일하게 표시.
     setTransTag 헬퍼: tokenize(innerHTML) 설정 뒤 평문으로 감지해 data-lang만 갱신(번역 줄 3곳).
@@ -2528,7 +2537,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.199 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.200 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -5031,6 +5040,12 @@ function speechInstruction(level, targetLang) {
    Gemini Live 연결 + 세션 자동 재연결
    ════════════════════════════════════════════ */
 let ws = null, audioContext = null, micStream = null, workletNode = null, running = false;
+/* 시작·재연결 오디오 버퍼 (v1.13.200, 교수님 보고 "시작이 빠릿하지 않다"):
+   WS가 열리기 전(시작 직후·방향 전환·자동 재연결)의 마이크 소리를 버리지 않고 모아뒀다가
+   연결이 열리는 첫 콜백에서 순서대로 몰아 보냄 → 시작 직후 첫 마디가 잘리지 않는다.
+   16kHz 다운샘플 후 base64 조각(약 85ms) 단위. 최대 96조각(≈8초) — 넘으면 오래된 것부터 버림. */
+let preOpenAudioBuf = [];
+const PREOPEN_BUF_MAX = 96;
 
 /* ── 입력 사운드 레벨 미터 (카운터 아래 5칸) ──────────────────────────────
    ⚠️ BoothmateG에서 레벨바가 재생 시 충돌했던 원인 = 레벨바가 별도 스트림/컨텍스트를
@@ -5223,6 +5238,7 @@ async function start() {
   window.__startCount = (window.__startCount || 0) + 1;
   console.log('[진단] start() 누적 호출 횟수 = ' + window.__startCount + ' (1보다 크면 시작이 자동 반복되는 것)');
   console.log('[start] 0) start() — connectWS 호출');
+  preOpenAudioBuf.length = 0;   // 이전 세션의 연결 전 버퍼 잔여분 제거 (v1.13.200)
   connectWS();          // ws 연결
   console.log('[start] 0b) connectWS 반환 — startMic 호출');
   await startMic();     // 마이크는 한 번만 시작 (재연결돼도 유지)
@@ -5574,7 +5590,10 @@ async function startMic() {
     let __frac = 0;          // 다운샘플 보간 잔여 위치
     let __firstAudio = true;
     workletNode.onaudioprocess = (e) => {
-      if (!(ws && ws.readyState === WebSocket.OPEN)) return;
+      const wsOpen = (ws && ws.readyState === WebSocket.OPEN);
+      // 연결 대기 중(시작 직후·방향 전환·자동 재연결)이면 버리지 않고 버퍼링 (v1.13.200).
+      // 일시정지·정지 상태면 버퍼를 비우고 반환 — 일시정지 중 소리는 캡처하지 않는 기존 동작 유지.
+      if (!wsOpen && !(running && !paused)) { preOpenAudioBuf.length = 0; return; }
       if (__firstAudio) { __firstAudio = false; console.log('[start] 6) 첫 오디오 콜백 — 정상 처리 중'); }
       const input = e.inputBuffer.getChannelData(0);
       // 16k로 선형보간 다운샘플
@@ -5602,7 +5621,19 @@ async function startMic() {
       let binary = '';
       for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
       const base64 = btoa(binary);
-      ws.send(JSON.stringify({ realtimeInput: { audio: { data: base64, mimeType: "audio/pcm;rate=16000" } } }));
+      const msg = JSON.stringify({ realtimeInput: { audio: { data: base64, mimeType: "audio/pcm;rate=16000" } } });
+      if (!wsOpen) {
+        // 연결 전 — 버퍼에 쌓아 두고(오래된 것부터 버림), 열리면 아래에서 몰아 보냄
+        preOpenAudioBuf.push(msg);
+        if (preOpenAudioBuf.length > PREOPEN_BUF_MAX) preOpenAudioBuf.shift();
+        return;
+      }
+      if (preOpenAudioBuf.length) {
+        console.log('[start] 연결 전 버퍼 오디오 ' + preOpenAudioBuf.length + '조각 몰아 보냄');
+        for (const m of preOpenAudioBuf) ws.send(m);
+        preOpenAudioBuf.length = 0;
+      }
+      ws.send(msg);
     };
     source.connect(workletNode);
     // 에코 방지: ScriptProcessor는 동작하려면 destination 연결이 필요하지만,

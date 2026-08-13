@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.197 → v1.13.198) — 언어 리스트 영어명 통일 + 원문 언어 태그 (K)/(E)/(J) (교수님 요청):
+  - 언어 선택 리스트(언어쌍 langA/langB·targetLang)의 표기를 원어(한국어/日本語/Español…)에서
+    영어명(Korean/Japanese/Spanish…)으로 통일. langLabel도 영어명 반환 → 방향 옵션·안내 문구 동일 적용.
+    LANGUAGES 데이터의 자국어 표기(l[1])는 데이터로만 유지.
+  - 원문 전사 줄 앞에 감지 언어 태그를 굵고 작게 표시(확인용): (K)orean/(E)nglish/(J)apanese,
+    중국어 계열은 (C) 통일, 그 외 언어는 영어명 첫 글자. 번역 줄에는 붙이지 않음.
+    구현: setSrcLine 헬퍼(원문 줄 4곳 일원화)가 detectLang으로 data-lang 속성을 채우고
+    CSS .srcline[data-lang]::before로 표시 — textContent는 그대로라 내보내기·미러·검색에 영향 없음.
   변경점 (v1.13.196 → v1.13.197) — 저장된 자막: 리스트만 평소 표시, 호버 시 첫 5줄 미리 보기 (교수님 요청):
   - v1.13.196의 '내용 항상 펼침'을 되돌림 — 목록(제목 줄)만 평소에 보이고,
     항목 위에 마우스를 올리면 원문·번역 첫 5줄만 미리 보기(5줄 초과 시 ⋯ 표시).
@@ -1950,6 +1958,11 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     word-break: normal; overflow-wrap: normal;
     transition: opacity 0.4s;
   }
+  /* 원문 언어 태그 (K)/(E)/(J) — 굵고 작게, 확인용 (v1.13.198) */
+  .srcline[data-lang]::before {
+    content: '(' attr(data-lang) ') ';
+    font-weight: 800; font-size: 0.62em; opacity: 0.85; vertical-align: 1px;
+  }
   .transline {
     font-size: var(--mc-trans-size); color: var(--mc-trans-color); font-weight: var(--mc-trans-weight);
     line-height: 1.55; margin-bottom: 0;
@@ -2511,7 +2524,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.197 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.198 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2575,19 +2588,20 @@ function langName(code) {
   const row = LANGUAGES.find(l => l[0] === code);
   return row ? row[2] : code;
 }
-/* 언어 코드 → 자국어 표기(UI 표시용) */
+/* 언어 코드 → UI 표시명 — v1.13.198: 원어(자국어) 표기 대신 영어명으로 통일(교수님 요청).
+   자국어 표기(l[1])는 데이터로만 유지. */
 function langLabel(code) {
   const row = LANGUAGES.find(l => l[0] === code);
-  return row ? row[1] : code;
+  return row ? row[2] : code;
 }
 /* targetLang select를 언어 목록으로 채움 */
 function fillTargetLangOptions() {
   const sel = $('targetLang');
   if (!sel) return;
   sel.innerHTML = '';
-  for (const [code, label] of LANGUAGES) {
+  for (const row of LANGUAGES) {
     const opt = document.createElement('option');
-    opt.value = code; opt.textContent = label;
+    opt.value = row[0]; opt.textContent = row[2];   // 영어명 표기 (v1.13.198)
     sel.appendChild(opt);
   }
 }
@@ -2668,6 +2682,23 @@ function detectLang(text, a, b) {
   if (sa > sb) return a;
   if (sb > sa) return b;
   return null;
+}
+
+/* 원문 언어 태그 (v1.13.198, 교수님 요청): 감지된 언어의 영어명 첫 글자 — (K)/(E)/(J)/(C)….
+   CSS ::before(data-lang)로 원문 줄 앞에만 굵고 작게 표시(번역 줄에는 안 붙임). 감지 실패 시 없음. */
+function srcLangTag(text) {
+  const pr = getPair();
+  const det = detectLang(text, pr.a, pr.b);
+  if (!det) return '';
+  if (langPrefix(det) === 'zh') return 'C';   // zh-TW(Traditional Chinese)도 C로 통일
+  return (langName(det).charAt(0) || '').toUpperCase();
+}
+/* 원문 줄 텍스트 설정 + 언어 태그 갱신 — srcLine.textContent 직접 대입 대신 이 함수 사용 */
+function setSrcLine(p, text) {
+  p.srcLine.textContent = text;
+  const tag = srcLangTag(text);
+  if (tag) p.srcLine.setAttribute('data-lang', tag);
+  else p.srcLine.removeAttribute('data-lang');
 }
 
 /* 언어 쌍 잠금(v1.10.0): 원문 텍스트가 쌍의 두 언어가 '아닌' 다른 언어인지 판별.
@@ -2800,9 +2831,9 @@ function fillPairLangOptions() {
   for (const id of ['langA', 'langB']) {
     const sel = $(id); if (!sel) continue;
     sel.innerHTML = '';
-    for (const [code, label] of LANGUAGES) {
+    for (const row of LANGUAGES) {
       const opt = document.createElement('option');
-      opt.value = code; opt.textContent = label;
+      opt.value = row[0]; opt.textContent = row[2];   // 영어명 표기 (v1.13.198)
       sel.appendChild(opt);
     }
   }
@@ -4755,7 +4786,7 @@ function appendSrc(t) {
     if (p.transLine) p.el.insertBefore(p.srcLine, p.transLine);
     else p.el.appendChild(p.srcLine);
   }
-  p.srcLine.textContent = tidyNumbers(srcBuf).trim();
+  setSrcLine(p, tidyNumbers(srcBuf).trim());
   p.srcLine.classList.remove('pending');
   trimLines(combinedEl, 'srcline');
   pushMirror();
@@ -4830,7 +4861,7 @@ function appendTrans(t) {
         if (p.transLine) p.el.insertBefore(p.srcLine, p.transLine);
         else p.el.appendChild(p.srcLine);
       }
-      p.srcLine.textContent = tidyNumbers(mySrc).trim();
+      setSrcLine(p, tidyNumbers(mySrc).trim());
       p.srcLine.classList.remove('pending');
     } else if (p.srcLine) {
       // 완성 원문 문장이 없으면 이 묶음의 원문 줄은 다음 묶음으로 넘김
@@ -4858,7 +4889,7 @@ function appendTrans(t) {
       if (p.transLine) p.el.insertBefore(p.srcLine, p.transLine);
       else p.el.appendChild(p.srcLine);
     }
-    p.srcLine.textContent = tidyNumbers(srcBuf).trim();
+    setSrcLine(p, tidyNumbers(srcBuf).trim());
   }
   // 진행 중 나머지 번역은 현재(새) 묶음의 임시 번역 줄로
   if (rest) {
@@ -4891,7 +4922,7 @@ function finishSegment() {
       if (p.transLine) p.el.insertBefore(p.srcLine, p.transLine);
       else p.el.appendChild(p.srcLine);
     }
-    p.srcLine.textContent = tidyNumbers(srcBuf).trim();
+    setSrcLine(p, tidyNumbers(srcBuf).trim());
     p.srcLine.classList.remove('pending');
   }
   srcBuf = "";

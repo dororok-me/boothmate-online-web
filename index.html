@@ -1,5 +1,17 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.195 → v1.13.196) — 용어집 오적용 수정 + 저장된 자막 상시 표시 (교수님 요청):
+  - [용어집] 'inspection-실사' 등록 시 "실 사용자들"이 inspection으로 오역되는 문제:
+    ① 프롬프트(glossaryInstruction)에 "트리거어가 실제 그 단어로 쓰였을 때만 적용 —
+       다른 단어 안에 글자만 우연히 나타나거나 단어 경계를 넘는 경우(실 사용자들=실+사용자들)는
+       적용 금지, 애매하면 자연 번역" 지침 + 실사/실 사용자 반례 예시 추가.
+    ② 우리 쪽 정규식도 보강: 한국어 용어의 '글자 사이 공백 허용' 매칭(인지과학=인지 과학)을
+       공백 제거 후 2글자 이하 용어에는 금지(koFlexCore 신설) — '실사'가 "실 사"에 오매치돼
+       하이라이트·감지 로그·후처리 치환이 오작동하는 것 방지.
+       flexRegex/flexRegexP/flexRegexInfl/flexRegexSrc 모두 동일 규칙 적용.
+  - [설정 > 자막 기록] '저장된 세션' → '저장된 자막' 명칭 변경(버튼·안내문·알림, app-i18n.js 영어 포함).
+  - 저장된 자막 목록을 설정 열면 바로 표시(버튼 클릭 불필요), 각 항목의 원문·번역 내용도
+    마우스 호버 없이 항상 펼쳐서 표시. 제목 줄 클릭으로 접기/펴기. 설정을 열 때마다 최신 갱신.
   변경점 (v1.13.194 → v1.13.195) — 시간 부여 1건:
   - katiekim7991@gmail.com → TIME_GRANTS 2시간(grantId katiekim7991-2h-20260804). ALLOWED_EMAILS에는 이미 등록돼 있던 계정.
   변경점 (v1.13.193 → v1.13.194) — 브라우저 탭 파비콘을 전체 로고로 교체 (교수님 요청):
@@ -2494,7 +2506,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.195 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.196 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4146,14 +4158,19 @@ function glossaryList() {
 }
 /* 매칭 정규식 생성.
    - 한글이 포함된 용어: 글자 사이 공백 허용(인지과학=인지 과학), 경계 없음
+     단, 공백 제거 후 2글자 이하 짧은 용어는 공백 건너뛰기 금지 — '실사'가 "실 사용자들"의
+     "실 사"에 오매치되는 것 방지(짧은 용어에 띄어쓰기가 있으면 별개 단어일 확률이 높음, v1.13.196)
    - 영문/숫자로만 된 용어(약어 포함): 단어 경계(\b)를 붙여 단어 중간 부분일치 방지
      (예: "OS"가 "dosing" 안에서 잡히지 않게) */
+function koFlexCore(s) {
+  const chars = String(s).split('').filter(function (c) { return !/\s/.test(c); })
+    .map(function (c) { return c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+  return chars.join(chars.length > 2 ? '\\s*' : '');
+}
 function flexRegex(term) {
   const hasKo = /[가-힣]/.test(term);
   if (hasKo) {
-    // 한국어 포함 — 글자 사이 공백 0개 이상 허용
-    const escaped = term.split('').map(function(c){ return c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
-    return new RegExp(escaped.join('\\s*'), 'g');   // 한국어는 대소문자 개념 없음 → g
+    return new RegExp(koFlexCore(term), 'g');   // 한국어는 대소문자 개념 없음 → g
   }
   // 영문/숫자 — 단어 단위로만 (앞뒤가 글자/숫자가 아닐 때만 매칭)
   const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -4164,8 +4181,7 @@ function flexRegex(term) {
 function flexRegexP(term) {
   const hasKo = /[가-힣]/.test(term);
   if (hasKo) {
-    const escaped = term.split('').map(function (c) { return c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
-    return new RegExp(escaped.join('\\s*'), 'g');
+    return new RegExp(koFlexCore(term), 'g');
   }
   const esc = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp('(?<![A-Za-z0-9])' + esc + '(?:es|s)?(?![A-Za-z0-9])', 'gi');
@@ -4178,10 +4194,7 @@ function flexRegexP(term) {
 function flexRegexInfl(term) {
   const hasKo = /[가-힣]/.test(term);
   if (hasKo) {
-    const koCore = function (s) {   // 글자 사이 공백 0개 이상 허용 ("눈에 띄다" = "눈에띄다")
-      return s.split('').filter(function (c) { return !/\s/.test(c); })
-              .map(function (c) { return c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }).join('\\s*');
-    };
+    const koCore = koFlexCore;   // 글자 사이 공백 0개 이상 허용("눈에 띄다"="눈에띄다"), 2글자 이하는 금지
     if (/하다$/.test(term)) {
       // '~하다' 동사: 하/했/해/합 + 피동 되/됐/됩/된/될 활용까지 (제외하다 → 제외했습니다·제외되어야)
       return new RegExp(koCore(term.slice(0, -2)) + '\\s*(?:하|했|해|합|되|됐|됩|된|될)[가-힣]*', 'g');
@@ -4225,10 +4238,11 @@ function flexRegexSrc(term) {
     .map(function (c) { return c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
   const alt = koLiaisonAlt(term);
   if (!alt || chars.length < 2) return flexRegexInfl(term);
-  const head = chars.slice(0, -1).join('\\s*');
+  const gap = chars.length > 2 ? '\\s*' : '';   // 2글자 용어는 공백 건너뛰기 금지 (koFlexCore와 동일 규칙)
+  const head = chars.slice(0, -1).join(gap);
   const lastEsc = chars[chars.length - 1];
   // 원형(트리톤) 또는 연음형(트리토 + 뒤에 [나-닣] 계열 글자)
-  return new RegExp(head + '\\s*(?:' + lastEsc + '|' + alt.bare + '(?=' + alt.range + '))', 'g');
+  return new RegExp(head + gap + '(?:' + lastEsc + '|' + alt.bare + '(?=' + alt.range + '))', 'g');
 }
 /* 프롬프트용 글로서리 지시문 — 괄호 주석 방식으로 전환하여 프롬프트 주입 사용 안 함 */
 /* 용어집 프롬프트 주입 — 현재 출력 언어 방향의 (트리거어 → 표준표기) 매핑을 systemInstruction에 실어
@@ -4261,6 +4275,10 @@ function glossaryInstruction(targetCode) {
     'A left term counts as present even when inflected or conjugated — Korean particles and verb/adjective conjugations ' +
     '(e.g., 심사 covers 심사할·심사를·심사하는·심사받다) and English inflections/derivations ' +
     '(e.g., screen covers screens·screened·screening; gradual covers gradually). ' +
+    'BUT a mapping applies ONLY when the left term itself is genuinely used as that word (or an inflection of it). ' +
+    'It does NOT apply when the left term\'s characters merely happen to appear inside a different word or across a word boundary — ' +
+    'e.g., with "실사" → "inspection", the phrase "실 사용자들" means "actual users" (실 + 사용자들, two separate words), ' +
+    'so it must NOT be translated with inspection; translate it naturally. When in doubt, prefer the natural translation. ' +
     'Whenever a left term appears in the input in ANY such form, the translation MUST use the right term as the ROOT word — ' +
     'never a synonym, never a paraphrase — and you inflect that root naturally to fit the sentence grammar ' +
     '(plural, tense, participle, adverb form, Korean conjugation). ' +
@@ -5778,10 +5796,10 @@ window.__syncPanelLayout = function() {
       '<div class="row" style="max-width:none; gap:8px; flex-wrap:wrap;">' +
         '<button id="subExportBtn" class="g-tool">자막 내보내기</button>' +
         '<button id="subResetBtn" class="g-tool g-danger">전체 삭제하기</button>' +
-        '<button id="sessListBtn" class="g-tool">저장된 세션</button>' +
+        '<button id="sessListBtn" class="g-tool">저장된 자막</button>' +
       '</div>' +
-      '<div id="sessList" style="display:none; margin-top:8px;"></div>' +
-      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">세션은 통역 중 30초마다·정지 시 자동 저장(최대 50개). 내보내기는 현재 화면 자막을 txt로, 전체 삭제는 저장된 세션을 모두 지웁니다. 목록에서 세션 위에 마우스를 올리면(또는 눌러서 고정) 내용을 미리 볼 수 있습니다.</div>' +
+      '<div id="sessList" style="margin-top:8px;"></div>' +
+      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">자막은 통역 중 30초마다·정지 시 자동 저장(최대 50개). 내보내기는 현재 화면 자막을 txt로, 전체 삭제는 저장된 자막을 모두 지웁니다. 각 항목 아래에 원문·번역 내용이 바로 표시되며, 제목 줄을 누르면 접었다 펼 수 있습니다.</div>' +
     '</div>' +
     // 갤럭시 앱 전용: 설정 맨 아래 버전 표시(추적용). 웹은 CSS로 숨김. 버전은 #appFooter에서 읽어 단일 출처. (v1.13.118)
     '<div id="gxVersion" style="text-align:center; color:var(--t-muted); font-size:10px; opacity:0.6; padding:10px 0 4px; letter-spacing:0.3px; line-height:1.6;"></div>';
@@ -6008,19 +6026,19 @@ window.__syncPanelLayout = function() {
     if (!sub.src.length && !sub.trans.length) { alert('내보낼 자막이 없습니다.'); return; }
     downloadText(subtitlesToText(sub, null), 'boothmate_' + sessionStamp() + '.txt');
   };
-  // 전체 삭제: 저장된 세션을 모두 삭제 (화면 자막 지우기는 상단 새로고침 아이콘 버튼에 이미 있음)
+  // 전체 삭제: 저장된 자막을 모두 삭제 (화면 자막 지우기는 상단 새로고침 아이콘 버튼에 이미 있음)
   $('subResetBtn').onclick = () => {
     const list = loadSessions();
-    if (!list.length) { alert('저장된 세션이 없습니다.'); return; }
-    if (!confirm('저장된 세션 ' + list.length + '개를 모두 삭제할까요? 삭제하면 되돌릴 수 없습니다.')) return;
+    if (!list.length) { alert('저장된 자막이 없습니다.'); return; }
+    if (!confirm('저장된 자막 ' + list.length + '개를 모두 삭제할까요? 삭제하면 되돌릴 수 없습니다.')) return;
     localStorage.removeItem('sessions');
     if (sessListEl.style.display !== 'none') renderSessions();   // 목록이 열려 있으면 갱신
   };
-  // 저장된 세션 목록 토글 + 렌더
+  // 저장된 자막 목록 렌더 — v1.13.196: 설정을 열면 목록·내용이 바로 보이도록 상시 표시(교수님 요청)
   const sessListEl = $('sessList');
   function renderSessions() {
     const list = loadSessions().slice().reverse();   // 최신순
-    if (!list.length) { sessListEl.innerHTML = '<div style="color:#5a6b85; font-size:12px;">저장된 세션이 없습니다.</div>'; return; }
+    if (!list.length) { sessListEl.innerHTML = '<div style="color:#5a6b85; font-size:12px;">저장된 자막이 없습니다.</div>'; return; }
     sessListEl.innerHTML = '';
     list.forEach(function(s){
       const item = document.createElement('div');
@@ -6034,29 +6052,26 @@ window.__syncPanelLayout = function() {
       const dl = document.createElement('button');
       dl.className = 'g-tool'; dl.textContent = '내보내기'; dl.style.fontSize = '11px';
       dl.onclick = function(ev){ ev.stopPropagation(); downloadText(subtitlesToText({src:s.src, trans:s.trans}, {name:s.name}), s.name + '.txt'); };
-      // 미리 보기 (v1.13.167): 마우스를 올리면 원문·번역을 바로 표시 — 파일로 내보내지 않아도 내용 확인.
-      // 터치 기기(갤럭시)에는 호버가 없으므로 줄 클릭으로 고정 토글도 지원.
+      // 내용 표시 (v1.13.196): 마우스를 올리지 않아도 원문·번역을 항상 펼쳐서 표시(교수님 요청).
+      // 제목 줄을 누르면 접었다 펼 수 있음(길 때 정리용).
       const pv = document.createElement('div');
-      pv.style.cssText = 'display:none; padding:6px 10px 8px; border-top:1px dashed #1e2b40; color:#9fb4d8; font-size:11px; line-height:1.55; max-height:180px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;';
-      let pvFilled = false, pinned = false, hover = false;
-      function fillPv(){
-        if (pvFilled) return; pvFilled = true;
+      pv.style.cssText = 'padding:6px 10px 8px; border-top:1px dashed #1e2b40; color:#9fb4d8; font-size:11px; line-height:1.55; max-height:180px; overflow-y:auto; white-space:pre-wrap; word-break:break-word;';
+      let opened = true;
+      (function fillPv(){
         const n = Math.max(s.src.length, s.trans.length), parts = [];
         for (let i = 0; i < n; i++) {
           if (s.src[i]) parts.push(s.src[i]);
           if (s.trans[i]) parts.push('↳ ' + s.trans[i]);
         }
         pv.textContent = parts.length ? parts.join('\n') : '(내용 없음)';
-      }
-      function updPv(){ pv.style.display = (pinned || hover) ? 'block' : 'none'; }
-      item.onmouseenter = function(){ hover = true; fillPv(); updPv(); };
-      item.onmouseleave = function(){ hover = false; updPv(); };
-      row.onclick = function(){ pinned = !pinned; fillPv(); updPv(); };
+      })();
+      row.onclick = function(){ opened = !opened; pv.style.display = opened ? 'block' : 'none'; };
       row.appendChild(label); row.appendChild(dl);
       item.appendChild(row); item.appendChild(pv);
       sessListEl.appendChild(item);
     });
   }
+  renderSessions();   // 설정 패널 생성 시 바로 표시 — 버튼을 누르거나 마우스를 올릴 필요 없음 (v1.13.196)
   $('sessListBtn').onclick = () => {
     const show = sessListEl.style.display === 'none';
     sessListEl.style.display = show ? 'block' : 'none';
@@ -6097,6 +6112,8 @@ window.__syncPanelLayout = function() {
     if (!panel.classList.contains('open') && window.__closeGlossaryPanel) window.__closeGlossaryPanel();
     panel.classList.toggle('open');
     const isOpen = panel.classList.contains('open');
+    // 저장된 자막 목록은 상시 표시 — 열 때마다 최신으로 갱신 (v1.13.196)
+    if (isOpen && sessListEl.style.display !== 'none') renderSessions();
     // 핵심 옵션(번역 언어/입력/음성 소스)도 함께 펼치기/접기
     const oc = document.getElementById('optsCollapse');
     if (oc) oc.style.display = isOpen ? 'block' : 'none';

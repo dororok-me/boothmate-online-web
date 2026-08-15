@@ -1,5 +1,14 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.213 → v1.13.214) — 결제수단 확대(계좌이체·휴대폰) + 결제창 실패 사유 표시:
+  - 구매 그룹에 결제수단 선택칸(#buyMethodSel) 추가: 카드·간편결제(기본) / 계좌이체 / 휴대폰 결제.
+    CARD 하나로도 카카오페이·토스페이 등 간편결제가 결제창에 함께 뜨지만, 계좌이체·휴대폰은
+    별도 method로 호출해야 한다. 갤럭시 앱은 Play 결제라 선택 여지가 없어 CSS로 숨김.
+  - card 옵션 블록은 method가 CARD일 때만 넘긴다 — 다른 수단에 넣으면 파라미터 오류가 난다.
+  - ⚠️ 토스 계약에 포함되지 않은 결제수단을 고르면 결제창이 열리지 않는다. 계좌이체·휴대폰이
+    계약에 있는지는 상점관리자에서 확인 필요. 실패해도 사유가 그대로 노출되므로 판별 가능.
+  - 결제창 실패 시 alert에 토스가 준 사유를 그대로 표시. v1.13.210에서 키 종류가 안 맞아
+    결제창이 안 떴을 때 이 문구가 없어 콘솔을 열어야 원인을 알 수 있었다.
   변경점 (v1.13.212 → v1.13.213) — Play 구매 토큰 전송 (서버 v3.8.0 환불 회수의 선결 조건):
   - Play 결제 성공 시 /credit에 purchaseToken·productId·orderId를 함께 보낸다.
   - 왜 필요한가: 구글 환불 알림에는 purchaseToken만 들어 있다. 지금까지는 이 값을 어디에도
@@ -1655,7 +1664,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
    이메일이 달라 잔여시간·구매내역이 안 이어진다 — 유료화 전에 그 경로 자체를 닫는다.
    버튼 마크업·클릭 핸들러·KAKAO_REST_KEY·NAVER_CLIENT_ID는 그대로 살려 뒀다.
    다시 열려면 아래 한 줄만 지우고 네이버 SDK 로드(<head>)를 되살리면 된다. */
-#kakaoLoginBtn, #naverLoginBtn{display:none !important;}</style>
+#kakaoLoginBtn, #naverLoginBtn{display:none !important;}
+/* 결제수단 선택은 웹(토스) 전용 — 갤럭시 앱은 Google Play 결제라 고를 것이 없다 (v1.13.214) */
+.bm-galaxy #buyMethodRow{display:none !important;}</style>
 <!-- iOS 앱 전용 UI 언어 레이어(KO⇄EN). 앱모드에서만 작동, 웹 브라우저엔 영향 없음. -->
 <script defer src="app-i18n.js"></script>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
@@ -2659,7 +2670,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.213 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.214 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3383,22 +3394,34 @@ async function bmTossPay(sku) {
       ck = 'bm-' + Math.random().toString(36).slice(2) + Date.now().toString(36);
       try { localStorage.setItem('bm_toss_customer_key', ck); } catch (e) {}
     }
-    const payment = TossPayments(TOSS_CLIENT_KEY).payment({ customerKey: ck });
-    await payment.requestPayment({
-      method: 'CARD',   // 카드 및 간편결제
+    /* 결제수단 (v1.13.214). CARD 하나로도 카드+간편결제가 결제창에 다 뜨지만,
+       계좌이체·휴대폰은 별도 method로 호출해야 한다. 선택칸이 없으면 기존대로 CARD.
+       ⚠️ 토스 계약에 포함되지 않은 수단을 고르면 결제창이 열리지 않는다(아래 catch에서 안내). */
+    const methodSel = $('buyMethodSel');
+    const method = (methodSel && methodSel.value) || 'CARD';
+    const req = {
+      method: method,
       amount: { currency: 'KRW', value: Number(item.price) },
       orderId: 'bm-' + sku + '-' + Date.now(),
       orderName: '부스메이트 ' + item.labelKo,
       successUrl: location.origin + location.pathname + '?tossPay=success',
       failUrl: location.origin + location.pathname + '?tossPay=fail',
-      customerEmail: cloudEmail() || undefined,
-      card: { useEscrow: false, flowMode: 'DEFAULT', useCardPoint: false, useAppCardOnly: false }
-    });
+      customerEmail: cloudEmail() || undefined
+    };
+    // 카드 전용 옵션은 CARD일 때만 — 다른 수단에 넣으면 파라미터 오류가 난다
+    if (method === 'CARD') req.card = { useEscrow: false, flowMode: 'DEFAULT', useCardPoint: false, useAppCardOnly: false };
+    const payment = TossPayments(TOSS_CLIENT_KEY).payment({ customerKey: ck });
+    await payment.requestPayment(req);
   } catch (e) {
     const code = (e && e.code) || '';
     if (code === 'PAY_PROCESS_CANCELED' || code === 'USER_CANCEL') return;   // 사용자가 결제창을 닫음
-    console.error('[구매] 토스 결제창 실패: ' + ((e && e.message) || e));
-    alert(en ? 'Could not open the payment window. Please try again.' : '결제창을 열지 못했습니다. 잠시 후 다시 시도해 주세요.');
+    const msg = (e && e.message) || String(e);
+    console.error('[구매] 토스 결제창 실패: ' + msg);
+    /* 토스가 돌려주는 사유를 그대로 보여준다 (v1.13.214). 예전에 키 종류가 안 맞아 결제창이
+       안 뜬 적이 있는데, 이 문구가 안 보여서 원인을 찾는 데 시간이 걸렸다.
+       계약에 없는 결제수단을 고른 경우도 여기서 사유가 드러난다. */
+    alert((en ? 'Could not open the payment window.\n' : '결제창을 열지 못했습니다.\n') + msg +
+          (en ? '\n\nIf you chose a method other than card, try card payment.' : '\n\n카드 외 결제수단을 고르셨다면 카드·간편결제로 다시 시도해 보세요.'));
   }
 }
 /* ── 결제창에서 돌아왔을 때 (v1.13.208) ──
@@ -3499,7 +3522,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.213';
+const GX_DIAG_VER = '1.13.214';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -6076,6 +6099,15 @@ window.__syncPanelLayout = function() {
         // onclick 인라인 연결: 아래쪽 초기화 코드가 기기별 오류로 중단돼 핸들러가 안 붙어도 버튼이 동작하게 (v1.13.127)
         '<button id="buy5hBtn" onclick="bmBuy(\'time_5h\')" style="flex:1; min-width:130px; background:#4f46e5; color:#fff; font-weight:700; padding:10px 12px; border-radius:8px;">5시간권 ₩29,000</button>' +
         '<button id="buy10hBtn" onclick="bmBuy(\'time_10h\')" style="flex:1; min-width:130px; background:#4f46e5; color:#fff; font-weight:700; padding:10px 12px; border-radius:8px;">10시간권 ₩55,000</button>' +
+      '</div>' +
+      // 결제수단 선택 (v1.13.214) — 웹 전용. 갤럭시 앱은 Google Play 결제라 선택 여지가 없어 숨긴다.
+      '<div class="row" id="buyMethodRow" style="max-width:none; gap:8px; margin-top:8px; align-items:center;">' +
+        '<span style="color:var(--t-muted); font-size:12px;">결제수단</span>' +
+        '<select id="buyMethodSel" style="flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--t-border); background:var(--t-input-bg); color:var(--t-text); font-size:13px;">' +
+          '<option value="CARD">카드 · 간편결제 (카카오페이·토스페이 등)</option>' +
+          '<option value="TRANSFER">계좌이체</option>' +
+          '<option value="MOBILE_PHONE">휴대폰 결제</option>' +
+        '</select>' +
       '</div>' +
       '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">갤럭시 앱은 Google Play, 웹은 토스페이먼츠 결제창으로 결제됩니다. 구매 즉시 남은 시간에 더해지며, 이용권은 구매일로부터 12개월 이내 사용할 수 있습니다.</div>' +
     '</div>' +

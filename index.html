@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.208 → v1.13.209) — 토스 클라이언트 키를 부스메이트 상점 테스트 키로 교체:
+  - test_ck_D5GePWvy...(토스 공개 문서 예시 키, 남의 상점) → test_gck_Poxy1XQL...(부스메이트 상점).
+    예시 키로는 결제창은 떠도 승인 단계에서 상점이 달라 실패한다. 이제 결제→승인→충전
+    전 과정이 실제와 똑같이 동작하고 실제 청구만 없다.
+  - 중계서버 TOSS_SECRET_KEY도 반드시 같은 짝(test_gsk_)이어야 한다. 라이브 전환 시에는
+    이 상수(live_gck_)와 서버 시크릿(live_gsk_)을 동시에 바꾼다 — 한쪽만 바꾸면 승인 거부.
   변경점 (v1.13.207 → v1.13.208) — 토스 웹 결제 승인 연동 (결제 → 시간 충전이 실제로 이어짐):
   - 지금까지는 결제창에서 결제를 마쳐도 안내 알림만 뜨고 시간이 충전되지 않았다.
     토스는 결제창 통과 후 successUrl에 ?paymentKey=&orderId=&amount=를 붙여 되돌려보내는데,
@@ -2626,7 +2632,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.208 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.209 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3314,10 +3320,12 @@ const GX_SKUS = {
       우리는 v2 SDK 결제창 방식이라 개발자센터의 '주문서형·결제창형 연동 키'(gck/gsk)를 쓴다.
       'API 개별 연동 키'(ck/sk)는 자동결제·구버전 결제창용이라 여기서는 쓰지 않는다.
 
-   ⚠️ 현재 값은 토스 공개 문서의 예시 키라 교수님 상점 소유가 아니다. 결제창은 뜨지만
-      승인 단계에서 상점이 달라 실패한다. 개발자센터 [API 키 > 테스트]의 test_gck_로
-      교체해야 결제→충전 전 과정이 동작한다. 검증이 끝나면 live_gck_로 바꾼다. */
-const TOSS_CLIENT_KEY = 'test_ck_D5GePWvyJnrK0W0k6q8gLzN97Eoq';
+   현재: 부스메이트 상점의 테스트 키. 결제창·승인·충전이 전부 실제와 똑같이 동작하고
+   실제 청구만 없다. 검증이 끝나면 아래 두 곳을 동시에 라이브로 바꾼다:
+     · 이 상수 → live_gck_DLJOpm5Qrl79P9JW6nzQVPNdxbWn
+     · 중계서버 TOSS_SECRET_KEY → live_gsk_... (개발자센터 [API 키 > 라이브])
+   한쪽만 바꾸면 상점·모드가 어긋나 승인이 거부된다. */
+const TOSS_CLIENT_KEY = 'test_gck_Poxy1XQL8RYkKplBov04r7nO5Wml';
 let bmTossSdkPromise = null;
 function bmLoadTossSdk() {
   if (window.TossPayments) return Promise.resolve();
@@ -3460,7 +3468,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.208';
+const GX_DIAG_VER = '1.13.209';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {

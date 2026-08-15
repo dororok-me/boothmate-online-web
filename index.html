@@ -1,5 +1,11 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.215 → v1.13.216) — 로그인 화면에 무료 체험 안내 추가 (교수님 요청):
+  - 로그인 게이트 부제 아래에 '신규 가입 시 30분 무료 체험이 제공됩니다' 배지(#gateTrialNote).
+  - 문구의 '30분'은 하드코딩하지 않고 로드 시 FREE_QUOTA_SECONDS에서 채운다. 체험 시간은
+    3시간 → 5시간 → 30분으로 바뀐 이력이 있어, 고정 문구면 화면이 사실과 달라지기 쉽다.
+    0으로 바꾸면(무료 체험 폐지) 안내 자체가 자동으로 숨겨진다.
+  - 영어 모드(iOS·갤럭시)에서는 영문 문구로 교체.
   변경점 (v1.13.214 → v1.13.215) — 휴대폰 결제 선택지 제거 (실기 확인 결과):
   - v1.13.214에서 넣은 세 수단을 실제로 눌러 본 결과:
     · 계좌이체 → 정상. 결제창이 뜨고 BankPay 앱 단계까지 진행됨(계약에 포함돼 있음).
@@ -2451,7 +2457,10 @@ if (!document.documentElement.classList.contains('bm-app')) {
 <div id="authGate" style="position:fixed; inset:0; z-index:9999; background:#FFFFFF; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;">
   <img src="logo.png" alt="Boothmate" style="height:46px; width:auto; margin-bottom:22px;">
   <div id="gateTitle" style="font-size:26px; font-weight:700; color:#0F172A; margin-bottom:8px; letter-spacing:-0.3px;">Boothmate Online</div>
-  <div style="font-size:14px; color:#64748B; margin-bottom:30px;">실시간 통역 자막 · 시작하려면 로그인하세요</div>
+  <div style="font-size:14px; color:#64748B; margin-bottom:12px;">실시간 통역 자막 · 시작하려면 로그인하세요</div>
+  <!-- 무료 체험 안내 (v1.13.216). 문구의 '30분'은 로드 시 FREE_QUOTA_SECONDS에서 자동으로 채운다
+       — 설정값만 바꾸고 이 문구를 못 고쳐 사실과 달라지는 일을 막기 위함. -->
+  <div id="gateTrialNote" style="display:inline-block; font-size:13px; color:#4338CA; background:#EEF2FF; border:1px solid #E0E7FF; border-radius:999px; padding:6px 14px; margin-bottom:26px;">신규 가입 시 30분 무료 체험이 제공됩니다</div>
   <div id="googleSignInBtn"></div>
   <!-- 카카오 로그인 (브랜드 가이드: 배경 #FEE500, 글자 #191919, 말풍선 심볼) -->
   <button id="kakaoLoginBtn" type="button" style="width:260px; height:40px; margin-top:10px; display:inline-flex; align-items:center; justify-content:center; gap:8px; background:#FEE500; color:#191919; border:none; border-radius:20px; font-size:14px; font-weight:600; cursor:pointer;">
@@ -2678,7 +2687,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.215 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.216 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3132,6 +3141,21 @@ try { localStorage.removeItem('mc_wrap_h'); } catch (e) {}
    ════════════════════════════════════════════ */
 const FREE_QUOTA_SECONDS = 30 * 60;   // 무료 체험 30분 = 1800초 (POLICY_SPEC §2 원안 복귀 — 기기당 30분, v1.13.113)
 
+/* 로그인 화면의 무료 체험 안내를 실제 설정값으로 채운다 (v1.13.216).
+   문구를 하드코딩해 두면 FREE_QUOTA_SECONDS만 바꿨을 때 화면이 거짓말을 하게 된다.
+   (실제로 3시간 → 5시간 → 30분으로 바뀐 이력이 있다.) 0이면 안내 자체를 숨긴다. */
+(function () {
+  try {
+    const el = document.getElementById('gateTrialNote');
+    if (!el) return;
+    if (!FREE_QUOTA_SECONDS) { el.style.display = 'none'; return; }
+    const m = Math.round(FREE_QUOTA_SECONDS / 60);
+    const en = (typeof bmEN === 'function') ? bmEN() : false;
+    el.textContent = en ? ('New members get a ' + m + '-minute free trial')
+                        : ('신규 가입 시 ' + m + '분 무료 체험이 제공됩니다');
+  } catch (e) {}
+})();
+
 /* 시간 제한 완전 면제(무제한) 계정 — 5분 세션 제한 + 쿼터 모두 적용 안 함 */
 const UNLIMITED_EMAILS = ['dororok@gmail.com'];
 
@@ -3530,7 +3554,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.215';
+const GX_DIAG_VER = '1.13.216';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {

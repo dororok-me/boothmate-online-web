@@ -1,5 +1,22 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.217 → v1.13.218) — 용어집 '누락' 관찰 로그 추가 (치환 로직은 무변경):
+  - 목적: 어떤 등록어가 실제로 얼마나 자주 빠져나가는지를 실사용 데이터로 쌓기 위함.
+    나중에 용어집 시스템을 재설계할 때 짐작이 아니라 기록으로 판단하기 위한 관찰 장치다.
+    치환·프롬프트·하이라이트는 한 줄도 건드리지 않았다 — 순수 관찰 전용.
+  - [누락의 정의] 이번 턴 원문(turnSrcText)에 등록 트리거어(표제어·원문쪽 별칭, 굴절·연음 포함)가
+    있었는데, AI 원시 번역(turnRawTrans)에 표준표기도 등록 별칭도 하나도 안 나온 경우.
+     · 표준표기가 나왔다 → AI가 용어집을 따랐다 → 누락 아님
+     · 등록 별칭이 나왔다 → 후처리(applyGlossaryReplace)가 잡는다 → 누락 아님
+     · 둘 다 없다 → AI가 모르는 제3의 단어로 번역했다 → 누락 (지금 구조로는 못 잡는 사례)
+  - [검사 시점] finishSegment에서 턴 원문·원시 번역이 모두 확정된 뒤 1회(scanGlossaryMisses).
+    turnSrcText/turnRawTrans가 비워지기 직전이라 한 턴을 통째로 보고 판단할 수 있다.
+    try/catch로 감싸 — 관찰 기능이 턴 종료 처리를 절대 깨뜨리지 않게.
+  - [표시] 반영 로그에 회색 '누락' 칩. 화살표를 점선(⇢)으로 써서 적용된 항목(→)과 눈으로 구분.
+    칩에 마우스를 올리면 그 턴의 번역 끝부분이 title로 뜬다 → AI가 대신 쓴 단어를 바로 확인,
+    별칭으로 등록할 후보를 찾기 쉽다.
+  - [한계·의도적 보수성] 원문 전사가 안 왔거나(비동기 지연) 원어 메아리로 버려진 턴은 검사에서
+    빠진다. 없는 누락을 만드는 것보다 있는 누락을 놓치는 쪽이 관찰 데이터로 안전하다.
   변경점 (v1.13.216 → v1.13.217) — 테스트 계정 1개 추가 + 시간 부여:
   - shinseoyeon.translator@gmail.com → ALLOWED_EMAILS 등록 + TIME_GRANTS 3시간(grantId shinseoyeon-translator-3h-20260804).
   변경점 (v1.13.215 → v1.13.216) — 로그인 화면에 무료 체험 안내 추가 (교수님 요청):
@@ -2689,7 +2706,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.217 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.218 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3557,7 +3574,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.217';
+const GX_DIAG_VER = '1.13.218';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -3866,6 +3883,8 @@ const REFLOG_STYLE = {
   glossary: { bg: '#EEF0FE', bd: '#E0E3FB', fg: '#4338CA', tag: '용어' },
   currency: { bg: '#E7F6EF', bd: '#CFEEDD', fg: '#0B7A4F', tag: '환율' },
   unit:     { bg: '#FBF1D6', bd: '#EFDDA8', fg: '#92580A', tag: '도량형' },
+  // 누락(v1.13.218): 적용된 항목이 아니라 '반영 안 됨'을 알리는 관찰용 — 회색으로 눈에 덜 띄게
+  miss:     { bg: '#F1F3F5', bd: '#DEE2E6', fg: '#6B7280', tag: '누락' },
 };
 function renderReflog() {
   const list = $('reflogList'), empty = $('reflogEmpty');
@@ -3885,15 +3904,16 @@ function renderReflog() {
     txt.textContent = e.text;
     txt.style.cssText = 'font-size:12px; color:' + s.fg + ';';
     row.appendChild(tag); row.appendChild(txt);
+    if (e.title) row.title = e.title;   // 누락 칩: 그 턴의 번역 일부 — AI가 대신 쓴 단어 확인용
     list.appendChild(row);
   }
 }
-function reflogAdd(kind, text) {
+function reflogAdd(kind, text, title) {
   // 연속 중복 방지: 직전 항목과 종류·내용이 같으면 추가하지 않음
   // (통화 변환이 문장 경계에 걸쳐 turnLogged가 비워질 때 같은 항목이 두 번 찍히는 것 방지)
   const last = reflogEntries[reflogEntries.length - 1];
   if (last && last.kind === kind && last.text === text) return;
-  reflogEntries.push({ kind: kind, text: text });
+  reflogEntries.push({ kind: kind, text: text, title: title });
   if (reflogEntries.length > REFLOG_MAX) reflogEntries = reflogEntries.slice(-REFLOG_MAX);
   renderReflog();
   // 첫 로그 → 패널이 열려 숨겨둔 로그 줄이 있으면 다시 표시 (v1.13.48)
@@ -4870,6 +4890,50 @@ function annotateGlossary(text, outCode) {
   }
   return out;
 }
+/* ════════════════════════════════════════════
+   용어집 누락 관찰 (v1.13.218) — 관찰 전용, 치환은 절대 하지 않는다
+   이번 턴 원문에 등록 트리거어가 있었는데 AI 번역에 표준표기도 등록 별칭도 안 나온 경우 =
+   지금 구조(별칭 기반 후처리)로는 못 잡고 통째로 새어 나간 사례.
+   어떤 용어가 얼마나 자주 새는지 실사용에서 쌓아, 나중 재설계 판단의 근거로 쓴다.
+   ※ 별칭이 나왔으면 후처리가 잡으므로 누락 아님. 표준표기가 나왔으면 AI가 따랐으므로 누락 아님.
+   ════════════════════════════════════════════ */
+function scanGlossaryMisses(outCode) {
+  const hay = (typeof turnSrcText === 'string') ? turnSrcText : '';
+  const out = (typeof turnRawTrans === 'string') ? turnRawTrans : '';
+  if (!hay.trim() || !out.trim()) return;
+  const { outP, otherP } = gDirKeys(outCode);
+  for (const it of loadGlossary()) {
+    if (!it) continue;
+    const outCol = gPick(it.nat, outP, otherP);
+    const srcCol = (gPick(it.nat, otherP, outP) || []).filter(Boolean);
+    if (!outCol || !outCol.length || !srcCol.length) continue;
+    const canonical = outCol[0];
+    // 양쪽 표제어가 사실상 같은 항목(방향 판별 실패 등)은 검사에서 제외 — annotateGlossary와 동일 기준
+    if (!canonical || eqTerm(canonical, srcCol[0])) continue;
+    // ① 원문에서 실제로 말한 트리거어를 찾는다(없으면 이 용어는 이번 턴과 무관 → 검사 안 함)
+    const said = scanSrcTrigger(srcCol);
+    if (!said) continue;
+    // ② 출력에 표준표기(굴절 포함) 또는 등록 별칭(복수형 포함)이 하나라도 있으면 반영된 것
+    let covered = false;
+    for (const w of outCol) {
+      if (!w) continue;
+      let re;
+      // 표준표기는 감지용(굴절)·별칭은 치환용(복수) 정규식 — 각 단계가 실제로 쓰는 것과 같게 맞춘다
+      try { re = eqTerm(w, canonical) ? flexRegexInfl(w) : flexRegexP(w); } catch (e) { continue; }
+      re.lastIndex = 0;
+      if (re.test(out)) { covered = true; break; }
+    }
+    if (covered) continue;
+    // ③ 누락 확정 — 로그만 남긴다(치환 없음)
+    const k = 'miss:' + said + '→' + canonical;
+    if (typeof turnLogged !== 'undefined') {
+      if (turnLogged.has(k)) continue;
+      turnLogged.add(k);
+    }
+    // 점선 화살표(⇢) = 반영 안 됨. title에 번역 끝부분을 실어 'AI가 대신 쓴 단어'를 바로 볼 수 있게.
+    reflogAdd('miss', said + ' ⇢ ' + canonical, out.replace(/\s+/g, ' ').trim().slice(-120));
+  }
+}
 /* 괄호 밖에 있는 매치만 치환 */
 function replaceSafe(text, re, fn) {
   let result = '';
@@ -5247,6 +5311,9 @@ function finishSegment() {
   if (curPair && (curPair.srcLine || curPair.transLine)) curPair = null;
   trimLines(combinedEl, 'srcline');
   pushMirror();
+  // 용어집 누락 관찰 (v1.13.218): 턴 원문·원시 번역이 모두 확정된 이 시점에서 1회만 검사.
+  // 관찰 기능이 턴 종료 처리를 깨뜨리는 일은 없어야 하므로 try/catch로 격리.
+  try { scanGlossaryMisses(curTarget || ($('targetLang') && $('targetLang').value) || ''); } catch (e) {}
   turnLogged.clear();   // 턴 종료 → 다음 턴은 같은 치환도 다시 기록
   turnRawTrans = "";
   // 이 턴 원문으로 마지막 소급 갱신 시도 후 pending 만료 (다음 턴 원문이 잘못 매칭되지 않게)

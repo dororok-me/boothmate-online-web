@@ -1,5 +1,20 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.218 → v1.13.219) — 용어집 파일 입출력 단순화: 별칭은 열 위치로 (교수님 지시):
+  - 전제: 유저 대부분은 A/B 두 칸짜리 파일을 만들어 온다. 그 경우를 아무것도 안 건드리는 게 우선.
+  - [불러오기] 3열 = 용어1 별칭, 4열부터 = 용어2 별칭. 열 위치가 곧 별칭의 언어다.
+    예전에는 3열부터 전부 한 덩어리로 읽은 뒤 synSplitByLang이 '글자'로 어느 쪽인지 추측했는데,
+    같은 문자체계 쌍(영↔불·영↔독)은 판별이 불가능해 별칭이 전부 한쪽으로 몰렸다. 위치 기반이라 사라짐.
+    2열짜리 파일은 예전 그대로 들어온다(별칭 칸이 없으면 빈 값).
+  - [내보내기] 별칭이 하나도 없으면 A,B 2열 그대로 — 헤더도 안 붙인다(들고 온 모양 그대로 돌려줌).
+    별칭이 하나라도 있으면 헤더 '용어1,용어2,용어1 별칭,용어2 별칭' + 4열 고정, 없는 칸은 빈 칸.
+    예전엔 별칭 개수만큼 열이 늘어 행마다 열 수가 달랐다(엑셀에서 삐뚤빼뚤한 표) → 항상 직사각형.
+  - [CSV 이스케이프] 별칭 여러 개를 한 칸에 쉼표로 담게 되므로 따옴표가 필수가 됐다(csvCell).
+    안 씌우면 "고양이, 야옹이"가 두 열로 쪼개져 4열 구조가 그 자리에서 무너진다.
+    parseCSV도 "" (값 안의 따옴표 한 개)를 읽도록 맞춤 — 내보낸 파일을 그대로 다시 읽을 수 있게.
+  - [헤더 인식] 첫 칸이 '용어1'인 줄도 헤더로 건너뛴다(용어\d?). 우리가 내보내는 헤더인데
+    정작 다시 불러올 때 '용어1'을 용어로 등록해 버리던 문제.
+  - 구버전 syn(언어 혼합 한 칸)만 있는 옛 엔트리는 내보낼 때 synSplitByLang으로 두 칸에 나눠 담아 유실 방지.
   변경점 (v1.13.217 → v1.13.218) — 용어집 '누락' 관찰 로그 추가 (치환 로직은 무변경):
   - 목적: 어떤 등록어가 실제로 얼마나 자주 빠져나가는지를 실사용 데이터로 쌓기 위함.
     나중에 용어집 시스템을 재설계할 때 짐작이 아니라 기록으로 판단하기 위한 관찰 장치다.
@@ -2706,7 +2721,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.218 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.219 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3574,7 +3589,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.218';
+const GX_DIAG_VER = '1.13.219';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -7047,6 +7062,32 @@ window.__syncPanelLayout = function() {
     const d = new Date();
     return d.getFullYear() + ('0'+(d.getMonth()+1)).slice(-2) + ('0'+d.getDate()).slice(-2);
   }
+  /* 내보내기 행 만들기 (v1.13.219) — 유저 대부분은 A/B 두 칸만 쓴다는 전제로 단순하게:
+       · 별칭이 하나도 없다 → A,B 2열 그대로. 헤더도 안 붙인다(들고 온 파일 그대로 돌려받는 모양).
+       · 별칭이 하나라도 있다 → 헤더 + 4열 고정. 별칭 없는 행은 빈 칸.
+     열 위치가 곧 별칭의 언어(3열=용어1쪽, 4열=용어2쪽)라 글자로 언어를 추측할 필요가 없고,
+     같은 문자체계 쌍(영↔불)도 왕복으로 그대로 복원된다. */
+  function gExportRows(list) {
+    const rows = list.map(function (it) {
+      let sa = String(it.synA || '').trim(), sb = String(it.synB || '').trim();
+      // 구버전 syn(언어 혼합 한 칸)만 있는 옛 엔트리는 언어 판별로 두 칸에 나눠 담는다(유실 방지)
+      if (!sa && !sb && String(it.syn || '').trim()) {
+        const sp = synSplitByLang(it.a, it.b, splitAliases(it.syn));
+        sa = sp.synA; sb = sp.synB;
+      }
+      return [String(it.a || ''), String(it.b || ''), sa, sb];
+    });
+    if (!rows.some(function (r) { return r[2] || r[3]; })) {
+      return rows.map(function (r) { return [r[0], r[1]]; });
+    }
+    return [['용어1', '용어2', '용어1 별칭', '용어2 별칭']].concat(rows);
+  }
+  /* CSV 한 칸 이스케이프 — 별칭 여러 개를 한 칸에 쉼표로 담으므로 따옴표가 필수다.
+     안 씌우면 "고양이, 야옹이"가 두 열로 쪼개져 4열 구조가 바로 무너진다. */
+  function csvCell(s) {
+    const v = String(s == null ? '' : s);
+    return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
   // 내보내기: 별도 버튼 없이 드롭다운에서 형식을 고르면 바로 실행 (v1.13.60)
   $('gExportFmt').addEventListener('change', () => {
     const fmt = $('gExportFmt').value;
@@ -7058,7 +7099,7 @@ window.__syncPanelLayout = function() {
     if (fmt === 'xlsx') {
       loadSheetJS(function(err){
         if (err) { alert('엑셀 라이브러리 로드 실패. 인터넷 연결을 확인하세요.'); return; }
-        const aoa = list.map(function(it){ return [it.a, it.b].concat(splitAliases(it.synA || ''), splitAliases(it.synB || ''), splitAliases(it.syn || '')); });
+        const aoa = gExportRows(list);
         const ws = XLSX.utils.aoa_to_sheet(aoa);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, 'glossary');
@@ -7067,9 +7108,8 @@ window.__syncPanelLayout = function() {
       $('gExportFmt').value = '';
       return;
     }
-    // csv / txt — "용어1, 용어2, 별칭, 별칭..." 쉼표 구분 (3번째 칸부터 별칭 — 양쪽 언어 합침,
-    // 불러올 때 언어 판별로 두 박스에 자동 분배되므로 왕복 시 그대로 복원됨)
-    const lines = list.map(function(it){ return [it.a, it.b].concat(splitAliases(it.synA || ''), splitAliases(it.synB || ''), splitAliases(it.syn || '')).join(', '); }).join('\n');
+    // csv / txt — 별칭 없으면 "용어1,용어2" 2열, 있으면 헤더 + 4열 (gExportRows 참조)
+    const lines = gExportRows(list).map(function (r) { return r.map(csvCell).join(','); }).join('\n');
     if (fmt === 'txt') downloadBlob(lines, 'glossary_' + stamp() + '.txt', 'text/plain;charset=utf-8');
     else downloadBlob('\uFEFF' + lines, 'glossary_' + stamp() + '.csv', 'text/csv;charset=utf-8'); // CSV는 BOM(엑셀 한글)
     $('gExportFmt').value = '';
@@ -7148,19 +7188,22 @@ window.__syncPanelLayout = function() {
       let cur = '', inQ = false;
       for (let k = 0; k < line.length; k++) {
         const ch = line[k];
-        if (ch === '"') { inQ = !inQ; continue; }
+        // "" = 값 안의 따옴표 한 개 (내보내기의 csvCell과 짝)
+        if (ch === '"') { if (inQ && line[k + 1] === '"') { cur += '"'; k++; continue; } inQ = !inQ; continue; }
         if (ch === sep && !inQ) { cells.push(cur); cur = ''; continue; }
         cur += ch;
       }
       cells.push(cur);
       const a = (cells[0] || '').trim();
       const b = (cells[1] || '').trim();
-      // 3번째 칸부터 = 유사어(치환 변이형). 쉼표로 합침.
-      const syn = cells.slice(2).map(function (c) { return c.trim(); }).filter(Boolean).join(', ');
+      // 3열 = 용어1 별칭, 4열부터 = 용어2 별칭 (v1.13.219).
+      // 열 위치가 곧 언어 — 예전처럼 글자로 어느 쪽 별칭인지 추측하지 않는다.
+      const synA = (cells[2] || '').trim();
+      const synB = cells.slice(3).map(function (c) { return c.trim(); }).filter(Boolean).join(', ');
       if (!a || !b) continue;
-      // 첫 줄이 헤더로 보이면 건너뜀
-      if (i === 0 && /^(용어|단어|영어|한국어|term|word|english|korean|source|target|a|b)$/i.test(a)) continue;
-      pairs.push({ a: a, b: b, syn: syn });
+      // 첫 줄이 헤더로 보이면 건너뜀 ('용어1' 등 우리가 내보내는 헤더 포함)
+      if (i === 0 && /^(용어\d?|단어|영어|한국어|term|word|english|korean|source|target|a|b)$/i.test(a)) continue;
+      pairs.push({ a: a, b: b, synA: synA, synB: synB });
     }
     return pairs;
   }
@@ -7188,10 +7231,11 @@ window.__syncPanelLayout = function() {
               const a = (r[0] != null ? String(r[0]) : '').trim();
               const b = (r[1] != null ? String(r[1]) : '').trim();
               if (!a || !b) return;
-              if (idx === 0 && /^(용어|단어|영어|한국어|term|word|english|korean|source|target|a|b)$/i.test(a)) return;
-              // 3번째 칸부터 = 유사어(치환 변이형)
-              const syn = r.slice(2).map(function (c) { return (c != null ? String(c) : '').trim(); }).filter(Boolean).join(', ');
-              pairs.push({ a: a, b: b, syn: syn });
+              if (idx === 0 && /^(용어\d?|단어|영어|한국어|term|word|english|korean|source|target|a|b)$/i.test(a)) return;
+              // 3열 = 용어1 별칭, 4열부터 = 용어2 별칭 (CSV와 동일 규칙, v1.13.219)
+              const synA = (r[2] != null ? String(r[2]) : '').trim();
+              const synB = r.slice(3).map(function (c) { return (c != null ? String(c) : '').trim(); }).filter(Boolean).join(', ');
+              pairs.push({ a: a, b: b, synA: synA, synB: synB });
             });
             mergeGlossary(pairs);
           } catch (err2) { alert('엑셀 파싱 실패: 올바른 파일인지 확인하세요.'); }

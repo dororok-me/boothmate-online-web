@@ -1,5 +1,32 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.219 → v1.13.220) — 번역 엔진 선택: 속도 우선 / 품질 우선 (교수님 요청):
+  - [무엇] '번역·입력 설정'에 엔진 드롭다운(#transEngine) 추가. 기본값은 기존과 같은 속도 우선이라
+    아무것도 안 바꾸면 동작이 그대로다.
+      · 속도 우선(live) = 지금까지의 유일한 경로. Gemini Live가 전사와 번역을 한 세션에서 동시에 한다.
+        말이 흘러가는 동안 번역이 확정돼 가장 빠르지만, 뒤늦게 온 정보를 반영하지 못한다.
+      · 품질 우선(flash) = 전사는 그대로 Live가 하고, 번역만 gemini-3.5-flash가 맡는다.
+        문장이 맺힌 뒤 번역하고 직전 문장들을 문맥으로 함께 보내므로 조금 느린 대신 정확하다.
+  - [왜 되는가] 품질 모드도 STT를 따로 구하지 않는다. Live의 inputTranscription이 곧 전사이고,
+    그 텍스트를 문장으로 끊어 Flash로 넘긴다. 그래서 웹 구조를 새로 짤 필요가 없었다.
+  - [데스크탑과 같은 번역] 품질은 모델이 아니라 프롬프트에서 나온다. 데스크탑(BoothmateMulti)의
+    GeminiFlashProvider 0.4.6 / TranslationProvider 0.4.1에서 통역 규칙을 그대로 이식했다 —
+    FRAGMENT/INCOMPLETE STRUCTURE(목적어 미도착 시 서술어 보류), PUNCTUATION(종결어미 뒤 쉼표 금지,
+    원문 쉼표 모사 금지, 담화 필러 제거), RESUMING A CLOSED SENTENCE("말이죠" 꼬리 금지),
+    FIDELITY(전재수 시장 → 박형준 시장 사고 차단), PRONOUN("그녀는" 반복 차단).
+    이 규칙들이 빠지면 같은 모델을 써도 데스크탑과 번역이 달라진다.
+  - [용어집이 실시간 반영] 속도 모드는 용어집을 세션 시작 때 딱 1회만 주입한다(setup.systemInstruction)
+    → 통역 도중 추가한 용어가 그 세션에 반영되지 않는다. 품질 모드는 문장마다 실어 보내므로
+    추가하는 즉시 다음 문장부터 적용된다. 누락 로그(v1.13.218)를 보고 바로 고칠 수 있다.
+  - [순서 보장] 문장 큐는 반드시 직렬(qmBusy) — 두 문장을 동시에 던지면 늦게 시작한 쪽이 먼저 끝나
+    자막 순서가 뒤집힌다. 턴 종료(turnComplete)도 큐가 다 빠진 뒤에 finishSegment를 부른다.
+    바로 부르면 아직 도착하지 않은 번역이 다음 묶음으로 새어 나간다.
+  - [스트리밍] 중계서버(v3.9.1)가 Gemini SSE를 그대로 흘려보내고 웹앱이 조각을 appendTrans로 넣는다.
+    통짜로 받으면 문장이 통째로 늦게 떠서 품질 모드 체감이 크게 나빠진다.
+  - [안전] 실패 시 1회 재시도하되, 이미 화면에 조각이 나갔으면 재시도하지 않는다(중복 출력 방지).
+    쌍 밖·단방향 잠금으로 숨긴 묶음은 번역 호출 자체를 생략해 비용을 아낀다.
+  - 서버 짝: 중계서버 v3.9.1 — POST /translate가 systemInstruction·history·model·stream을 받는다.
+    이 값들이 없으면 예전 동작 그대로라 기존 호출은 안 바뀐다.
   변경점 (v1.13.218 → v1.13.219) — 용어집 파일 입출력 단순화: 별칭은 열 위치로 (교수님 지시):
   - 전제: 유저 대부분은 A/B 두 칸짜리 파일을 만들어 온다. 그 경우를 아무것도 안 건드리는 게 우선.
   - [불러오기] 3열 = 용어1 별칭, 4열부터 = 용어2 별칭. 열 위치가 곧 별칭의 언어다.
@@ -2446,7 +2473,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
       mc_src_weight:1, mc_trans_weight:1, mc_wrap_h:1, speech_level:1, lang_pair:1,
       mic_device_id:1, sys_audio_mode:1, input_mode:1, reflog_visible:1, reflog_collapsed:1,
       sessions:1, glossary:1, glossary_sets:1, glossary_cloud_ts:1, conn_mode:1, gemini_api_key:1, auto_stop_min:1,
-      relay_url:1, relay_ticket:1, bm_native_overlay:1, dir_mode:1
+      relay_url:1, relay_ticket:1, bm_native_overlay:1, dir_mode:1, trans_engine:1
     };
     var email = null;
     try { var u = JSON.parse(localStorage.getItem('boothmate_user') || 'null'); email = (u && u.email) ? u.email : null; } catch(e){}
@@ -2683,6 +2710,10 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
     <select id="dirMode"><option value="auto">🔄 양방향 자동</option><option value="ab"></option><option value="ba"></option></select>
   </label>
   <div id="dirModeHint" style="flex-basis:100%; width:100%; font-size:11px; color:var(--t-muted); margin:-2px 0 2px 2px; line-height:1.4;">언어를 자동 인식해 양방향으로 번역합니다.</div>
+  <label style="white-space:nowrap;" title="속도 우선: 말하는 동안 실시간으로 번역 · 품질 우선: 문장이 맺힌 뒤 번역(조금 느리지만 문맥·용어집 반영이 정확)">
+    <select id="transEngine"><option value="live">&#9889; 속도 우선</option><option value="flash">&#127919; 품질 우선</option></select>
+  </label>
+  <div id="engineHint" style="flex-basis:100%; width:100%; font-size:11px; color:var(--t-muted); margin:-2px 0 2px 2px; line-height:1.4;"></div>
   <select id="targetLang" style="display:none;"></select>
   <label style="white-space:nowrap;" title="번역 자막의 금액을 자동으로 환산해 괄호로 표시합니다 (예: $24억(₩약 3조…))"><input type="checkbox" id="currencyToggle" checked> $↔₩ 환율 환산</label>
   <label style="white-space:nowrap;" title="번역 자막의 면적 단위를 자동으로 환산해 괄호로 표시합니다 (예: 30평(99.2㎡), 100㎡(30.3평))"><input type="checkbox" id="unitToggle" checked> 📐 도량형 환산</label>
@@ -2721,7 +2752,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.219 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.220 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3589,7 +3620,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.219';
+const GX_DIAG_VER = '1.13.220';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5290,6 +5321,259 @@ function appendTrans(t) {
 /* 후처리 적용된 rest를 다시 원본 버퍼로 쓰기 위한 근사 (후처리는 멱등에 가까워 그대로 사용) */
 function recoverRaw(shownRest) { return shownRest; }
 
+/* ════════════════════════════════════════════
+   번역 엔진 선택 (v1.13.220) — 속도 우선 / 품질 우선
+
+   속도 우선(live, 기존·기본값): Gemini Live가 전사와 번역을 한 세션에서 동시에 한다.
+     말이 흘러가는 동안 번역이 확정되므로 가장 빠르지만, 뒤늦게 온 정보를 반영하지 못한다.
+   품질 우선(flash): 전사는 그대로 Live가 하고, 번역만 gemini-3.5-flash가 맡는다.
+     문장이 맺힌 뒤 번역하고 직전 문장들을 문맥으로 함께 보내므로 조금 느린 대신 정확하다.
+     데스크탑(BoothmateMulti)에서 'Gemini 3.5 Flash'를 골랐을 때와 같은 결과를 목표로 한다.
+
+   품질 모드의 이득이 큰 지점 — 속도 모드는 용어집을 세션 시작 때 딱 1회만 주입하므로
+   통역 도중 추가한 용어가 그 세션에 반영되지 않는다. 품질 모드는 문장마다 실어 보내
+   추가하는 즉시 다음 문장부터 적용된다.
+   ════════════════════════════════════════════ */
+function getEngine() { return (localStorage.getItem('trans_engine') === 'flash') ? 'flash' : 'live'; }
+let ENGINE = 'live';                 // 세션 시작 시 확정 — 통역 중 바뀌면 파이프라인이 어긋난다
+const FLASH_MODEL = 'gemini-3.5-flash';
+
+/* ── 통역 규칙 (데스크탑 BoothmateMulti 이식) ──
+   아래 규칙들은 전부 현장 사고 보고를 받고 하나씩 덧댄 것이다.
+   출처: GeminiFlashProvider 0.4.6 / TranslationProvider 0.4.1(FIDELITY_RULE·proDropRule).
+   웹앱이 같은 모델에 같은 문장을 보내도 이 규칙이 빠지면 데스크탑과 번역이 달라진다. */
+
+/* 표기 복원은 허용, 사실 교체는 금지 — 모델의 세계 지식을 어디까지 쓰게 할지 가르는 규칙.
+   연사가 "전재수 시장"이라 했는데 모델이 학습된 사실을 믿고 "박형준 시장"으로 바꾼 사고에서 나왔다.
+   다만 STT가 뭉갠 발음을 정식 표기로 되살리는 것(오펜하이마 → 오펜하이머)은 통역사가 마땅히 할 일이라
+   막으면 안 된다. 가르는 기준은 소리 — 고쳐도 들린 대로 소리 나면 표기 복원, 다른 대상을 가리키면 사실 교체. */
+const FIDELITY_RULE =
+  '\nFIDELITY — FIX SPELLING, NEVER CHANGE FACTS. Two different things must be kept apart:\n' +
+  '(1) ALLOWED, and expected of a good interpreter — recovering the CORRECT SPELLING of something the ' +
+  'speaker clearly said. Speech-to-text garbles proper names, film and product titles, technical terms ' +
+  'and foreign words, and speakers mispronounce them. If the garbled transcript still SOUNDS like a name ' +
+  'you know ("Oppen Hymer" -> Oppenheimer / 오펜하이머; "Tenant" in a film context -> Tenet / 테넷), write ' +
+  'the correct standard form. The referent is unchanged — you are repairing the transcription, not the content.\n' +
+  '(2) FORBIDDEN — replacing WHO or WHAT was named because you believe the speaker is wrong or out of ' +
+  'date. Your knowledge stops at your training cutoff, while this event is happening NOW: on current ' +
+  'office-holders, titles, dates and figures, YOUR knowledge is the outdated side. ' +
+  'Never swap a name for a DIFFERENT-SOUNDING one — if the speaker says "Mayor Jeon Jae-soo", render ' +
+  '"전재수 시장" even if you are certain someone else holds that office. ' +
+  'Never infer a person from a role: "the mayor said" is "시장은 …라고 말했습니다" — never fill in a name ' +
+  'that was not spoken. Never add or alter a title, affiliation, date or figure that was not spoken.\n' +
+  'THE TEST: if your corrected form still sounds like what was said, it is a spelling fix — do it. ' +
+  'If it names someone or something else, it is a fact substitution — do not. ' +
+  'Entries in the GLOSSARY always win over both.';
+
+/* 3인칭 대명사 억제 — 한국어·일본어 타겟 전용. 영어는 문장마다 대명사 주어를 요구해서 그대로 옮기면
+   "그녀는"이 매 문장 반복된다(현장 보고: 30줄에 13회). 중국어는 "她"가 정상 구어라 제외. */
+function proDropRule(targetCode, targetName) {
+  const pfx = langPrefix(targetCode);
+  if (pfx !== 'ko' && pfx !== 'ja') return '';
+  return '\nPRONOUN RULE (' + targetName + ' is a pro-drop language): ' + targetName +
+    ' normally OMITS a subject that is already clear from context, and the pronouns "그녀"/"그" ' +
+    '(Japanese "彼女"/"彼") read as stiff translationese — a spoken interpreter almost never says them. ' +
+    'Do NOT render every English "she/he/they/it" as a pronoun; that is the single most common tell of ' +
+    'machine translation. When the referent is unchanged from the previous sentence, DROP the subject ' +
+    'entirely: "그녀는 특히 젊습니다." -> "특히 젊습니다." The same goes for possessives and objects: ' +
+    '"그녀의 노동자 계급 출신" -> "노동자 계급 출신". State a subject ONLY when the referent CHANGES or ' +
+    'would otherwise be ambiguous — and then NAME it (name, title, or role) instead of a bare pronoun. ' +
+    'Omitting a subject must NEVER make it unclear who is being talked about.';
+}
+
+/* Flash에 보낼 시스템 프롬프트. 마지막에 이 앱 고유 지시(존댓말 설정·용어집)를 덧붙인다 —
+   용어집이 여기 실리기 때문에 품질 모드는 통역 도중 추가한 용어도 바로 반영된다. */
+function flashSystemText(targetCode) {
+  const targetName = langName(targetCode);
+  let t =
+    'You are a professional simultaneous interpreter. Translate the user sentence into ' + targetName + '.\n' +
+    'Output ONLY the translation — no explanations, no quotes, no prefixes, no source text.\n' +
+    'Write entirely in ' + targetName + '; never leave words untranslated. Keep it natural and concise.\n' +
+    'Numbers must be carried over exactly; group thousands with commas, never spaces. ' +
+    'Convert Korean numeric units precisely: 만=10 thousand, 백만=1 million, 억=100 million, 조=1 trillion. ' +
+    'Never change the order of magnitude of a number.\n' +
+    'FRAGMENT RULE: The input may be a COMPLETE sentence or a PARTIAL clause of an ongoing sentence ' +
+    '(simultaneous interpretation). For a partial clause: translate only that clause so it reads as a ' +
+    'natural continuation of your previous translation; never repeat previously translated content; ' +
+    'never invent or guess the rest of the sentence; if the input does not end the sentence, do not end ' +
+    'your output with sentence-final punctuation. ' +
+    'INCOMPLETE STRUCTURE: if the fragment stops right after a verb, preposition, comparative, or ' +
+    'article whose object/number has NOT arrived yet (e.g., "went above", "more than", "reached a"), ' +
+    'translate only the parts whose meaning is already complete, hold the incomplete clause for your ' +
+    'next output, and NEVER invent the missing object or number. When the continuation arrives, render ' +
+    'the held clause as ONE natural clause in normal word order. Do NOT attach a late-arriving object ' +
+    'as a comma afterthought with fillers like "말이죠"/"말입니다" — no comma-spliced tails. ' +
+    'PUNCTUATION: never put a comma right after a sentence-final ending (Korean "…니다"/"…습니다"/"…죠"/' +
+    '"…이에요"/"…어요", Japanese "…です"/"…ます") — a finished sentence ends with a period; commas belong ' +
+    'only inside an unfinished clause. Do NOT mirror the source comma placement: ' + targetName + ' uses ' +
+    'commas far more sparingly than English, so keep a comma only where ' + targetName + ' itself needs one ' +
+    '(never between an adverb and the phrase it modifies, e.g., "대부분, 사람들이" — write "대부분 사람들이"). ' +
+    'Discourse fillers ("you know", "I mean", "sort of", "kind of") carry no meaning — drop them entirely ' +
+    'along with the commas around them; never render them as "말이죠"/"있잖아요"/"뭐랄까". ' +
+    'RESUMING A CLOSED SENTENCE: when the new fragment modifies a sentence you have ALREADY closed with a ' +
+    'period, never emit it as a dangling tail ("…말이죠."/"…말입니다."/"…을요."/"…거든요.") — every line you ' +
+    'output must stand on its own as a complete sentence. Instead restate it as a full follow-up sentence ' +
+    'that resumes the previous one: repeat the head word it modifies and give it a real predicate, ' +
+    'optionally opening with "바로"/"그것도". For example: "이것을 시작하기 위해서는 말이죠." -> ' +
+    '"바로 이것을 시작하기 위해서였습니다."; "할 수 있는 그런 발판을요." -> ' +
+    '"아무도 하지 못한 일을 할 수 있는 발판이었습니다."';
+  t += FIDELITY_RULE;
+  t += proDropRule(targetCode, targetName);
+  // 이 앱 고유 지시 — 존댓말 설정 + 용어집(문장마다 최신본이 실린다)
+  const extra = [
+    (typeof speechInstruction === 'function') ? speechInstruction($('speechLevel') ? $('speechLevel').value : '', targetCode) : '',
+    (typeof glossaryInstruction === 'function') ? glossaryInstruction(targetCode) : ''
+  ].filter(Boolean).join(' ');
+  if (extra) t += '\n\nSTANDING INSTRUCTIONS (obey above all):\n' + extra;
+  return t;
+}
+
+/* SSE를 줄 단위로 읽어 텍스트 조각을 흘려보낸다 (중계·직접 모드 공용) */
+async function readSSEDeltas(body, onDelta) {
+  const reader = body.getReader();
+  const dec = new TextDecoder();
+  let buf = '';
+  for (;;) {
+    const r = await reader.read();
+    if (r.done) break;
+    buf += dec.decode(r.value, { stream: true });
+    let nl;
+    while ((nl = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (line.indexOf('data:') !== 0) continue;
+      const payload = line.slice(5).trim();
+      if (!payload || payload === '[DONE]') continue;
+      try {
+        const j = JSON.parse(payload);
+        const parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
+        for (const pt of parts) if (pt && pt.text) onDelta(pt.text);
+      } catch (e) { /* 조각난 JSON — SSE는 줄 단위 완결이라 무시해도 안전 */ }
+    }
+  }
+}
+
+/* 문장 하나를 Flash로 번역. 중계 모드는 서버 경유(키 비노출), 직접 모드는 본인 키로 Google 직접. */
+async function flashTranslate(sentence, targetCode, onDelta) {
+  const sys = flashSystemText(targetCode);
+  const history = qmHistory.slice(-6);
+  const mode = (localStorage.getItem('conn_mode') || 'relay');
+  if (mode === 'relay' && RELAY_SERVER_URL && RELAY_PASS_KEY) {
+    const baseHttp = RELAY_SERVER_URL.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
+    const res = await fetch(baseHttp + '/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
+      body: JSON.stringify({
+        text: sentence, targetLang: langName(targetCode), systemInstruction: sys,
+        history: history, model: FLASH_MODEL, stream: true,
+        platform: document.documentElement.classList.contains('bm-galaxy') ? 'galaxy' : undefined
+      })
+    });
+    if (!res.ok || !res.body) throw new Error('relay ' + res.status);
+    await readSSEDeltas(res.body, onDelta);
+    return;
+  }
+  const apiKey = ($('apiKey') && $('apiKey').value.trim()) || localStorage.getItem('gemini_api_key') || '';
+  if (!apiKey) throw new Error('no-key');
+  const contents = [];
+  for (const h of history) {
+    contents.push({ role: 'user', parts: [{ text: h.source }] });
+    contents.push({ role: 'model', parts: [{ text: h.translation }] });
+  }
+  contents.push({ role: 'user', parts: [{ text: sentence }] });
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + FLASH_MODEL +
+              ':streamGenerateContent?alt=sse&key=' + apiKey;
+  const res = await fetch(url, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: sys }] }, contents: contents,
+      generationConfig: { thinkingConfig: { thinkingLevel: 'minimal' }, maxOutputTokens: 2048 }
+    })
+  });
+  if (!res.ok || !res.body) throw new Error('gemini ' + res.status);
+  await readSSEDeltas(res.body, onDelta);
+}
+
+/* ── 품질 모드 문장 큐 ──
+   전사를 모아 문장이 맺히면 하나씩 순서대로 번역한다. 반드시 직렬이어야 한다 —
+   두 문장을 동시에 던지면 늦게 시작한 쪽이 먼저 끝나 자막 순서가 뒤집힌다. */
+let qmQueue = [], qmBusy = false, qmHistory = [], qmPendingFinish = false, qmSrcPending = '';
+function qmReset() { qmQueue = []; qmBusy = false; qmHistory = []; qmPendingFinish = false; qmSrcPending = ''; }
+function qmFeedSource(t) {
+  qmSrcPending += String(t || '').replace(/\n+/g, ' ');
+  const sp = splitToSentences(qmSrcPending);
+  qmSrcPending = sp.rest;
+  for (const sent of sp.done) qmEnqueue(sent);
+}
+function qmEnqueue(sentence) {
+  const sent = String(sentence || '').trim();
+  if (!sent) return;
+  // 쌍 밖 언어·단방향 잠금으로 숨긴 묶음은 어차피 표시되지 않는다 — 번역 호출 자체를 아낀다
+  if (curPair && curPair._offpair) return;
+  qmQueue.push(sent);
+  qmPump();
+}
+/* 턴 종료: 남은 미완성 조각까지 밀어 넣고, 큐가 다 빠진 뒤에 finishSegment를 부른다.
+   바로 부르면 아직 도착하지 않은 번역이 이 턴에 못 담기고 다음 묶음으로 새어 나간다. */
+function qmFlushTurn() {
+  if (qmSrcPending.trim()) qmEnqueue(qmSrcPending.trim());
+  qmSrcPending = '';
+  qmPendingFinish = true;
+  qmPump();
+}
+function qmPump() {
+  if (qmBusy) return;
+  if (!qmQueue.length) {
+    if (qmPendingFinish) { qmPendingFinish = false; finishSegment(); }
+    return;
+  }
+  qmBusy = true;
+  const sent = qmQueue.shift();
+  const target = curTarget || ($('targetLang') && $('targetLang').value) || '';
+  let acc = '';
+  qmRun(sent, target, function (d) { acc += d; appendTrans(d); })
+    .then(function () {
+      if (acc.trim()) {
+        qmHistory.push({ source: sent, translation: acc.trim() });
+        if (qmHistory.length > 8) qmHistory = qmHistory.slice(-8);
+      }
+    })
+    .catch(function (e) {
+      console.log('[품질 모드 번역 실패] ' + ((e && e.message) || e));
+      setStatus('번역 지연 — 한 문장을 건너뜁니다', true);
+    })
+    .then(function () { qmBusy = false; qmPump(); });
+}
+/* 1회 재시도. 단, 이미 화면에 조각이 나간 뒤라면 재시도가 중복 출력이 되므로 하지 않는다. */
+async function qmRun(sent, target, onDelta) {
+  let emitted = false;
+  const wrap = function (d) { emitted = true; onDelta(d); };
+  try { await flashTranslate(sent, target, wrap); }
+  catch (e) {
+    if (emitted) throw e;
+    await flashTranslate(sent, target, wrap);
+  }
+}
+/* 엔진 선택 드롭다운 — 저장·안내문. 통역 중 바꾸면 다음 시작부터 적용된다(세션 중 교체는 위험). */
+(function initEngineSel() {
+  const sel = $('transEngine');
+  if (!sel) return;
+  sel.value = getEngine();
+  const hint = $('engineHint');
+  const render = function () {
+    if (!hint) return;
+    hint.textContent = (sel.value === 'flash')
+      ? '문장이 맺힌 뒤 번역합니다. 조금 느리지만 문맥과 용어집이 정확히 반영됩니다.'
+      : '말하는 동안 실시간으로 번역합니다. 가장 빠릅니다.';
+  };
+  sel.onchange = function () {
+    localStorage.setItem('trans_engine', sel.value === 'flash' ? 'flash' : 'live');
+    render();
+    if (running) setStatus('엔진 변경 — 다음 시작부터 적용됩니다', true);
+  };
+  render();
+})();
+
 /* 턴 종료(turnComplete) / 정지 시: 미완성 버퍼를 확정하고 현재 묶음 닫음 */
 function finishSegment() {
   if (idleFlushTimer) { clearTimeout(idleFlushTimer); idleFlushTimer = null; }
@@ -5604,6 +5888,9 @@ async function start() {
   autoSaveSession();
   resetSubtitles();
   liveSessionName = newSessionName();   // 이번 세션의 고정 이름 — 실시간 저장이 이 항목을 계속 갱신
+  // 엔진은 세션 시작 시점에 확정한다 — 통역 중 바뀌면 전사/번역 파이프라인이 어긋난다
+  ENGINE = getEngine();
+  qmReset();
   running = true;
   userStopped = false;
   paused = false;
@@ -5793,10 +6080,15 @@ function connectWS() {
     }
     const sc = msg.serverContent;
     if (sc) {
-      if (sc.inputTranscription && sc.inputTranscription.text) { appendSrc(sc.inputTranscription.text); maybeFlipDirection(sc.inputTranscription.text); }
-      if (sc.outputTranscription && sc.outputTranscription.text) appendTrans(sc.outputTranscription.text);
+      if (sc.inputTranscription && sc.inputTranscription.text) {
+        appendSrc(sc.inputTranscription.text);
+        maybeFlipDirection(sc.inputTranscription.text);
+        // 품질 모드: 전사를 모아 문장이 맺히면 Flash로 번역 (Live의 번역은 쓰지 않음)
+        if (ENGINE === 'flash') qmFeedSource(sc.inputTranscription.text);
+      }
+      if (sc.outputTranscription && sc.outputTranscription.text && ENGINE !== 'flash') appendTrans(sc.outputTranscription.text);
       if (sc.modelTurn && sc.modelTurn.parts) { for (const part of sc.modelTurn.parts) { if (part.inlineData && part.inlineData.data && $('audioToggle').checked) playAudioChunk(part.inlineData.data); } }
-      if (sc.turnComplete) finishSegment();
+      if (sc.turnComplete) { if (ENGINE === 'flash') qmFlushTurn(); else finishSegment(); }
     }
   };
   ws.onerror = () => { /* onclose가 이어서 처리 */ };
@@ -6062,6 +6354,7 @@ async function startMic() {
 function stop() {
   userStopped = true;                            // 사용자 정지 → 재연결 막음
   running = false;
+  qmReset();                                     // 품질 모드: 대기 중인 문장 큐 폐기
   paused = false;                                // 일시정지 중 정지해도 상태 초기화 (v1.13.130)
   if (sessionLimitTimer) { clearTimeout(sessionLimitTimer); sessionLimitTimer = null; }
   setRunningUI(false);

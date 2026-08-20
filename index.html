@@ -1,5 +1,19 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.231 → v1.13.232) — 품질 모드에서 원문과 번역이 어긋나 붙던 것 수정 (교수님 보고):
+  - 증상: 원문 문단 하나에 번역이 세 줄 붙고, 다음 원문엔 한 줄만 붙는 식으로 짝이 밀렸다.
+  - 원인: 표시 단계(flushPairs)는 '지금 버퍼에 있는 원문'과 '지금 도착한 번역'을 짝짓는다.
+    속도 모드는 둘이 거의 동시에 오므로 맞지만, 품질 모드는 원문이 즉시 뜨고 번역은 문장이
+    맺힌 뒤 몇 초 늦게 온다. 그 사이 원문이 계속 밀려들어 번역이 엉뚱한 원문 밑에 붙었다.
+  - 수정: 품질 모드는 어느 원문이 어느 번역을 낳았는지 큐에 함께 들고 있다. 추측을 버리고
+    문장 하나 = 화면 묶음 하나로 직접 짝짓는다.
+      ① 문장이 맺히면 그 자리에서 묶음을 만들어 원문을 바로 띄운다(대기 중 번역 줄과 함께)
+      ② 번역 조각은 '그 묶음의' 번역 줄에만 쓴다
+    원문은 여전히 실시간으로 보이고(문장 미완성분은 맨 아래 임시 줄), 번역은 자기 원문 바로
+    아래에 채워진다. 품질 모드에서는 appendSrc/appendTrans/flushPairs 경로를 타지 않는다.
+  - 문장 단위 숨김: 쌍 밖 언어·단방향 반대 방향 발화는 문장 자체를 보고 판단해 화면에도 안 띄우고
+    번역 호출도 생략한다(속도 모드는 묶음 단위라 판정 지점이 다르다).
+  - 번역이 끝내 실패한 문장은 빈 번역 줄을 남기지 않고 원문만 보여준다.
   변경점 (v1.13.230 → v1.13.231) — 375px에서 타이머 줄이 재생 버튼을 4px 침범하던 것 수정:
   - v1.13.229에서 좁은 화면 조임을 되돌렸더니 타이머 줄이 153px로 늘어 재생 버튼과 4px 겹쳤다.
   - 좁은 화면에서만 경과 11px·간격 4px·토글 여백 5px·배지 9px로 조여 8px 여유를 만들었다.
@@ -2885,7 +2899,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.231 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.232 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3755,7 +3769,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.231';
+const GX_DIAG_VER = '1.13.232';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5629,30 +5643,104 @@ async function flashTranslate(sentence, targetCode, onDelta) {
   await readSSEDeltas(res.body, onDelta);
 }
 
-/* ── 품질 모드 문장 큐 ──
-   전사를 모아 문장이 맺히면 하나씩 순서대로 번역한다. 반드시 직렬이어야 한다 —
-   두 문장을 동시에 던지면 늦게 시작한 쪽이 먼저 끝나 자막 순서가 뒤집힌다. */
+/* ── 품질 모드 문장 큐 + 화면 짝짓기 (v1.13.232) ──
+   속도 모드는 원문과 번역이 거의 동시에 도착하므로, 표시 단계(flushPairs)가 '지금 버퍼에 있는
+   원문'과 '지금 도착한 번역'을 짝지어도 맞는다. 품질 모드는 다르다 — 원문은 즉시 뜨는데 번역은
+   문장이 맺힌 뒤 몇 초 늦게 온다. 그 사이 원문이 계속 밀려들어, 추측으로 짝지으면 번역이 엉뚱한
+   원문 밑에 붙는다(교수님 보고: 원문 문단 하나에 번역 세 줄, 그 다음 원문엔 한 줄).
+
+   품질 모드는 어느 원문이 어느 번역을 낳았는지 정확히 안다(큐에 함께 들고 있다).
+   그래서 추측하지 않고 문장 하나 = 화면 묶음 하나로 직접 짝짓는다:
+     ① 문장이 맺히면 그 자리에서 묶음을 만들어 원문을 바로 띄운다(대기 중 번역 줄과 함께)
+     ② 번역 조각이 도착하면 '그 묶음의' 번역 줄에만 쓴다
+   원문은 여전히 즉시 보이고, 번역은 자기 원문 바로 아래에 채워진다. */
 let qmQueue = [], qmBusy = false, qmHistory = [], qmPendingFinish = false, qmSrcPending = '';
-function qmReset() { qmQueue = []; qmBusy = false; qmHistory = []; qmPendingFinish = false; qmSrcPending = ''; }
+let qmTailEl = null;   // 아직 문장이 안 맺힌 진행 중 원문 — 항상 맨 아래 임시 줄
+function qmReset() {
+  qmQueue = []; qmBusy = false; qmHistory = []; qmPendingFinish = false; qmSrcPending = '';
+  if (qmTailEl && qmTailEl.parentNode) qmTailEl.parentNode.removeChild(qmTailEl);
+  qmTailEl = null;
+}
+/* 진행 중(미완성) 원문 줄 — 말하는 동안 실시간으로 보이게. 문장이 맺히면 정식 묶음으로 넘어간다. */
+function qmSetTail(text) {
+  const t = String(text || '').trim();
+  if (!t) {
+    if (qmTailEl && qmTailEl.parentNode) qmTailEl.parentNode.removeChild(qmTailEl);
+    qmTailEl = null;
+    return;
+  }
+  if (!qmTailEl || !qmTailEl.parentNode) {
+    qmTailEl = document.createElement('div');
+    qmTailEl.className = 'pair';
+    const line = document.createElement('div');
+    line.className = 'srcline pending';
+    qmTailEl.appendChild(line);
+  }
+  qmTailEl.firstChild.textContent = tidyNumbers(t);
+  combinedEl.appendChild(qmTailEl);   // 항상 맨 아래로 (완성 문장 묶음이 그 위에 쌓인다)
+}
+/* 문장 하나짜리 묶음 생성 — 원문은 확정, 번역 줄은 대기 상태로 미리 만들어 둔다 */
+function qmMakePair(sentence) {
+  const hint = combinedEl.querySelector('.hint');
+  if (hint) hint.remove();
+  const el = document.createElement('div');
+  el.className = 'pair';
+  const src = document.createElement('div');
+  src.className = 'srcline';
+  src.textContent = tidyNumbers(sentence);
+  const tr = document.createElement('div');
+  tr.className = 'transline pending';
+  tr.dataset.lineId = 'L' + (++lineSeq);
+  el.appendChild(src); el.appendChild(tr);
+  // 진행 중 원문 줄(꼬리)보다 위에 넣어 시간 순서를 유지한다
+  if (qmTailEl && qmTailEl.parentNode === combinedEl) combinedEl.insertBefore(el, qmTailEl);
+  else combinedEl.appendChild(el);
+  trimPairs();
+  if (window.__syncPanelLayout && combinedEl.querySelectorAll('.pair').length === 1) window.__syncPanelLayout();
+  return { el: el, srcLine: src, transLine: tr };
+}
+/* 이 문장을 화면에 띄우지 않아야 하는가 — 쌍 밖 언어, 또는 단방향 모드에서 반대 방향 발화.
+   속도 모드는 묶음 단위로 숨기지만, 품질 모드는 문장 단위라 여기서 문장 자체를 보고 판단한다. */
+function qmShouldHide(sent) {
+  try {
+    const pr = getPair();
+    if (isForeignToPair(sent, pr.a, pr.b)) return true;
+    if (getDirMode() !== 'auto') {
+      const det = detectLang(sent, pr.a, pr.b);
+      if (det && langPrefix(det) === langPrefix(curTarget)) return true;
+    }
+  } catch (e) {}
+  return false;
+}
 function qmFeedSource(t) {
-  qmSrcPending += String(t || '').replace(/\n+/g, ' ');
+  const chunk = String(t || '').replace(/\n+/g, ' ');
+  if (typeof clearErr === 'function') clearErr();
+  if (typeof noteSpeech === 'function') noteSpeech();
+  // 용어 로그가 '실제 말한 단어'를 찾는 데 쓰는 이번 턴 원문 누적 (속도 모드의 appendSrc와 동일)
+  turnSrcText += chunk;
+  if (turnSrcText.length > 800) turnSrcText = turnSrcText.slice(-800);
+  if (typeof resolvePendingReflog === 'function') resolvePendingReflog();
+  qmSrcPending += chunk;
   const sp = splitToSentences(qmSrcPending);
   qmSrcPending = sp.rest;
   for (const sent of sp.done) qmEnqueue(sent);
+  qmSetTail(qmSrcPending);
+  trimLines(combinedEl, 'srcline');
+  pushMirror();
 }
 function qmEnqueue(sentence) {
   const sent = String(sentence || '').trim();
   if (!sent) return;
-  // 쌍 밖 언어·단방향 잠금으로 숨긴 묶음은 어차피 표시되지 않는다 — 번역 호출 자체를 아낀다
-  if (curPair && curPair._offpair) return;
-  qmQueue.push(sent);
+  if (qmShouldHide(sent)) return;   // 화면에도 안 띄우고 번역 호출도 하지 않는다(비용 절약)
+  qmQueue.push({ sent: sent, pair: qmMakePair(sent) });
   qmPump();
 }
 /* 턴 종료: 남은 미완성 조각까지 밀어 넣고, 큐가 다 빠진 뒤에 finishSegment를 부른다.
-   바로 부르면 아직 도착하지 않은 번역이 이 턴에 못 담기고 다음 묶음으로 새어 나간다. */
+   바로 부르면 아직 도착하지 않은 번역이 이 턴의 용어 로그·누락 관찰에 안 잡힌다. */
 function qmFlushTurn() {
   if (qmSrcPending.trim()) qmEnqueue(qmSrcPending.trim());
   qmSrcPending = '';
+  qmSetTail('');
   qmPendingFinish = true;
   qmPump();
 }
@@ -5663,21 +5751,31 @@ function qmPump() {
     return;
   }
   qmBusy = true;
-  const sent = qmQueue.shift();
+  const item = qmQueue.shift();
   const target = curTarget || ($('targetLang') && $('targetLang').value) || '';
   let acc = '';
-  qmRun(sent, target, function (d) { acc += d; appendTrans(d); })
+  qmRun(item.sent, target, function (d) {
+    acc += d;
+    turnRawTrans += d;                        // 용어집 누락 관찰(scanGlossaryMisses)이 쓰는 원시 번역
+    // 후처리(용어집 치환·환율·도량형)는 shownTrans가, 하이라이트는 tokenize가 담당 — 속도 모드와 동일
+    item.pair.transLine.innerHTML = tokenize(shownTrans(acc));
+    trimLines(combinedEl, 'transline');
+    pushMirror();
+  })
     .then(function () {
+      item.pair.transLine.classList.remove('pending');
       if (acc.trim()) {
-        qmHistory.push({ source: sent, translation: acc.trim() });
+        qmHistory.push({ source: item.sent, translation: acc.trim() });
         if (qmHistory.length > 8) qmHistory = qmHistory.slice(-8);
       }
     })
     .catch(function (e) {
       console.log('[품질 모드 번역 실패] ' + ((e && e.message) || e));
       setStatus('번역 지연 — 한 문장을 건너뜁니다', true);
+      // 번역이 끝내 안 온 문장은 빈 줄을 남기지 않고 원문만 보여준다
+      if (item.pair.transLine.parentNode) item.pair.transLine.parentNode.removeChild(item.pair.transLine);
     })
-    .then(function () { qmBusy = false; qmPump(); });
+    .then(function () { qmBusy = false; pushMirror(); qmPump(); });
 }
 /* 1회 재시도. 단, 이미 화면에 조각이 나간 뒤라면 재시도가 중복 출력이 되므로 하지 않는다. */
 async function qmRun(sent, target, onDelta) {
@@ -6233,10 +6331,11 @@ function connectWS() {
     const sc = msg.serverContent;
     if (sc) {
       if (sc.inputTranscription && sc.inputTranscription.text) {
-        appendSrc(sc.inputTranscription.text);
         maybeFlipDirection(sc.inputTranscription.text);
-        // 품질 모드: 전사를 모아 문장이 맺히면 Flash로 번역 (Live의 번역은 쓰지 않음)
+        // 품질 모드는 화면 표시까지 qmFeedSource가 맡는다 — 원문/번역을 문장 단위로 직접 짝지어야
+        // 하므로, 버퍼를 추측으로 짝짓는 appendSrc 경로를 타면 안 된다 (v1.13.232).
         if (ENGINE === 'flash') qmFeedSource(sc.inputTranscription.text);
+        else appendSrc(sc.inputTranscription.text);
       }
       if (sc.outputTranscription && sc.outputTranscription.text && ENGINE !== 'flash') appendTrans(sc.outputTranscription.text);
       if (sc.modelTurn && sc.modelTurn.parts) { for (const part of sc.modelTurn.parts) { if (part.inlineData && part.inlineData.data && $('audioToggle').checked) playAudioChunk(part.inlineData.data); } }

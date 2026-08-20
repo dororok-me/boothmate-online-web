@@ -1,5 +1,16 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.242 → v1.13.243) — 문장마다 원문 바로 아래 번역이 오도록 (교수님 지정):
+  - 요구: 원문 문장 하나 → 그 번역 → 빈 줄 → 다음 문장. v1.13.242의 '원문 덩어리 통째 /
+    번역 덩어리 통째'는 따라 읽기 어렵다.
+  - v1.13.239에서 같은 배치를 시도했다가 어긋남이 누적돼 접었는데, 이번엔 방식이 다르다.
+    그때는 도착하는 문장을 한 칸씩 붙여 나갔다(누적 상태가 있어 한 번 밀리면 되돌아오지 않음).
+    이번엔 이번 발화의 원문 전체와 번역 전체를 들고 있다가, 그릴 때마다 양쪽을 문장으로 쪼개
+    처음부터 다시 짝짓는다(spRenderTurn). 누적될 상태가 없으므로 한 번 어긋나도 다음 그리기에서
+    바로잡히고, 어긋남은 그 발화 안에 갇힌다 — 발화가 끝나면 버퍼가 비어 다음 발화로 안 넘어간다.
+  - 문장 수가 다르면 남는 쪽은 짝 없이 남는다. Live가 정렬 정보를 주지 않는 한 이건 원리상 남는다.
+    정확한 대응이 필요하면 품질 우선 모드를 쓰면 된다.
+  - 수정 중인 번역 줄(editingLineEl)은 다시 그리지 않는다 — 고치던 내용이 날아가면 안 된다.
   변경점 (v1.13.241 → v1.13.242) — 덩어리 안에서 문장마다 줄바꿈 복구 (교수님 보고):
   - 증상: v1.13.240에서 발화를 통으로 묶으면서 문장 줄바꿈까지 같이 사라져, 긴 발화가 글 벽처럼 보인다.
   - 수정: 덩어리는 그대로 두고(발화 하나 = 묶음 하나), 그 안에서 문장마다 줄을 바꾼다.
@@ -3051,7 +3062,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.242 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.243 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3927,7 +3938,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.242';
+const GX_DIAG_VER = '1.13.243';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5418,59 +5429,85 @@ function scheduleIdleFlush() {
 
 /* ── 원문: 현재 묶음의 원문 줄에 누적 (묶음 닫기는 번역이 담당) ── */
 /* ════════════════════════════════════════════
-   속도 모드 표시: 한 발화 = 한 묶음 (v1.13.240)
+   속도 모드 표시 (v1.13.243) — 문장마다 원문 바로 아래 번역
 
-   Live는 원문 전사와 번역을 정렬 정보 없이 서로 다른 속도로 보낸다. 그래서 문장 단위로 짝을
-   지으려 하면 반드시 어긋난다 — AI가 원문 두 문장을 한 문장으로 옮기는 순간 한 칸이 밀리고,
-   그 뒤로 계속 밀린 채 간다(교수님 보고: 번역이 2행씩 벗어남).
+   Live는 원문 전사와 번역을 정렬 정보 없이 두 갈래로 보낸다. 그래서 도착하는 대로 한 문장씩
+   짝을 지어 붙여 나가면, 원문 한 문장이 별도 번역 문장을 못 받는 순간 한 칸이 밀리고
+   그 어긋남이 되돌아오지 않는다(v1.13.239에서 실제로 그랬다).
 
-   화면만 보고는 이 두 경우를 구별할 수 없다:
-     ① 원문 3문장이 한꺼번에 전사됐고 번역 3개가 차례로 올 예정 → 앞 행부터 채워야 맞다
-     ② 그중 2개는 별도 번역이 안 나온다 → 최신 행에 붙여야 맞다
-   위치·시간 기준을 각각 시도했지만 둘 다 한쪽을 깨뜨려 폐기했다.
+   이번엔 붙여 나가지 않는다. 이번 발화의 원문 전체와 번역 전체를 계속 들고 있다가,
+   화면을 그릴 때마다 양쪽을 문장으로 쪼개 처음부터 다시 짝짓는다. 누적될 상태가 없으므로
+   한 번 어긋나도 다음 그리기에서 바로잡히고, 어긋남은 그 발화 안에 갇힌다
+   (발화가 끝나면 버퍼가 비므로 다음 발화로 넘어가지 않는다).
 
-   그래서 짝 주장 자체를 버린다(교수님 결정). 한 발화(turnComplete까지)를 통으로 보여준다 —
-   원문 덩어리 하나, 번역 덩어리 하나. 틀린 짝이 생길 수 없으니 오해할 일도 없다.
-   문장 단위 대응이 꼭 필요하면 품질 우선 모드를 쓰면 된다 — 거기선 어느 원문이 어느 번역을
-   낳았는지 프로그램이 알고 있어 오차 자체가 없다.
+   문장 수가 다르면 남는 쪽은 짝 없이 남는다 — Live가 정렬을 알려주지 않는 한 이건 원리상 남는다.
+   정확한 대응이 필요하면 품질 우선 모드를 쓰면 된다(어느 원문이 어느 번역을 낳았는지 알고 있다).
    ════════════════════════════════════════════ */
-let spRow0 = null;      // 이번 발화의 묶음(하나뿐)
-let spOffpair = false;  // 쌍 밖 제3언어 → 숨김
-let spNoTrans = false;  // 단방향 반대 방향 발화 → 전사만 남기고 번역 억제
-function spReset() { spRow0 = null; spOffpair = false; spNoTrans = false; }
-function spTurnRow() {
-  if (spRow0 && spRow0.el && spRow0.el.parentNode) return spRow0;
-  const hint = combinedEl.querySelector('.hint'); if (hint) hint.remove();
-  const el = document.createElement('div');
-  el.className = 'pair' + (spOffpair ? ' offpair' : '');
-  combinedEl.appendChild(el);
-  spRow0 = { el: el, srcLine: null, transLine: null };
-  curPair = spRow0;
-  trimPairs();
-  if (window.__syncPanelLayout && combinedEl.querySelectorAll('.pair').length === 1) window.__syncPanelLayout();
-  return spRow0;
-}
+let spRows = [];        // 이번 발화의 묶음들 (문장 하나 = 묶음 하나)
+let spOffpair = false;  // 쌍 밖 제3언어 → 더 그리지 않는다
+let spNoTrans = false;  // 단방향 반대 방향 발화 → 전사만, 번역 억제
+function spReset() { spRows = []; spOffpair = false; spNoTrans = false; }
 
-/* ── 한 덩어리 안에서 문장마다 줄을 바꾼다 (v1.13.242) ──
-   발화를 통으로 묶으면서(v1.13.240) 문장 줄바꿈까지 같이 사라져 글이 벽처럼 보였다(교수님 보고).
-   줄바꿈은 '읽기 편하게 끊는 것'일 뿐, 원문 줄과 번역 줄이 1:1로 마주 본다는 뜻이 아니다 —
-   각 덩어리가 자기 문장만 기준으로 끊으므로 v1.13.240의 결정(짝을 주장하지 않는다)은 그대로다. */
 function escHtml(x) {
   return String(x).replace(/[&<>"]/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
   });
 }
+/* 텍스트를 문장 목록으로 (아직 안 맺힌 마지막 조각도 한 줄로 포함) */
 function blockLines(text) {
   const sp = splitToSentences(String(text || ''));
   return sp.done.concat(sp.rest ? [sp.rest] : []).filter(function (x) { return x && x.trim(); });
 }
-/* 원문: 텍스트를 그대로 쓰되 HTML로 해석되지 않게 이스케이프한다(전사문은 무슨 글자든 올 수 있다) */
-function renderSrcBlock(el, text) {
-  el.innerHTML = blockLines(text).map(escHtml).join('<br>');
+function spNewRow() {
+  const hint = combinedEl.querySelector('.hint'); if (hint) hint.remove();
+  const el = document.createElement('div');
+  el.className = 'pair';
+  combinedEl.appendChild(el);
+  const row = { el: el, srcLine: null, transLine: null };
+  spRows.push(row);
+  curPair = row;
+  trimPairs();
+  if (window.__syncPanelLayout && combinedEl.querySelectorAll('.pair').length === 1) window.__syncPanelLayout();
+  return row;
 }
-/* 번역: 문장마다 tokenize를 걸어 단어 클릭 수정·용어집 하이라이트가 그대로 동작하게 한다 */
-function renderTransBlock(el, text) {
-  el.innerHTML = blockLines(text).map(function (x) { return tokenize(x); }).join('<br>');
+function spSetRow(row, srcText, transText, pending) {
+  if (srcText != null) {
+    if (!row.srcLine) {
+      row.srcLine = document.createElement('div');
+      row.srcLine.className = 'srcline';
+      if (row.transLine) row.el.insertBefore(row.srcLine, row.transLine);
+      else row.el.appendChild(row.srcLine);
+    }
+    row.srcLine.innerHTML = escHtml(srcText);   // 전사문엔 무슨 글자든 온다 — HTML로 해석되면 안 됨
+  } else if (row.srcLine) { row.srcLine.remove(); row.srcLine = null; }
+  if (transText != null) {
+    if (!row.transLine) {
+      row.transLine = document.createElement('div');
+      row.transLine.className = 'transline';
+      row.transLine.dataset.lineId = 'L' + (++lineSeq);
+      row.el.appendChild(row.transLine);
+    }
+    // 수정 중인 줄은 건드리지 않는다(사용자가 고치던 내용이 날아가면 안 됨)
+    if (row.transLine !== editingLineEl) row.transLine.innerHTML = tokenize(transText);
+    row.transLine.classList.toggle('pending', !!pending);
+  } else if (row.transLine && row.transLine !== editingLineEl) { row.transLine.remove(); row.transLine = null; }
+}
+/* 이번 발화를 통째로 다시 그린다 — 상태를 이어 붙이지 않으므로 어긋남이 누적되지 않는다 */
+function spRenderTurn() {
+  if (spOffpair) return;
+  const srcLines = blockLines(tidyNumbers(srcBuf).trim());
+  const trLines = spNoTrans ? [] : blockLines(shownTrans(transBuf));
+  const n = Math.max(srcLines.length, trLines.length);
+  while (spRows.length < n) spNewRow();
+  for (let i = 0; i < n; i++) {
+    const lastTrans = (i === trLines.length - 1);
+    spSetRow(spRows[i],
+             i < srcLines.length ? srcLines[i] : null,
+             i < trLines.length ? trLines[i] : null,
+             lastTrans);
+  }
+  trimLines(combinedEl, 'transline');
+  pushMirror();
 }
 
 function appendSrc(t) {
@@ -5484,13 +5521,12 @@ function appendSrc(t) {
   // 원문이 번역보다 늦게 도착한 경우: 대기 중인 용어 로그의 좌측을 실제 말한 단어로 소급 갱신
   if (typeof resolvePendingReflog === 'function') resolvePendingReflog();
 
-  // 쌍 밖 언어 차단(v1.10.0): 통역 대상이 아닌 제3언어는 화면에 올리지 않는다
+  // 쌍 밖 언어 차단(v1.10.0): 통역 대상이 아닌 제3언어는 더 그리지 않는다.
+  // 이미 그려진 앞 묶음은 지우지 않는다 — 한 발화에 제3언어가 끼어들었다고 멀쩡한 자막을
+  // 소급해 없애면 안 된다.
   if (!spOffpair) {
     const pr = getPair();
-    if (isForeignToPair(srcBuf, pr.a, pr.b)) {
-      spOffpair = true;
-      if (spRow0 && spRow0.el) spRow0.el.classList.add('offpair');
-    }
+    if (isForeignToPair(srcBuf, pr.a, pr.b)) spOffpair = true;
   }
   if (spOffpair) { pushMirror(); return; }
 
@@ -5498,39 +5534,25 @@ function appendSrc(t) {
   if (getDirMode() !== 'auto') {
     const pr = getPair();
     if (!spNoTrans) {
-      // 아직 이 묶음이 어느 방향인지 안 정해졌으면 지금까지 모인 원문으로 판단한다
       const detBuf = detectLang(srcBuf, pr.a, pr.b);
       if (detBuf && langPrefix(detBuf) === langPrefix(curTarget)) spNoTrans = true;
     } else {
-      // 복귀 판단은 '방금 들어온 조각'으로 한다 (v1.13.240).
-      // srcBuf는 이제 발화 전체를 담으므로 두 언어가 섞여 있어 판별이 안 된다.
+      // 복귀 판단은 방금 들어온 조각으로 — srcBuf는 발화 전체라 두 언어가 섞여 판별이 안 된다.
       const detChunk = detectLang(chunk, pr.a, pr.b);
       if (detChunk && langPrefix(detChunk) !== langPrefix(curTarget)) {
-        // 화자가 원어로 돌아왔다(턴 경계 없이 교대) → 앞 묶음은 전사만인 채로 닫고 새 묶음에서 시작.
-        // 안 그러면 뒤따르는 원어 발화까지 같은 묶음에 붙어 번역이 안 뜬다 (v1.13.189의 취지).
+        // 화자가 원어로 돌아왔다 → 앞 묶음들은 전사만인 채로 닫고 새 발화처럼 다시 시작
         spNoTrans = false;
-        spRow0 = null;
+        spRows = [];
         srcBuf = chunk;
         transBuf = ''; turnRawTrans = '';
       }
     }
   }
-
-  const r = spTurnRow();
-  if (!r.srcLine) {
-    r.srcLine = document.createElement('div');
-    r.srcLine.className = 'srcline';
-    if (r.transLine) r.el.insertBefore(r.srcLine, r.transLine);
-    else r.el.appendChild(r.srcLine);
-  }
-  renderSrcBlock(r.srcLine, tidyNumbers(srcBuf).trim());
-  r.srcLine.classList.remove('pending');
+  spRenderTurn();
   trimLines(combinedEl, 'srcline');
-  pushMirror();
   scheduleIdleFlush();
 }
 
-/* ── 번역: 이번 발화의 번역을 한 덩어리로 계속 갱신 ── */
 function appendTrans(t) {
   transBuf += t;
   turnRawTrans += t;   // 반영 로그용: 치환 전 원시 번역 누적
@@ -5545,24 +5567,13 @@ function appendTrans(t) {
     if (outAll.trim().length >= 14) {
       const det = detectLang(outAll, srcLang, curTarget);
       if (det && langPrefix(det) === langPrefix(srcLang)) {
-        if (spRow0 && spRow0.transLine) { spRow0.transLine.remove(); spRow0.transLine = null; }
         transBuf = ''; turnRawTrans = '';
-        pushMirror();
+        spRenderTurn();
         return;
       }
     }
   }
-  const r = spTurnRow();
-  if (!r.transLine) {
-    r.transLine = document.createElement('div');
-    r.transLine.className = 'transline';
-    r.transLine.dataset.lineId = 'L' + (++lineSeq);
-    r.el.appendChild(r.transLine);
-  }
-  if (r.transLine !== editingLineEl) renderTransBlock(r.transLine, shownTrans(transBuf));
-  r.transLine.classList.add('pending');   // 발화가 끝나면(finishSegment) 확정으로 바꾼다
-  trimLines(combinedEl, 'transline');
-  pushMirror();
+  spRenderTurn();
   scheduleIdleFlush();
 }
 /* 후처리 적용된 rest를 다시 원본 버퍼로 쓰기 위한 근사 (후처리는 멱등에 가까워 그대로 사용) */
@@ -5949,19 +5960,16 @@ function finishSegment() {
     const pr = getPair();
     const srcLang = (langPrefix(curTarget) === langPrefix(pr.a)) ? pr.b : pr.a;
     const det = detectLang(shownTrans(transBuf), srcLang, curTarget);
-    if (det && langPrefix(det) === langPrefix(srcLang)) {
-      transBuf = "";
-      if (spRow0 && spRow0.transLine) { spRow0.transLine.remove(); spRow0.transLine = null; }
-    }
+    if (det && langPrefix(det) === langPrefix(srcLang)) transBuf = "";
   }
-  // 이번 발화의 번역을 확정 표시로 (내용은 appendTrans가 이미 그려 두었다 — 다시 배치하지 않는다)
-  if (spRow0 && spRow0.transLine && spRow0.transLine !== editingLineEl) {
-    if (transBuf.trim()) renderTransBlock(spRow0.transLine, shownTrans(transBuf).trim());
-    spRow0.transLine.classList.remove('pending');
+  spRenderTurn();                     // 마지막 상태로 한 번 더
+  for (const r of spRows) {           // 진행 중 표시 해제
+    if (r.transLine) r.transLine.classList.remove('pending');
+    if (r.srcLine) r.srcLine.classList.remove('pending');
   }
   srcBuf = "";
   transBuf = "";
-  spReset();            // 다음 발화는 새 묶음부터
+  spReset();            // 다음 발화는 새 묶음부터 (어긋남이 발화를 넘어가지 않는다)
   curPair = null;
   trimLines(combinedEl, 'srcline');
   pushMirror();

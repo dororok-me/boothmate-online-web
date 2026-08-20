@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.227 → v1.13.228) — 375px(아이폰 표준)에서 레벨미터가 숨던 것 수정:
+  - v1.13.227이 미터를 접는 기준을 400px로 잡아, 가장 흔한 폰 폭인 375px에서 미터가 사라졌다.
+  - 글자·여백을 한 단계 더 조여(경과 10px, 간격 2px, 토글 여백 3px) 375px에 미터까지 들어가게 하고,
+    접는 기준은 360px 아래로 낮췄다.
   변경점 (v1.13.226 → v1.13.227) — 좁은 화면 대응을 '옮기기'에서 '줄이기'로 교체:
   - v1.13.224~226은 좁은 화면에서 레벨미터를 재생 버튼 아래로 '옮기는' 방식이었다. 폭 변화를
     matchMedia change로 따라가고, v1.13.226에서 resize 대비책까지 붙였는데 — 두 이벤트가 모두
@@ -2394,9 +2398,10 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
      안 보이던 문제 → 오버레이와 같은 반투명 인디고 + 밝은 글자로 대비 확보 */
   body.theme-dark .transline .gword { background: rgba(129,140,248,0.42); color: #EEF2FF; }
   body.theme-dark .transline.pending .gword { background: rgba(129,140,248,0.30); }
-  /* 아주 좁은 화면(≤400px, 구형 소형 기기): 줄여도 다 안 들어간다 → 레벨미터만 접는다.
+  /* 아주 좁은 화면(≤360px, 구형 소형 기기): 줄여도 다 안 들어간다 → 레벨미터만 접는다.
+     375px(아이폰 표준)에서는 미터가 보여야 하므로 기준을 그 아래로 잡았다.
      경과·언어쌍·엔진은 통역 중 계속 봐야 하는 정보라 남기고, 미터는 시작 전 확인용이라 먼저 양보. */
-  @media (max-width: 400px) {
+  @media (max-width: 360px) {
     #timerBar #levelMeter { display: none; }
   }
   /* 모바일: 헤더를 더 컴팩트하게(한 줄 유지), 자막 공간 최대 확보 (v1.7.0) */
@@ -2534,13 +2539,13 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
        요소를 다른 곳으로 옮기지 않고 '줄여서' 넣는다 — 옮기는 방식은 화면 폭 변화를 이벤트로
        따라가야 하는데, matchMedia change도 resize도 오지 않는 환경을 실측했다(임베디드 뷰).
        CSS만 쓰면 폭이 바뀌는 순간 항상 맞으므로 이벤트가 필요 없다. */
-    #timerBar { gap: 3px; right: 8px; }
+    #timerBar { gap: 2px; right: 8px; }
     #levelMeter { gap: 1px; }
     #levelMeter span { width: 2px; height: 2px; }
-    .tbox { font-size: 11px; }
-    .tsep { font-size: 11px; }
+    .tbox { font-size: 10px; }
+    .tsep { font-size: 10px; }
     #langBadge { font-size: 9px; letter-spacing: 0.2px; }
-    #engineToggle button { font-size: 9px; padding: 3px 4px; }
+    #engineToggle button { font-size: 9px; padding: 3px 3px; }
     #engineToggle button .eng-tail { display: none; }
     .icon-btn, #mcOptBtn, #glossaryBtn { width: 32px; height: 32px; }
     .icon-btn svg, #mcOptBtn svg, #glossaryBtn svg { width: 17px; height: 17px; }
@@ -2857,7 +2862,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.227 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.228 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3727,7 +3732,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.227';
+const GX_DIAG_VER = '1.13.228';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {

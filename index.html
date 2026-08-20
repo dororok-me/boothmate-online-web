@@ -1,5 +1,16 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.245 → v1.13.246) — 언어쌍 배지·엔진 토글에도 안내 툴팁이 뜨도록 (교수님 요청):
+  - 증상: 상단 아이콘은 마우스를 올리면 안내가 뜨는데, 아래 K⇄E 배지와 속도/품질 토글은 안 뜬다.
+  - 원인: 타이머 줄(#timerBar)은 자막 위에 겹쳐 있어 클릭을 통과시키려고 pointer-events:none이다.
+    그 바람에 안에 있는 것들도 마우스를 못 받아 호버 자체가 안 잡혔다(실측: 배지 위에서
+    elementFromPoint가 헤더를 가리킴). 토글만 예외로 auto를 줘 놨던 터라 토글은 버튼 위에서는
+    떴지만 버튼 사이 여백에서는 안 떴다.
+  - 수정: 빈 자리는 계속 통과시키되 '내용물'만 마우스를 받게 한다(#timerBar > * { pointer-events: auto }).
+    자막을 가리지 않으면서 경과 시간·언어쌍·토글 모두 안내가 뜬다.
+  - 토글은 감싼 상자에도 설명을 붙였다 — 버튼 사이 여백에 올려도 뜬다.
+    버튼 위에서는 각 버튼의 설명이 우선한다(안쪽 요소의 title이 이긴다).
+  - 언어쌍 배지 문구를 늘렸다: 무슨 언어쌍인지, 양방향/단방향이 무슨 뜻인지, 어디서 바꾸는지.
   변경점 (v1.13.244 → v1.13.245) — 엔진 토글을 '낱말 + 상태' 형태로 (교수님 요청, 자리 절약):
   - v1.13.244의 비교식('속도>품질')은 뜻은 분명했지만 자리를 더 먹었다. 목적이 자리 절약이었으므로
     낱말만 남긴다 — '속도' / '품질'.
@@ -2040,8 +2051,11 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   #timerBar { position: absolute; right: 12px; bottom: 3px; display: flex; align-items: center; gap: 6px; z-index: 4; pointer-events: none; }   /* right:12px → 카운터 우측 끝을 설정 아이콘 글리프 우측에 정렬. 미터는 카운터 왼쪽. */
   #timerStack { display: inline-flex; flex-direction: row; align-items: baseline; gap: 1px;
     font-family: ui-rounded, "Segoe UI Variable Display", "Segoe UI", Pretendard, system-ui, sans-serif; }   /* 부드러운(라운드) 폰트 */
-  /* ── 번역 엔진 토글 (v1.13.223) — 타이머·언어쌍 배지 오른쪽 ──
-     #timerBar는 pointer-events:none(자막 클릭을 가리지 않으려고)이라 이 토글만 auto로 되살린다. */
+  /* 타이머 줄은 자막 위에 겹쳐 있어 pointer-events:none으로 클릭을 통과시킨다.
+     그런데 그러면 안에 있는 것들도 마우스를 못 받아 안내 툴팁이 안 뜬다(교수님 보고: 언어쌍 배지).
+     빈 자리는 계속 통과시키되 '내용물'만 마우스를 받게 한다 (v1.13.246). */
+  #timerBar > * { pointer-events: auto; }
+  /* ── 번역 엔진 토글 (v1.13.223) — 타이머·언어쌍 배지 오른쪽 ── */
   #engineToggle {
     display: inline-flex; align-items: center; pointer-events: auto;
     border: 1px solid var(--t-border); border-radius: 999px;
@@ -3081,7 +3095,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.245 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.246 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3261,7 +3275,10 @@ function updateLangBadge() {
   if (m === 'ab') el.textContent = A + '→' + B;
   else if (m === 'ba') el.textContent = B + '→' + A;
   else el.textContent = A + '⇄' + B;
-  el.title = langLabel(a) + ' ⇄ ' + langLabel(b) + (m === 'auto' ? ' (양방향 자동)' : ' (단방향)');
+  el.title = '통역 언어: ' + langLabel(a) + ' ⇄ ' + langLabel(b) +
+    (m === 'auto' ? ' (양방향 자동 — 들리는 언어를 감지해 반대쪽으로 번역)'
+                  : ' (단방향 — 설정한 방향으로만 번역)') +
+    ' · 설정에서 바꿀 수 있습니다';
 }
 
 /* 언어 쌍 잠금(v1.10.0): 원문 텍스트가 쌍의 두 언어가 '아닌' 다른 언어인지 판별.
@@ -3957,7 +3974,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.245';
+const GX_DIAG_VER = '1.13.246';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5948,7 +5965,11 @@ function renderEngineToggle() {
   for (const b of box.querySelectorAll('button')) b.classList.toggle('on', b.dataset.eng === cur);
   const locked = isInterpreting();
   box.classList.toggle('locked', locked);
-  box.title = locked ? '통역 중에는 엔진을 바꿀 수 없습니다 — 정지 후 전환하세요' : '';
+  // 버튼 사이 여백에 마우스를 올려도 안내가 뜨도록 감싼 상자에도 설명을 붙인다 (v1.13.246).
+  // 버튼 위에서는 각 버튼의 설명이 우선한다(안쪽 요소의 title이 이긴다).
+  box.title = locked
+    ? '통역 중에는 엔진을 바꿀 수 없습니다 — 정지 후 전환하세요'
+    : '번역 엔진 — 속도: 말하는 동안 실시간 번역 · 품질: 문장이 맺힌 뒤 번역(문맥·용어집 정확)';
 }
 function initEngineToggle() {
   const box = $('engineToggle');

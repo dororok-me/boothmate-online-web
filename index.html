@@ -1,16 +1,19 @@
 <!DOCTYPE html>
 <!--
-  변경점 (v1.13.220 → v1.13.221) — 상단 정지·일시정지 버튼을 보라 계열로 통일 (교수님 요청):
+  변경점 (v1.13.220 → v1.13.222) — 상단 정지·일시정지 버튼을 보라 계열로 통일 (교수님 요청):
   - 문제: 시작 버튼은 앱 강조색(#4F46E5 인디고)인데 정지는 빨강(#DC2626), 일시정지는 호박(#F59E0B),
     재개는 초록(#059669)이라 헤더에서 셋이 따로 놀았다.
   - 해법: 넷 다 보라 계열로 옮기고, 계열 안에서 명도로 가른다 — 진한 보라 = 지금의 주 동작,
     연한 보라 = 보조 동작. 색상환을 옮겨다니지 않으므로 통일감이 생기고, 명도 차가 커서
     두 버튼은 한눈에 구별된다.
-      · 통역 중   : 정지 #6D28D9(진한) / 일시정지 #A78BFA(연한)
-      · 일시정지 중: 정지 #C4B5FD(아주 연한) / 재개 #6D28D9(진한) — 강조가 재개 쪽으로 넘어가
-        '지금 눌러야 할 것'이 늘 진한 쪽이 된다.
-  - 연한 배경에는 흰 아이콘 대신 진한 보라(#4C1D95) 아이콘을 얹었다. 예전 호박색+흰 아이콘은
-    대비가 2.2:1로 오히려 지금보다 읽기 나빴다.
+      · 통역 중   : 정지 #6D28D9(진한) / 일시정지 #C4B5FD(연한)   — 둘의 명도차 3.85:1
+      · 일시정지 중: 정지 #DDD6FE(아주 연한) / 재개 #6D28D9(진한) — 둘의 명도차 5.12:1
+        강조가 재개 쪽으로 넘어가 '지금 눌러야 할 것'이 늘 진한 쪽이 된다.
+    명도차를 3:1 이상으로 잡은 이유: 비-텍스트 UI 요소를 서로 구별하는 기준선이 3:1이다.
+    처음엔 일시정지를 #A78BFA로 뒀는데 정지와 2.61:1이라 기준에 못 미쳐 한 단계 더 연하게 했다.
+  - 연한 배경에는 흰 아이콘 대신 진한 보라 아이콘을 얹었다(#4C1D95 / #6D28D9). 아이콘 대비는
+    4.0~7.1:1. 예전 호박색+흰 아이콘은 2.15:1, 흐림 정지의 분홍+흰 아이콘은 2.01:1로
+    지금보다 읽기 나빴다.
   - 정지 버튼의 맥박(pulseStop) 발광색도 빨강 → 보라로 바꿨다. 키프레임이 box-shadow를 덮어쓰기
     때문에 배경색만 바꾸면 빨간 잔광이 그대로 남는다.
   변경점 (v1.13.219 → v1.13.220) — 번역 엔진 선택: 속도 우선 / 품질 우선 (교수님 요청):
@@ -2392,14 +2395,14 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
      (예전 호박색+흰 아이콘은 대비 2.2:1로 오히려 지금보다 나빴다). */
   #toggleBtn.running { background: #6D28D9; color: #fff; box-shadow: 0 2px 10px rgba(109,40,217,0.40); }
   /* 일시정지 중: 정지(■)를 연하게 + 펄스 중단 — '지금은 쉬는 중' 시각 신호 (v1.13.131) */
-  #toggleBtn.running.paused-dim { background: #C4B5FD; color: #4C1D95; box-shadow: 0 2px 8px rgba(109,40,217,0.14); animation: none; }
-  #toggleBtn.running.paused-dim:hover { background: #B4A2FB; }
+  #toggleBtn.running.paused-dim { background: #DDD6FE; color: #6D28D9; box-shadow: 0 2px 8px rgba(109,40,217,0.14); animation: none; }
+  #toggleBtn.running.paused-dim:hover { background: #CFC5FD; }
   /* 일시정지 — 통역 중엔 연한 보라 ⏸(보조), 일시정지 중엔 진한 보라 ▶(재개)로 강조가 넘어온다 */
   #pauseBtn {
     width: 46px; height: 46px; padding: 0; border-radius: 50%;
-    background: #A78BFA; color: #4C1D95; box-shadow: 0 2px 10px rgba(139,92,246,0.30);
+    background: #C4B5FD; color: #4C1D95; box-shadow: 0 2px 10px rgba(139,92,246,0.26);
   }
-  #pauseBtn:hover { background: #8B5CF6; color: #fff; transform: translateY(-1px); }
+  #pauseBtn:hover { background: #A78BFA; transform: translateY(-1px); }
   #pauseBtn.paused { background: #6D28D9; color: #fff; box-shadow: 0 2px 10px rgba(109,40,217,0.32); }
   #pauseBtn.paused:hover { background: #5B21B6; }
   .icon-btn, #mcOptBtn, #glossaryBtn {
@@ -2771,7 +2774,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.221 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.222 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3639,7 +3642,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.221';
+const GX_DIAG_VER = '1.13.222';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {

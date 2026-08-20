@@ -1,5 +1,16 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.240 → v1.13.241) — 일시정지 상태를 버튼이 직접 말하게 (교수님 요청):
+  - 증상: 일시정지를 누르면 ⏸가 ▶로 바뀌어, 멈춘 상태인지 재생 대기인지 헷갈린다.
+  - 원인: 아이콘이 '상태'가 아니라 '다음 동작'을 그리고 있었다. 통역 중에는 ⏸(=멈춰라),
+    멈춘 뒤에는 ▶(=재개하라). 동작 안내로는 맞지만, 지금 무슨 상태인지는 알려주지 않는다.
+  - 수정: 아이콘은 상태를 말하고, 무엇을 하는지는 툴팁·aria가 알린다.
+      · ⏸ 모양을 계속 유지한다(▶로 바꾸지 않음) — 이게 '멈춤' 상태 표시다.
+      · 버튼이 알약처럼 늘어나며 안에 '일시정지 됨'을 작게 띄운다.
+      · 눌린 듯한 테두리(ring)를 더해 활성 상태임을 분명히 한다.
+      · aria-pressed로 토글 상태를 스크린리더에도 알린다.
+  - 좁은 화면(≤640px)에서는 라벨 글자·여백을 줄인다 — 알약이 길어지면 헤더 우측
+    (경과·언어쌍·엔진 토글)과 부딪힌다.
   변경점 (v1.13.239 → v1.13.240) — 속도 모드: 문장 짝짓기를 버리고 한 발화 = 한 묶음으로 (교수님 결정):
   - 증상: 번역이 자기 원문에서 2행씩 벗어난 채로 계속 이어진다.
   - 원인: v1.13.239의 행 짝짓기는 번호 세기였다(원문 n번째 ↔ 번역 n번째). AI가 원문 두 문장을
@@ -2608,8 +2619,18 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     background: #C4B5FD; color: #4C1D95; box-shadow: 0 2px 10px rgba(139,92,246,0.26);
   }
   #pauseBtn:hover { background: #A78BFA; transform: translateY(-1px); }
-  #pauseBtn.paused { background: #6D28D9; color: #fff; box-shadow: 0 2px 10px rgba(109,40,217,0.32); }
+  /* ── 일시정지 중 (v1.13.241) ──
+     예전에는 ⏸가 ▶로 바뀌어서, 멈춘 상태인지 재생 대기인지 헷갈렸다(교수님 보고).
+     이제 ⏸ 모양을 그대로 두고 버튼이 알약처럼 늘어나며 '일시정지 됨'을 안에 띄운다.
+     눌린 듯한 테두리(ring)를 더해 '지금 이 상태'임을 분명히 한다. 누르면 재개된다. */
+  #pauseBtn.paused {
+    width: auto; min-width: 46px; border-radius: 999px; padding: 0 14px; gap: 7px;
+    background: #6D28D9; color: #fff;
+    box-shadow: 0 2px 10px rgba(109,40,217,0.32), 0 0 0 3px rgba(109,40,217,0.22);
+  }
   #pauseBtn.paused:hover { background: #5B21B6; }
+  #pauseLabel { display: none; font-size: 11px; font-weight: 700; letter-spacing: -0.2px; white-space: nowrap; }
+  #pauseBtn.paused #pauseLabel { display: inline; }
   .icon-btn, #mcOptBtn, #glossaryBtn {
     width: 38px; height: 38px; padding: 0; border-radius: 10px; font-size: 18px;
     display: inline-flex; align-items: center; justify-content: center;
@@ -2676,6 +2697,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     #elapsed { font-size: 11px; letter-spacing: 0.5px; }
     #toggleBtn, #toggleBtn:not(.running) { width: 40px; height: 40px; }
     #pauseBtn { width: 40px; height: 40px; }
+    /* 좁은 화면에선 라벨을 짧게 — 알약이 길어지면 헤더 우측(경과·언어쌍·엔진)과 부딪힌다 */
+    #pauseBtn.paused { min-width: 40px; padding: 0 10px; gap: 5px; }
+    #pauseLabel { font-size: 10px; }
     /* 세로 분할은 좁은 화면에서 두 칸이 너무 좁아 읽기 어렵다 → 위아래 배치로 되돌린다 */
     #mcCombined.split .pair { display: block; }
     #mcCombined.split .pair .srcline { padding-right: 0; margin-bottom: var(--mc-src-gap); }
@@ -2888,6 +2912,8 @@ if (!document.documentElement.classList.contains('bm-app')) {
         <button id="pauseBtn" title="일시정지 (시간 차감 없음 · 창/사운드 공유 유지)" aria-label="일시정지/재개">
           <svg id="pauseIcon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1.5"/><rect x="14" y="4" width="4" height="16" rx="1.5"/></svg>
           <svg id="resumeIcon" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" style="display:none;"><path d="M7 4.5v15a1 1 0 0 0 1.52.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>
+          <!-- 일시정지 중임을 버튼 안에서 말해 준다 (v1.13.241). 평소엔 숨김 -->
+          <span id="pauseLabel">일시정지 됨</span>
         </button>
       </div>
       <!-- 입력 레벨미터 — 재생 버튼 바로 아래 (v1.13.229, 교수님 요청).
@@ -3010,7 +3036,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.240 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.241 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3248,18 +3274,24 @@ function setRunningUI(on) {
   // 엔진 토글 잠금 갱신 — 통역 중에는 전환 불가 (v1.13.223)
   if (typeof renderEngineToggle === 'function') renderEngineToggle();
 }
-/* 일시정지 버튼 표시 상태 — 진행 중=⏸(호박색), 일시정지=▶(초록, 재개) (v1.13.130) */
+/* 일시정지 버튼 표시 상태 (v1.13.241)
+   진행 중 = ⏸ 만, 일시정지 중 = ⏸ + '일시정지 됨' 라벨(알약형·눌린 테두리).
+   예전에는 ⏸를 ▶로 바꿨는데, 멈춘 상태인지 재생 대기인지 구별이 안 됐다(교수님 보고).
+   상태 표시(⏸ 유지)와 동작(누르면 재개)은 다른 층이라, 모양은 상태를 말하고
+   무엇을 하는지는 툴팁·aria로 알린다. */
 function setPausedUI(p) {
   const pb = $('pauseBtn');
   if (!pb) return;
   pb.classList.toggle('paused', p);
-  // 일시정지 중엔 정지(■) 버튼 빨강을 연하게(펄스도 중단) — CSS .paused-dim (v1.13.131)
+  // 일시정지 중엔 정지(■) 버튼을 연하게(펄스도 중단) — CSS .paused-dim (v1.13.131)
   const tb = $('toggleBtn');
   if (tb) tb.classList.toggle('paused-dim', p);
   const pi = $('pauseIcon'), ri = $('resumeIcon');
-  if (pi) pi.style.display = p ? 'none' : '';
-  if (ri) ri.style.display = p ? '' : 'none';
-  pb.title = p ? '재개 — 창/사운드 공유가 유지된 채 바로 계속' : '일시정지 (시간 차감 없음 · 창/사운드 공유 유지)';
+  if (pi) pi.style.display = '';        // ⏸는 항상 보인다 — 이게 '멈춤' 상태 표시다
+  if (ri) ri.style.display = 'none';    // ▶ 아이콘은 쓰지 않는다(상태와 헷갈림)
+  pb.setAttribute('aria-pressed', p ? 'true' : 'false');
+  pb.title = p ? '일시정지 됨 — 누르면 재개합니다 (창/사운드 공유 유지)'
+               : '일시정지 (시간 차감 없음 · 창/사운드 공유 유지)';
 }
 setRunningUI(false);
 function showErr(t) { errEl.textContent = t; }
@@ -3880,7 +3912,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.240';
+const GX_DIAG_VER = '1.13.241';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {

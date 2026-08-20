@@ -1,5 +1,9 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.236 → v1.13.237) — 설정 아이콘을 톱니바퀴로 교체 (교수님 요청):
+  - 슬라이더(믹서) 모양 → 톱니바퀴. 설정은 톱니바퀴가 관습이라 한눈에 알아본다.
+  - 선 스타일은 헤더의 다른 아이콘(리셋·오버레이·용어집·구매)과 동일하게 유지:
+    19x19 · viewBox 24 · fill none · stroke currentColor · stroke-width 1.7 · 둥근 끝/이음.
   변경점 (v1.13.235 → v1.13.236) — 자막 배치 선택 추가: 세로 분할(원문 왼쪽·번역 오른쪽) (교수님 요청):
   - 설정 패널에 '🖥 자막 배치' 그룹 추가. 기본은 예전 그대로(원문 위·번역 아래)라 아무것도
     안 바꾸면 화면이 달라지지 않는다.
@@ -2855,7 +2859,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
     <button id="resetSubBtn" class="icon-btn" title="자막 리셋 (화면 자막 전체 지우기)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
     <button id="openOverlayBtn" class="icon-btn" title="오버레이"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg></button>
     <button id="glossaryBtn" class="icon-btn" title="용어집"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2C10.4 5 7.8 4.5 4 4.5V18c3.8 0 6.4.5 8 1.8 1.6-1.3 4.2-1.8 8-1.8V4.5c-3.8 0-6.4.5-8 1.7z"></path><path d="M12 6.2V19.8"></path></svg></button>
-    <button id="mcOptBtn" class="icon-btn" title="설정"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h7M16 7h4M4 12h12M19 12h1M4 17h3M11 17h9"></path><circle cx="13" cy="7" r="2"></circle><circle cx="14" cy="12" r="2"></circle><circle cx="9" cy="17" r="2"></circle></svg></button>
+    <button id="mcOptBtn" class="icon-btn" title="설정"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></button>
     <button id="gxBuyBtn" class="icon-btn" title="사용권 구매 (시간 추가)" aria-label="사용권 구매"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="14" r="7.5"></circle><path d="M10 10v4l2.5 1.5"></path><path d="M19 3v5M16.5 5.5h5"></path></svg></button>
   </div>
   <!-- 경과 카운터 + 입력 레벨미터(가로 점 7개, 회색): 헤더 바 안 우측에 겹쳐 배치. 카운터 왼쪽에 미터. -->
@@ -2966,7 +2970,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.236 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.237 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3836,7 +3840,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.236';
+const GX_DIAG_VER = '1.13.237';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {

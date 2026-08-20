@@ -1,5 +1,15 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.234 → v1.13.235) — 속도 모드에서 전사된 원문이 굳거나 사라지던 것 수정 (교수님 보고):
+  - 원인은 v1.13.233에서 내가 넣은 srcWaiting이었다. 원문을 배치하는 길이 두 개가 되어 서로
+    같은 srcBuf를 두고 다퉜다:
+      ① appendTrans의 '이월 표시'(v1.13.192) — 남은 원문을 아래쪽 새 묶음에 미리 그려 둔다
+      ② fillWaitingSrc(v1.13.233) — 번역이 먼저 와 원문이 빈 위쪽 묶음에 채워 넣는다
+    ②가 원문을 위로 옮겨 가도 ①이 그려 둔 아래 줄은 그대로 남아, 같은 원문이 두 곳에 보이고
+    아래 줄은 옛 텍스트에서 갱신이 멈췄다. 화면에선 전사되던 원문이 굳거나 사라진 것처럼 보인다.
+  - 수정: fillWaitingSrc가 원문을 소비한 뒤 이월 표시 줄도 같이 갱신한다.
+    남은 원문이 있으면 그 내용으로 다시 그리고, 없으면 줄을 지운다. 원문도 번역도 없는 빈 묶음은
+    화면에서 치운다.
   변경점 (v1.13.233 → v1.13.234) — 단방향에서 반대 방향 발화의 전사가 지워지던 것 수정 (교수님 요청):
   - 증상: 단방향으로 설정하면 반대 방향(타겟 언어) 발화의 전사가 떴다가 사라졌다.
   - 원인: v1.13.188이 그 묶음을 _offpair로 표시하고 .offpair(display:none)를 붙여 통째로 숨겼다.
@@ -2928,7 +2938,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.234 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.235 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3798,7 +3808,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.234';
+const GX_DIAG_VER = '1.13.235';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5311,6 +5321,23 @@ function fillWaitingSrc() {
   }
   srcBuf = sp.done.concat(sp.rest ? [sp.rest] : []).join(' ');
   if (srcBuf) srcBuf += ' ';
+  // 방금 소비한 만큼 '이월 표시' 줄을 갱신한다 (v1.13.235).
+  // appendTrans의 이월 표시가 아래쪽 묶음에 srcBuf를 그려 두는데, 여기서 그 원문을 위 묶음으로
+  // 옮기고도 아래 줄을 그대로 두면 같은 원문이 두 곳에 남고, 아래 줄은 옛 텍스트에서 갱신이
+  // 멈춘다 — 화면에선 "전사되던 원문이 굳어 버리거나 사라진" 것처럼 보인다(교수님 보고).
+  if (curPair && curPair.srcLine) {
+    if (srcBuf.trim()) {
+      setSrcLine(curPair, tidyNumbers(srcBuf).trim());
+    } else {
+      curPair.srcLine.remove();
+      curPair.srcLine = null;
+      // 원문도 번역도 없는 빈 묶음은 화면에서 치운다
+      if (!curPair.transLine && curPair.el && curPair.el.parentNode) {
+        curPair.el.parentNode.removeChild(curPair.el);
+        curPair = null;
+      }
+    }
+  }
 }
 function appendSrc(t) {
   clearErr();   // 실제 자막이 들어오기 시작하면 이전 에러 메시지 제거

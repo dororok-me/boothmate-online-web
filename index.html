@@ -1,5 +1,22 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.232 → v1.13.233) — 속도 모드에서도 원문·번역 짝이 밀리던 것 수정 + 반영 로그 '누락' 표시 삭제:
+  - [속도 모드 짝 밀림] v1.13.232는 품질 모드만 고쳤는데, 속도 모드에도 같은 증상이 있었다(교수님 보고).
+    Live는 원문 전사와 번역을 서로 다른 속도로 보낸다. 그래서 결함이 두 군데 있었다:
+      ① 마지막 번역 문장이 남은 원문을 전부 가져갔다(remaining===1 → srcQueue.length).
+         원문 여러 문장이 한 줄에 뭉치고 뒤 번역들은 원문 없이 남았다 — 스크린샷의 '원문 문단 하나에
+         번역 세 줄'이 이것이다. → 원문:번역 = 1:1 고정. 남는 원문은 버퍼에 두고 다음 번역과 짝짓는다.
+      ② 번역이 먼저 확정됐는데 원문이 아직이면 그 묶음의 원문 줄을 삭제해 버렸다. 그 원문은 다음
+         묶음으로 넘어가 이후 짝이 전부 한 칸씩 밀렸다(한 번 밀리면 계속 밀린다).
+         → 원문을 기다리는 묶음을 srcWaiting에 담아 두고, 원문이 도착하면 fillWaitingSrc가 제자리에 채운다.
+    ※ Live는 원문과 번역을 정렬 정보 없이 두 갈래로 보내므로 완벽한 짝짓기는 원리상 불가능하다.
+      이번 수정은 '한 번 밀리면 계속 밀리는' 연쇄를 끊는 것이다. 문장 수가 어긋나면 그 자리에서만
+      비고, 다음 문장부터 다시 맞는다. (품질 모드는 대응을 알고 있어 연쇄 자체가 없다.)
+  - [빈 줄 방지] 대기 묶음을 다 채워 남은 원문이 없을 때 appendSrc가 그대로 진행하면 빈 원문 줄이
+    하나 생긴다 → 남은 원문이 없으면 새 묶음을 만들지 않고 끝낸다.
+  - [반영 로그 '누락' 삭제] v1.13.218에서 넣은 회색 '누락' 칩을 제거했다(교수님 요청).
+    scanGlossaryMisses 함수와 REFLOG_STYLE.miss까지 통째로 걷어냈다 — 호출만 끊고 코드를 남기면
+    다음에 읽는 사람이 살아 있는 기능으로 오해한다.
   변경점 (v1.13.231 → v1.13.232) — 품질 모드에서 원문과 번역이 어긋나 붙던 것 수정 (교수님 보고):
   - 증상: 원문 문단 하나에 번역이 세 줄 붙고, 다음 원문엔 한 줄만 붙는 식으로 짝이 밀렸다.
   - 원인: 표시 단계(flushPairs)는 '지금 버퍼에 있는 원문'과 '지금 도착한 번역'을 짝짓는다.
@@ -2899,7 +2916,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.232 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.233 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3769,7 +3786,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.232';
+const GX_DIAG_VER = '1.13.233';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -4078,8 +4095,6 @@ const REFLOG_STYLE = {
   glossary: { bg: '#EEF0FE', bd: '#E0E3FB', fg: '#4338CA', tag: '용어' },
   currency: { bg: '#E7F6EF', bd: '#CFEEDD', fg: '#0B7A4F', tag: '환율' },
   unit:     { bg: '#FBF1D6', bd: '#EFDDA8', fg: '#92580A', tag: '도량형' },
-  // 누락(v1.13.218): 적용된 항목이 아니라 '반영 안 됨'을 알리는 관찰용 — 회색으로 눈에 덜 띄게
-  miss:     { bg: '#F1F3F5', bd: '#DEE2E6', fg: '#6B7280', tag: '누락' },
 };
 function renderReflog() {
   const list = $('reflogList'), empty = $('reflogEmpty');
@@ -4208,6 +4223,11 @@ let editingLineEl = null;                  // 수정 중인 번역 줄
    문장 개수가 원문≠번역이어도 한 발화 = 한 묶음이라 절대 안 어긋남.
    curPair = { el, srcLine, transLine } (el=div.pair) */
 let curPair = null;
+/* 번역이 먼저 도착해 원문 자리가 빈 묶음들 (v1.13.233).
+   Live는 원문 전사와 번역을 서로 다른 속도로 보내서, 번역이 먼저 확정되는 일이 흔하다.
+   그때 묶음을 원문 없이 닫아 버리면 그 원문은 다음 묶음으로 넘어가고, 이후 모든 짝이
+   한 칸씩 밀린다. 여기 담아 두었다가 원문이 도착하면 제자리에 채워 넣는다. */
+let srcWaiting = [];
 
 /* 현재 묶음 가져오기 (없으면 새로 생성) */
 function getCurrentPair() {
@@ -5085,50 +5105,6 @@ function annotateGlossary(text, outCode) {
   }
   return out;
 }
-/* ════════════════════════════════════════════
-   용어집 누락 관찰 (v1.13.218) — 관찰 전용, 치환은 절대 하지 않는다
-   이번 턴 원문에 등록 트리거어가 있었는데 AI 번역에 표준표기도 등록 별칭도 안 나온 경우 =
-   지금 구조(별칭 기반 후처리)로는 못 잡고 통째로 새어 나간 사례.
-   어떤 용어가 얼마나 자주 새는지 실사용에서 쌓아, 나중 재설계 판단의 근거로 쓴다.
-   ※ 별칭이 나왔으면 후처리가 잡으므로 누락 아님. 표준표기가 나왔으면 AI가 따랐으므로 누락 아님.
-   ════════════════════════════════════════════ */
-function scanGlossaryMisses(outCode) {
-  const hay = (typeof turnSrcText === 'string') ? turnSrcText : '';
-  const out = (typeof turnRawTrans === 'string') ? turnRawTrans : '';
-  if (!hay.trim() || !out.trim()) return;
-  const { outP, otherP } = gDirKeys(outCode);
-  for (const it of loadGlossary()) {
-    if (!it) continue;
-    const outCol = gPick(it.nat, outP, otherP);
-    const srcCol = (gPick(it.nat, otherP, outP) || []).filter(Boolean);
-    if (!outCol || !outCol.length || !srcCol.length) continue;
-    const canonical = outCol[0];
-    // 양쪽 표제어가 사실상 같은 항목(방향 판별 실패 등)은 검사에서 제외 — annotateGlossary와 동일 기준
-    if (!canonical || eqTerm(canonical, srcCol[0])) continue;
-    // ① 원문에서 실제로 말한 트리거어를 찾는다(없으면 이 용어는 이번 턴과 무관 → 검사 안 함)
-    const said = scanSrcTrigger(srcCol);
-    if (!said) continue;
-    // ② 출력에 표준표기(굴절 포함) 또는 등록 별칭(복수형 포함)이 하나라도 있으면 반영된 것
-    let covered = false;
-    for (const w of outCol) {
-      if (!w) continue;
-      let re;
-      // 표준표기는 감지용(굴절)·별칭은 치환용(복수) 정규식 — 각 단계가 실제로 쓰는 것과 같게 맞춘다
-      try { re = eqTerm(w, canonical) ? flexRegexInfl(w) : flexRegexP(w); } catch (e) { continue; }
-      re.lastIndex = 0;
-      if (re.test(out)) { covered = true; break; }
-    }
-    if (covered) continue;
-    // ③ 누락 확정 — 로그만 남긴다(치환 없음)
-    const k = 'miss:' + said + '→' + canonical;
-    if (typeof turnLogged !== 'undefined') {
-      if (turnLogged.has(k)) continue;
-      turnLogged.add(k);
-    }
-    // 점선 화살표(⇢) = 반영 안 됨. title에 번역 끝부분을 실어 'AI가 대신 쓴 단어'를 바로 볼 수 있게.
-    reflogAdd('miss', said + ' ⇢ ' + canonical, out.replace(/\s+/g, ' ').trim().slice(-120));
-  }
-}
 /* 괄호 밖에 있는 매치만 치환 */
 function replaceSafe(text, re, fn) {
   let result = '';
@@ -5303,16 +5279,41 @@ function scheduleIdleFlush() {
 }
 
 /* ── 원문: 현재 묶음의 원문 줄에 누적 (묶음 닫기는 번역이 담당) ── */
+/* 원문이 늦게 도착했을 때, 원문 자리가 비어 있던 묶음부터 순서대로 채운다 (v1.13.233).
+   이걸 안 하면 그 묶음은 영영 원문 없이 남고 이후 짝이 한 칸씩 밀린다. */
+function fillWaitingSrc() {
+  if (!srcWaiting.length || !srcBuf.trim()) return;
+  const sp = splitToSentences(srcBuf);
+  while (srcWaiting.length && sp.done.length) {
+    const pw = srcWaiting.shift();
+    if (!pw.el || !pw.el.parentNode) continue;          // 화면에서 이미 지워진 묶음은 건너뜀
+    const sent = sp.done.shift();
+    if (!pw.srcLine) {
+      pw.srcLine = document.createElement('div');
+      pw.srcLine.className = 'srcline';
+      if (pw.transLine) pw.el.insertBefore(pw.srcLine, pw.transLine);
+      else pw.el.appendChild(pw.srcLine);
+    }
+    setSrcLine(pw, tidyNumbers(sent).trim());
+    pw.srcLine.classList.remove('pending');
+  }
+  srcBuf = sp.done.concat(sp.rest ? [sp.rest] : []).join(' ');
+  if (srcBuf) srcBuf += ' ';
+}
 function appendSrc(t) {
   clearErr();   // 실제 자막이 들어오기 시작하면 이전 에러 메시지 제거
   noteSpeech(); // 무음 자동 정지 타이머 리셋 (실제 음성 인식 입력이 들어옴)
-  let p = getCurrentPair();   // 단방향 잠금이 묶음을 분리하면 새 묶음으로 교체됨 (v1.13.189)
   srcBuf += t.replace(/\n+/g, ' ');
+  fillWaitingSrc();   // 번역이 먼저 와 원문이 비었던 묶음부터 채운다 (v1.13.233)
   // 이번 턴 원문 누적 (로그 트리거어 표시용). 과도 성장 방지로 뒤 800자만 유지.
   turnSrcText += t.replace(/\n+/g, ' ');
   if (turnSrcText.length > 800) turnSrcText = turnSrcText.slice(-800);
   // 원문이 번역보다 늦게 도착한 경우: 대기 중인 용어 로그의 좌측을 실제 말한 단어로 소급 갱신
   if (typeof resolvePendingReflog === 'function') resolvePendingReflog();
+  // 대기 묶음을 채우고 남은 원문이 없으면 여기서 끝낸다 (v1.13.233).
+  // 그냥 진행하면 getCurrentPair가 빈 묶음을 만들어 원문 없는 빈 줄이 하나 생긴다.
+  if (!srcBuf.trim()) { pushMirror(); return; }
+  let p = getCurrentPair();   // 단방향 잠금이 묶음을 분리하면 새 묶음으로 교체됨 (v1.13.189)
   // 쌍 밖 언어 차단(v1.10.0): 원문이 쌍의 두 언어가 아니면 이 묶음(원문+번역)을 숨김
   if (!p._offpair) {
     const pr = getPair();
@@ -5410,11 +5411,11 @@ function appendTrans(t) {
     // 원문은 마침표(·?·!) 기준으로만 확정 (v1.13.92): 완성 문장은 이 묶음에 담고,
     // 미완성 나머지("이해가" 등)는 버퍼에 남겨 다음 묶음으로 이월 → 줄 바꿈이 문장 단위로 일정
     if (srcQueue.length) {
-      const remaining = done.length - di;
-      // 번역 진행 중이면 1문장씩(남는 원문은 다음 번역 문장 몫), 이 청크로 번역이 끝나면 균등 배분해 소진
-      const take = restPending ? 1
-                 : (remaining === 1 ? srcQueue.length : Math.ceil(srcQueue.length / remaining));
-      const mySrc = srcQueue.splice(0, take).join(' ');
+      // 원문 : 번역 = 1 : 1 고정 (v1.13.233).
+      // 예전에는 마지막 번역 문장이 남은 원문을 전부 가져갔다(remaining===1 → srcQueue.length).
+      // 그러면 원문 여러 문장이 한 줄에 뭉치고 뒤 번역들은 원문 없이 남아 짝이 통째로 밀렸다.
+      // 남는 원문은 버퍼에 두었다가 다음 번역 문장과 짝지으면 된다.
+      const mySrc = srcQueue.splice(0, 1).join(' ');
       if (!p.srcLine) {
         p.srcLine = document.createElement('div');
         p.srcLine.className = 'srcline';
@@ -5423,11 +5424,11 @@ function appendTrans(t) {
       }
       setSrcLine(p, tidyNumbers(mySrc).trim());
       p.srcLine.classList.remove('pending');
-    } else if (p.srcLine) {
-      // 완성 원문 문장이 없으면 이 묶음의 원문 줄은 다음 묶음으로 넘김
-      // (아래 이월분 즉시 표시가 같은 프레임에 새 묶음에 다시 그리므로 화면에서 사라지지 않음)
-      p.srcLine.remove();
-      p.srcLine = null;
+    } else {
+      // 아직 원문 문장이 안 왔다 → 원문 줄을 비운 채 '대기'로 등록해 두고, 도착하면 채운다.
+      // (예전에는 그냥 버려서 이 묶음이 영영 원문 없이 남고 이후 짝이 전부 밀렸다, v1.13.233)
+      if (p.srcLine) { p.srcLine.remove(); p.srcLine = null; }
+      if (srcWaiting.indexOf(p) < 0) srcWaiting.push(p);
     }
     curPair = null;         // 묶음 닫음 → 다음 문장은 새 묶음(원문·번역 함께 새로)
   }
@@ -5756,7 +5757,6 @@ function qmPump() {
   let acc = '';
   qmRun(item.sent, target, function (d) {
     acc += d;
-    turnRawTrans += d;                        // 용어집 누락 관찰(scanGlossaryMisses)이 쓰는 원시 번역
     // 후처리(용어집 치환·환율·도량형)는 shownTrans가, 하이라이트는 tokenize가 담당 — 속도 모드와 동일
     item.pair.transLine.innerHTML = tokenize(shownTrans(acc));
     trimLines(combinedEl, 'transline');
@@ -5860,9 +5860,7 @@ function finishSegment() {
   if (curPair && (curPair.srcLine || curPair.transLine)) curPair = null;
   trimLines(combinedEl, 'srcline');
   pushMirror();
-  // 용어집 누락 관찰 (v1.13.218): 턴 원문·원시 번역이 모두 확정된 이 시점에서 1회만 검사.
-  // 관찰 기능이 턴 종료 처리를 깨뜨리는 일은 없어야 하므로 try/catch로 격리.
-  try { scanGlossaryMisses(curTarget || ($('targetLang') && $('targetLang').value) || ''); } catch (e) {}
+  srcWaiting = [];      // 턴이 끝나면 대기 중이던 묶음은 더 채울 원문이 없다 (v1.13.233)
   turnLogged.clear();   // 턴 종료 → 다음 턴은 같은 치환도 다시 기록
   turnRawTrans = "";
   // 이 턴 원문으로 마지막 소급 갱신 시도 후 pending 만료 (다음 턴 원문이 잘못 매칭되지 않게)
@@ -6605,6 +6603,7 @@ async function startMic() {
 function stop() {
   userStopped = true;                            // 사용자 정지 → 재연결 막음
   running = false;
+  srcWaiting = [];                               // 원문 대기 묶음 정리
   qmReset();                                     // 품질 모드: 대기 중인 문장 큐 폐기
   paused = false;                                // 일시정지 중 정지해도 상태 초기화 (v1.13.130)
   if (sessionLimitTimer) { clearTimeout(sessionLimitTimer); sessionLimitTimer = null; }

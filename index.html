@@ -1,5 +1,21 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.239 → v1.13.240) — 속도 모드: 문장 짝짓기를 버리고 한 발화 = 한 묶음으로 (교수님 결정):
+  - 증상: 번역이 자기 원문에서 2행씩 벗어난 채로 계속 이어진다.
+  - 원인: v1.13.239의 행 짝짓기는 번호 세기였다(원문 n번째 ↔ 번역 n번째). AI가 원문 두 문장을
+    한 문장으로 옮기는 순간 한 칸이 밀리고, 번호는 되돌아오지 않아 턴 끝까지 누적된다.
+  - 고치려 두 가지를 시도했다가 둘 다 폐기했다(배포 안 함):
+      ① 번역 시작 시점의 원문 위치에 맞추기 → 원문이 한꺼번에 여러 문장 들어올 때 앞 행을
+         통째로 건너뛴다.
+      ② 오래 기다린 행 건너뛰기 → 연속 발화에서는 행이 기다릴 틈 없이 다음 번역으로 채워져
+         발동조차 안 한다.
+    화면에 보이는 것만으로는 '아직 번역이 올 예정'인지 '이 문장은 번역이 안 나온다'인지
+    구별할 수 없다. Live가 정렬 정보를 주지 않기 때문이다.
+  - 그래서 짝 주장 자체를 버렸다. 한 발화(turnComplete까지)를 통으로 보여준다 —
+    원문 덩어리 하나, 번역 덩어리 하나. 틀린 짝이 생길 수 없다.
+    세로 분할 배치와 함께 쓰면 원문·번역이 좌우로 나란히 흘러 따라 읽기 좋다.
+  - 문장 단위 대응이 필요하면 품질 우선 모드를 쓰면 된다 — 거기선 어느 원문이 어느 번역을
+    낳았는지 프로그램이 알고 있어 오차가 원리상 없다.
   변경점 (v1.13.238 → v1.13.239) — 속도 모드 자막이 재배치되며 따라 읽기 힘들던 것 수정 (교수님 보고):
   - 증상: 번역이 끝나면 문장들이 한 단락으로 합쳐지면서 원문과 번역의 위치가 바뀌어, 읽던 자리를
     놓친다.
@@ -2994,7 +3010,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.239 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.240 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3864,7 +3880,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.239';
+const GX_DIAG_VER = '1.13.240';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5355,72 +5371,38 @@ function scheduleIdleFlush() {
 
 /* ── 원문: 현재 묶음의 원문 줄에 누적 (묶음 닫기는 번역이 담당) ── */
 /* ════════════════════════════════════════════
-   속도 모드 행(row) 모델 (v1.13.239)
+   속도 모드 표시: 한 발화 = 한 묶음 (v1.13.240)
 
-   Live는 원문 전사와 번역을 정렬 정보 없이 서로 다른 속도로 보낸다. 예전에는 도착한 순서대로
-   묶음을 만들고 나중에 재배치했는데(v1.13.192 이월 표시 → v1.13.233 srcWaiting), 그때마다
-   이미 화면에 있던 글이 다른 줄로 옮겨 다녔다 — 교수님 보고: "번역이 끝나면 문장들이 한 단락으로
-   합쳐지면서 원문과 번역 위치가 바뀌어 따라 읽기 힘들다".
+   Live는 원문 전사와 번역을 정렬 정보 없이 서로 다른 속도로 보낸다. 그래서 문장 단위로 짝을
+   지으려 하면 반드시 어긋난다 — AI가 원문 두 문장을 한 문장으로 옮기는 순간 한 칸이 밀리고,
+   그 뒤로 계속 밀린 채 간다(교수님 보고: 번역이 2행씩 벗어남).
 
-   그래서 재배치를 없앤다. 원문 n번째 문장은 n번 행, 번역 n번째 문장도 n번 행 —
-   행 번호로만 짝짓는다. 한 번 행에 들어간 글은 절대 다른 행으로 움직이지 않는다.
-   진행 중(미완성) 조각도 '확정되면 들어갈 바로 그 행'에 미리 그리므로, 문장이 맺혀도 제자리다.
-   한쪽이 늦게 와도 그 행의 자리가 비어 있을 뿐, 뒤 짝이 밀리지 않는다.
+   화면만 보고는 이 두 경우를 구별할 수 없다:
+     ① 원문 3문장이 한꺼번에 전사됐고 번역 3개가 차례로 올 예정 → 앞 행부터 채워야 맞다
+     ② 그중 2개는 별도 번역이 안 나온다 → 최신 행에 붙여야 맞다
+   위치·시간 기준을 각각 시도했지만 둘 다 한쪽을 깨뜨려 폐기했다.
+
+   그래서 짝 주장 자체를 버린다(교수님 결정). 한 발화(turnComplete까지)를 통으로 보여준다 —
+   원문 덩어리 하나, 번역 덩어리 하나. 틀린 짝이 생길 수 없으니 오해할 일도 없다.
+   문장 단위 대응이 꼭 필요하면 품질 우선 모드를 쓰면 된다 — 거기선 어느 원문이 어느 번역을
+   낳았는지 프로그램이 알고 있어 오차 자체가 없다.
    ════════════════════════════════════════════ */
-let spRows = [];        // 이번 턴에 만든 행들
-let spSrcIdx = 0;       // 다음 원문 문장이 들어갈 행 번호
-let spTransIdx = 0;     // 다음 번역 문장이 들어갈 행 번호
-let spOffpair = false;  // 이번 턴이 쌍 밖 제3언어 → 통째로 숨김
+let spRow0 = null;      // 이번 발화의 묶음(하나뿐)
+let spOffpair = false;  // 쌍 밖 제3언어 → 숨김
 let spNoTrans = false;  // 단방향 반대 방향 발화 → 전사만 남기고 번역 억제
-function spReset() { spRows = []; spSrcIdx = 0; spTransIdx = 0; spOffpair = false; spNoTrans = false; }
-function spRow(i) {
-  while (spRows.length <= i) {
-    const hint = combinedEl.querySelector('.hint'); if (hint) hint.remove();
-    const el = document.createElement('div');
-    el.className = 'pair' + (spOffpair ? ' offpair' : '');
-    combinedEl.appendChild(el);
-    const row = { el: el, srcLine: null, transLine: null };
-    spRows.push(row);
-    curPair = row;          // trimPairs 보호 · finishSegment 호환용으로 최신 행을 가리킨다
-    trimPairs();
-    if (window.__syncPanelLayout && combinedEl.querySelectorAll('.pair').length === 1) window.__syncPanelLayout();
-  }
-  return spRows[i];
+function spReset() { spRow0 = null; spOffpair = false; spNoTrans = false; }
+function spTurnRow() {
+  if (spRow0 && spRow0.el && spRow0.el.parentNode) return spRow0;
+  const hint = combinedEl.querySelector('.hint'); if (hint) hint.remove();
+  const el = document.createElement('div');
+  el.className = 'pair' + (spOffpair ? ' offpair' : '');
+  combinedEl.appendChild(el);
+  spRow0 = { el: el, srcLine: null, transLine: null };
+  curPair = spRow0;
+  trimPairs();
+  if (window.__syncPanelLayout && combinedEl.querySelectorAll('.pair').length === 1) window.__syncPanelLayout();
+  return spRow0;
 }
-function spSetSrc(i, text, pending) {
-  const r = spRow(i);
-  if (!r.srcLine) {
-    r.srcLine = document.createElement('div');
-    r.srcLine.className = 'srcline';
-    if (r.transLine) r.el.insertBefore(r.srcLine, r.transLine);
-    else r.el.appendChild(r.srcLine);
-  }
-  setSrcLine(r, tidyNumbers(text).trim());
-  r.srcLine.classList.toggle('pending', !!pending);
-}
-function spSetTrans(i, html, pending) {
-  const r = spRow(i);
-  if (!r.transLine) {
-    r.transLine = document.createElement('div');
-    r.transLine.className = 'transline';
-    r.transLine.dataset.lineId = 'L' + (++lineSeq);
-    r.el.appendChild(r.transLine);
-  }
-  if (r.transLine !== editingLineEl) r.transLine.innerHTML = html;
-  r.transLine.classList.toggle('pending', !!pending);
-}
-/* 진행 중 표시가 사라졌을 때 쓰는 정리 — 맨 끝의 빈 행만 치운다.
-   중간 행은 비어 있어도 자리를 지켜야 한다(늦게 오는 짝이 들어올 자리다). */
-function spPrune(i) {
-  const r = spRows[i];
-  if (!r || r.srcLine || r.transLine) return;
-  if (i !== spRows.length - 1) return;
-  if (r.el && r.el.parentNode) r.el.parentNode.removeChild(r.el);
-  spRows.pop();
-  if (curPair === r) curPair = spRows[spRows.length - 1] || null;
-}
-function spDropSrc(i) { const r = spRows[i]; if (r && r.srcLine) { r.srcLine.remove(); r.srcLine = null; spPrune(i); } }
-function spDropTrans(i) { const r = spRows[i]; if (r && r.transLine) { r.transLine.remove(); r.transLine = null; spPrune(i); } }
 
 function appendSrc(t) {
   clearErr();   // 실제 자막이 들어오기 시작하면 이전 에러 메시지 제거
@@ -5433,15 +5415,12 @@ function appendSrc(t) {
   // 원문이 번역보다 늦게 도착한 경우: 대기 중인 용어 로그의 좌측을 실제 말한 단어로 소급 갱신
   if (typeof resolvePendingReflog === 'function') resolvePendingReflog();
 
-  // 쌍 밖 언어 차단(v1.10.0): 통역 대상이 아닌 제3언어는 화면에 올리지 않는다.
-  // 숨김은 '지금 쓰고 있는 행부터'만 적용한다 — 이미 원문·번역이 다 들어간 앞 행까지
-  // 소급해 지우면, 한 턴 안에서 제3언어가 끼어들었을 때 멀쩡한 자막이 통째로 사라진다.
+  // 쌍 밖 언어 차단(v1.10.0): 통역 대상이 아닌 제3언어는 화면에 올리지 않는다
   if (!spOffpair) {
     const pr = getPair();
     if (isForeignToPair(srcBuf, pr.a, pr.b)) {
       spOffpair = true;
-      const cur = spRows[spSrcIdx];
-      if (cur) cur.el.classList.add('offpair');
+      if (spRow0 && spRow0.el) spRow0.el.classList.add('offpair');
     }
   }
   if (spOffpair) { pushMirror(); return; }
@@ -5449,30 +5428,40 @@ function appendSrc(t) {
   // 단방향(v1.13.234): 타겟 언어 발화(= 반대 방향)는 번역만 억제하고 전사는 남긴다.
   if (getDirMode() !== 'auto') {
     const pr = getPair();
-    const det = detectLang(srcBuf, pr.a, pr.b);
-    if (det && langPrefix(det) === langPrefix(curTarget)) {
-      spNoTrans = true;
-    } else if (spNoTrans) {
-      // 화자가 원어로 돌아왔다 → 번역 억제를 풀되, 번역 자리를 지금 행까지 앞당긴다.
-      // 안 그러면 새 번역이 앞의 '번역 없는' 반대 방향 행에 잘못 들어간다.
-      spNoTrans = false;
-      spTransIdx = spSrcIdx;
-      transBuf = ''; turnRawTrans = '';
+    if (!spNoTrans) {
+      // 아직 이 묶음이 어느 방향인지 안 정해졌으면 지금까지 모인 원문으로 판단한다
+      const detBuf = detectLang(srcBuf, pr.a, pr.b);
+      if (detBuf && langPrefix(detBuf) === langPrefix(curTarget)) spNoTrans = true;
+    } else {
+      // 복귀 판단은 '방금 들어온 조각'으로 한다 (v1.13.240).
+      // srcBuf는 이제 발화 전체를 담으므로 두 언어가 섞여 있어 판별이 안 된다.
+      const detChunk = detectLang(chunk, pr.a, pr.b);
+      if (detChunk && langPrefix(detChunk) !== langPrefix(curTarget)) {
+        // 화자가 원어로 돌아왔다(턴 경계 없이 교대) → 앞 묶음은 전사만인 채로 닫고 새 묶음에서 시작.
+        // 안 그러면 뒤따르는 원어 발화까지 같은 묶음에 붙어 번역이 안 뜬다 (v1.13.189의 취지).
+        spNoTrans = false;
+        spRow0 = null;
+        srcBuf = chunk;
+        transBuf = ''; turnRawTrans = '';
+      }
     }
   }
 
-  const sp = splitToSentences(srcBuf);
-  for (const sent of sp.done) { spSetSrc(spSrcIdx, sent, false); spSrcIdx++; }
-  srcBuf = sp.rest;
-  // 진행 중 조각은 '확정되면 들어갈 그 행'에 미리 그린다 → 문장이 맺혀도 자리가 안 바뀐다
-  if (srcBuf.trim()) spSetSrc(spSrcIdx, srcBuf, true);
-  else spDropSrc(spSrcIdx);
+  const r = spTurnRow();
+  if (!r.srcLine) {
+    r.srcLine = document.createElement('div');
+    r.srcLine.className = 'srcline';
+    if (r.transLine) r.el.insertBefore(r.srcLine, r.transLine);
+    else r.el.appendChild(r.srcLine);
+  }
+  setSrcLine(r, tidyNumbers(srcBuf).trim());
+  r.srcLine.classList.remove('pending');
   trimLines(combinedEl, 'srcline');
   pushMirror();
   scheduleIdleFlush();
 }
 
-/* ── 번역: 완성 문장은 제 행에, 진행 중 조각은 다음 행에 미리 (v1.13.239) ── */
+/* ── 번역: 이번 발화의 번역을 한 덩어리로 계속 갱신 ── */
 function appendTrans(t) {
   transBuf += t;
   turnRawTrans += t;   // 반영 로그용: 치환 전 원시 번역 누적
@@ -5487,20 +5476,22 @@ function appendTrans(t) {
     if (outAll.trim().length >= 14) {
       const det = detectLang(outAll, srcLang, curTarget);
       if (det && langPrefix(det) === langPrefix(srcLang)) {
-        spDropTrans(spTransIdx);
+        if (spRow0 && spRow0.transLine) { spRow0.transLine.remove(); spRow0.transLine = null; }
         transBuf = ''; turnRawTrans = '';
+        pushMirror();
         return;
       }
     }
   }
-  const shown = shownTrans(transBuf);
-  const sp = splitToSentences(shown);
-  for (const sent of sp.done) { spSetTrans(spTransIdx, tokenize(sent), false); spTransIdx++; }
-  if (sp.done.length) turnLogged.clear();   // 문장 확정 → 다음 문장은 같은 용어도 다시 기록
-  transBuf = sp.rest ? recoverRaw(sp.rest) : "";
-  // 진행 중 번역도 '확정되면 들어갈 그 행'에 미리 → 완성돼도 자리가 안 바뀐다
-  if (sp.rest) spSetTrans(spTransIdx, tokenize(sp.rest), true);
-  else spDropTrans(spTransIdx);
+  const r = spTurnRow();
+  if (!r.transLine) {
+    r.transLine = document.createElement('div');
+    r.transLine.className = 'transline';
+    r.transLine.dataset.lineId = 'L' + (++lineSeq);
+    r.el.appendChild(r.transLine);
+  }
+  if (r.transLine !== editingLineEl) r.transLine.innerHTML = tokenize(shownTrans(transBuf));
+  r.transLine.classList.add('pending');   // 발화가 끝나면(finishSegment) 확정으로 바꾼다
   trimLines(combinedEl, 'transline');
   pushMirror();
   scheduleIdleFlush();
@@ -5884,25 +5875,24 @@ else initDisplayPrefs();
 /* 턴 종료(turnComplete) / 정지 시: 미완성 버퍼를 확정하고 현재 묶음 닫음 */
 function finishSegment() {
   if (idleFlushTimer) { clearTimeout(idleFlushTimer); idleFlushTimer = null; }
-  // 턴 종료: 남은 진행 중 조각을 '이미 그려져 있던 그 행'에서 확정으로 바꾼다 (v1.13.239).
-  // 자리를 옮기지 않으므로 마지막 순간에 글이 튀지 않는다.
-  if (!spOffpair && srcBuf.trim()) { spSetSrc(spSrcIdx, srcBuf, false); spSrcIdx++; }
-  srcBuf = "";
   // 단방향 잠금(v1.13.188): 턴 종료 시 남은 번역 버퍼가 원어 메아리면 확정하지 않고 버림
   if (getDirMode() !== 'auto' && transBuf.trim()) {
     const pr = getPair();
     const srcLang = (langPrefix(curTarget) === langPrefix(pr.a)) ? pr.b : pr.a;
     const det = detectLang(shownTrans(transBuf), srcLang, curTarget);
-    if (det && langPrefix(det) === langPrefix(srcLang)) transBuf = "";
+    if (det && langPrefix(det) === langPrefix(srcLang)) {
+      transBuf = "";
+      if (spRow0 && spRow0.transLine) { spRow0.transLine.remove(); spRow0.transLine = null; }
+    }
   }
-  if (!spOffpair && !spNoTrans && transBuf.trim() && !editingLineEl) {
-    spSetTrans(spTransIdx, tokenize(shownTrans(transBuf).trim()), false);
-    spTransIdx++;
-  } else if (!transBuf.trim()) {
-    spDropTrans(spTransIdx);   // 진행 중 표시만 남아 있던 빈 줄 정리
+  // 이번 발화의 번역을 확정 표시로 (내용은 appendTrans가 이미 그려 두었다 — 다시 배치하지 않는다)
+  if (spRow0 && spRow0.transLine && spRow0.transLine !== editingLineEl) {
+    if (transBuf.trim()) spRow0.transLine.innerHTML = tokenize(shownTrans(transBuf).trim());
+    spRow0.transLine.classList.remove('pending');
   }
+  srcBuf = "";
   transBuf = "";
-  spReset();            // 다음 턴은 새 행부터 — 앞 턴 행에 끼어들지 않게
+  spReset();            // 다음 발화는 새 묶음부터
   curPair = null;
   trimLines(combinedEl, 'srcline');
   pushMirror();

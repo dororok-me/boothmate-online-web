@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.223 → v1.13.224) — 좁은 화면에서 헤더 우측이 재생 버튼과 겹치던 것 수정:
+  - v1.13.223에서 타이머 바에 [언어쌍][엔진 토글]을 더하자 375px 화면에서 바가 205px로 늘어
+    가운데 재생 버튼을 63px 침범했다(실측). 타이머 바는 z-index가 낮아 미터가 버튼 뒤로 가려졌다.
+  - 640px 이하에서 레벨미터를 재생 버튼 아래로 내린다 — 갤럭시에서 이미 쓰던 배치(v1.13.128)를
+    그대로 재사용. 기능을 버리지 않고 자리만 옮기는 방법이라 미터가 계속 보인다.
+    matchMedia로 양방향 전환 — 화면 회전·창 크기 변경에도 따라간다.
+  - 나머지(경과·언어쌍·엔진 토글)는 글자·여백을 줄여 남은 폭에 들어가게 했다.
+  - 빈 언어쌍 배지(#langBadge:empty)는 숨긴다 — 로그인 전엔 내용이 없어 flex 간격만 남았다.
   변경점 (v1.13.222 → v1.13.223) — 언어쌍 배지를 타이머 옆으로 + 헤더에 엔진 토글 (교수님 요청):
   - [언어쌍 배지 이동] Play 버튼 왼쪽 절대배치(#langBadge) → 헤더 우측 타이머 바 안, 경과 시간 오른쪽.
     상태 표시(레벨미터·경과시간·언어쌍·엔진)가 헤더 우측 한 줄에 모여 눈이 덜 흩어진다.
@@ -1812,6 +1820,7 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     font-size: 10px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap;
     color: var(--t-muted, #7a8ba8);
   }
+  #langBadge:empty { display: none; }   /* 언어쌍 미설정(로그인 전)엔 flex gap만 남지 않게 */
   /* 일시정지 버튼 — 통역 중에만 표시(.show). 일시정지 상태(.paused)면 초록 재개(▶)로 변신 */
   #pauseBtn {
     display: none; align-items: center; justify-content: center;
@@ -2491,8 +2500,13 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     #elapsed { font-size: 11px; letter-spacing: 0.5px; }
     #toggleBtn, #toggleBtn:not(.running) { width: 40px; height: 40px; }
     #pauseBtn { width: 40px; height: 40px; }
-    /* 좁은 화면: 엔진 토글 라벨을 '속도'/'품질'로 줄인다(전체 문구는 title 툴팁에 남음) */
-    #engineToggle button { font-size: 9px; padding: 3px 6px; }
+    /* ── 좁은 화면(≤640px) 헤더 우측 정리 (v1.13.224) ──
+       타이머 바에 [미터][경과][언어쌍][엔진]을 다 넣으면 가운데 재생 버튼과 겹친다(실측 63px).
+       ① 레벨미터는 재생 버튼 아래로 내린다 — 갤럭시에서 이미 쓰는 배치(v1.13.128)를 재사용.
+       ② 나머지는 글자·여백을 줄인다. 기능은 하나도 버리지 않는다. */
+    #playCluster.with-meter { flex-direction: column; gap: 3px; }
+    #timerBar { gap: 4px; right: 8px; }
+    #engineToggle button { font-size: 9px; padding: 3px 5px; }
     #engineToggle button .eng-tail { display: none; }
     .icon-btn, #mcOptBtn, #glossaryBtn { width: 32px; height: 32px; }
     .icon-btn svg, #mcOptBtn svg, #glossaryBtn svg { width: 17px; height: 17px; }
@@ -2725,6 +2739,29 @@ if (!document.documentElement.classList.contains('bm-app')) {
 /* 갤럭시: 입력 레벨미터를 재생 버튼 아래로 이동(교수님 요청, v1.13.128). CSS(.bm-galaxy #playCluster)가 세로 배치 담당. */
 if (document.documentElement.classList.contains('bm-galaxy')) {
   try { document.getElementById('playCluster').appendChild(document.getElementById('levelMeter')); } catch (e) {}
+} else {
+  /* 좁은 화면(≤640px)에서도 같은 배치 (v1.13.224): 헤더 우측에 [경과][언어쌍][엔진 토글]이
+     들어오면서 미터까지 두면 가운데 재생 버튼과 겹친다. 미터를 버리지 않고 버튼 아래로 내린다.
+     회전·창 크기 변경에도 따라가도록 matchMedia로 양방향 전환. */
+  (function () {
+    const mq = window.matchMedia('(max-width: 640px)');
+    const sync = function () {
+      const meter = document.getElementById('levelMeter');
+      const cluster = document.getElementById('playCluster');
+      const bar = document.getElementById('timerBar');
+      if (!meter || !cluster || !bar) return;
+      if (mq.matches) {
+        if (meter.parentElement !== cluster) cluster.appendChild(meter);
+        cluster.classList.add('with-meter');
+      } else {
+        if (meter.parentElement !== bar) bar.insertBefore(meter, bar.firstChild);
+        cluster.classList.remove('with-meter');
+      }
+    };
+    sync();
+    if (mq.addEventListener) mq.addEventListener('change', sync);
+    else if (mq.addListener) mq.addListener(sync);
+  })();
 }
 </script>
 <!-- 갤럭시 앱 전용: 남은 시간 + 사용권 구매 (bm-galaxy에서만 표시, v1.13.112) -->
@@ -2809,7 +2846,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.223 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.224 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3679,7 +3716,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.223';
+const GX_DIAG_VER = '1.13.224';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {

@@ -1,5 +1,18 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.235 → v1.13.236) — 자막 배치 선택 추가: 세로 분할(원문 왼쪽·번역 오른쪽) (교수님 요청):
+  - 설정 패널에 '🖥 자막 배치' 그룹 추가. 기본은 예전 그대로(원문 위·번역 아래)라 아무것도
+    안 바꾸면 화면이 달라지지 않는다.
+  - 세로 분할은 한 묶음(.pair)을 2열 그리드로 만든다. 두 칸이 같은 '행'에 있으므로
+    align-items:start만으로 시작 높이가 정확히 맞는다 — 교수님이 말씀하신 조건.
+  - 칸 번호를 명시(grid-column 1/2)한 이유: 한쪽이 없는 묶음이 실제로 생긴다(번역을 기다리는
+    중, 단방향에서 반대 방향 발화라 번역이 없는 경우 등). 번호를 안 박으면 남은 한 칸이
+    1열로 흘러들어 위아래 줄이 어긋난다.
+  - 두 칸 사이에 세로 구분선(번역 칸 왼쪽 테두리)을 둬 시선이 흔들리지 않게 했다.
+  - 640px 이하에서는 두 칸이 너무 좁아 읽기 어려우므로 자동으로 위아래 배치로 돌아간다.
+  - 선택은 계정별로 저장된다(mc_layout). 설정 패널을 한 번도 안 열어도 저장된 배치가
+    적용되도록 적용 함수를 전역에 두고 DOMContentLoaded에서 호출한다.
+  - 오버레이 창(overlay.html)은 이번 변경에 포함하지 않았다 — 청중용 송출이라 배치 기준이 다르다.
   변경점 (v1.13.234 → v1.13.235) — 속도 모드에서 전사된 원문이 굳거나 사라지던 것 수정 (교수님 보고):
   - 원인은 v1.13.233에서 내가 넣은 srcWaiting이었다. 원문을 배치하는 길이 두 개가 되어 서로
     같은 srcBuf를 두고 다퉜다:
@@ -2071,12 +2084,12 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   #mcPanel .stepper .stp:hover { background: #34507a; }
   #mcPanel .stepper .val { width: 78px; text-align: center; color: #cfe0ff; font-size: 13px; }
   /* 테마 선택 버튼 */
-  .theme-btn {
+  .theme-btn, .layout-btn {
     padding: 8px 16px; font-size: 13px; font-weight: 600; border-radius: 8px;
     border: 2px solid var(--t-border); background: var(--t-input-bg); color: var(--t-text);
     cursor: pointer;
   }
-  .theme-btn.active { border-color: var(--t-accent); color: var(--t-accent); }
+  .theme-btn.active, .layout-btn.active { border-color: var(--t-accent); color: var(--t-accent); }
   /* "테마색" 미니 버튼 */
   .mini-reset {
     padding: 4px 10px; font-size: 11px; font-weight: 600; border-radius: 6px;
@@ -2564,6 +2577,17 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   #mcWrap { margin-top: 10px; }
   .mc-area { background: var(--t-area-bg); border: none !important; border-radius: 16px; padding: 38px 44px; }
   .pair { background: transparent !important; border: none !important; border-radius: 0; padding: 0 !important; margin-bottom: var(--mc-block-gap); }
+  /* ── 세로 분할 배치 (v1.13.236, 교수님 요청) — 원문 왼쪽 · 번역 오른쪽 ──
+     한 묶음의 두 칸을 같은 그리드 '행'에 두어 시작 높이를 맞춘다(align-items:start).
+     칸 번호를 명시하는 이유: 한쪽이 없는 묶음(원문 대기 중, 단방향 반대 방향 발화 등)에서도
+     남은 한 칸이 제자리를 지켜야 위아래 줄이 어긋나지 않는다. */
+  #mcCombined.split .pair {
+    display: grid; grid-template-columns: 1fr 1fr; align-items: start; column-gap: 0;
+  }
+  #mcCombined.split .pair .srcline { grid-column: 1; margin-bottom: 0; padding-right: 24px; }
+  #mcCombined.split .pair .transline {
+    grid-column: 2; padding-left: 24px; border-left: 1px solid var(--t-border);
+  }
   .pair:last-child { margin-bottom: 4px; }
   .pair.offpair { display: none !important; }   /* 쌍 밖 언어 발화 숨김 */
   .srcline { color: var(--mc-src-color); font-weight: 500; line-height: 1.5; margin-bottom: var(--mc-src-gap); }
@@ -2608,6 +2632,10 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     #elapsed { font-size: 11px; letter-spacing: 0.5px; }
     #toggleBtn, #toggleBtn:not(.running) { width: 40px; height: 40px; }
     #pauseBtn { width: 40px; height: 40px; }
+    /* 세로 분할은 좁은 화면에서 두 칸이 너무 좁아 읽기 어렵다 → 위아래 배치로 되돌린다 */
+    #mcCombined.split .pair { display: block; }
+    #mcCombined.split .pair .srcline { padding-right: 0; margin-bottom: var(--mc-src-gap); }
+    #mcCombined.split .pair .transline { padding-left: 0; border-left: none; }
     /* ── 좁은 화면(≤640px) 헤더 우측 정리 (v1.13.227) ──
        타이머 바에 [미터][경과][언어쌍][엔진]을 다 넣으면 가운데 재생 버튼과 겹친다(375px에서 실측 54px).
        요소를 다른 곳으로 옮기지 않고 '줄여서' 넣는다 — 옮기는 방식은 화면 폭 변화를 이벤트로
@@ -2656,7 +2684,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
       mc_src_weight:1, mc_trans_weight:1, mc_wrap_h:1, speech_level:1, lang_pair:1,
       mic_device_id:1, sys_audio_mode:1, input_mode:1, reflog_visible:1, reflog_collapsed:1,
       sessions:1, glossary:1, glossary_sets:1, glossary_cloud_ts:1, conn_mode:1, gemini_api_key:1, auto_stop_min:1,
-      relay_url:1, relay_ticket:1, bm_native_overlay:1, dir_mode:1, trans_engine:1
+      relay_url:1, relay_ticket:1, bm_native_overlay:1, dir_mode:1, trans_engine:1, mc_layout:1
     };
     var email = null;
     try { var u = JSON.parse(localStorage.getItem('boothmate_user') || 'null'); email = (u && u.email) ? u.email : null; } catch(e){}
@@ -2938,7 +2966,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.235 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.236 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3808,7 +3836,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.235';
+const GX_DIAG_VER = '1.13.236';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5525,6 +5553,14 @@ function recoverRaw(shownRest) { return shownRest; }
    통역 도중 추가한 용어가 그 세션에 반영되지 않는다. 품질 모드는 문장마다 실어 보내
    추가하는 즉시 다음 문장부터 적용된다.
    ════════════════════════════════════════════ */
+/* ── 자막 배치 (v1.13.236) ──
+   설정 패널을 한 번도 열지 않아도 저장된 배치가 적용돼야 하므로 전역 함수로 둔다. */
+function getLayoutMode() { return (localStorage.getItem('mc_layout') === 'split') ? 'split' : 'stack'; }
+function applyLayoutMode(mode) {
+  const m = (mode === 'split') ? 'split' : 'stack';
+  localStorage.setItem('mc_layout', m);
+  if (combinedEl) combinedEl.classList.toggle('split', m === 'split');
+}
 function getEngine() { return (localStorage.getItem('trans_engine') === 'flash') ? 'flash' : 'live'; }
 let ENGINE = 'live';                 // 세션 시작 시 확정 — 통역 중 바뀌면 파이프라인이 어긋난다
 const FLASH_MODEL = 'gemini-3.5-flash';
@@ -5873,8 +5909,9 @@ function initEngineToggle() {
 }
 /* 초기화는 스크립트가 다 실행된 뒤로 미룬다 — 이 자리에서 바로 부르면 아래쪽 let 선언들이
    아직 초기화 전이다. */
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initEngineToggle);
-else initEngineToggle();
+function initDisplayPrefs() { initEngineToggle(); applyLayoutMode(getLayoutMode()); }
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initDisplayPrefs);
+else initDisplayPrefs();
 
 /* 턴 종료(turnComplete) / 정지 시: 미완성 버퍼를 확정하고 현재 묶음 닫음 */
 function finishSegment() {
@@ -6868,6 +6905,13 @@ window.__syncPanelLayout = function() {
       '</div>' +
       '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">테마를 고르면 배경·글자색이 한 번에 바뀝니다. 아래에서 색을 직접 바꾸면 그 색이 우선됩니다.</div>' +
     '</div>' +
+    '<div class="grp"><div class="grp-ttl">🖥 자막 배치</div>' +
+      '<div class="row" style="max-width:none; gap:8px; flex-wrap:wrap;">' +
+        '<button class="layout-btn" data-layout="stack">⬍ 원문 위 · 번역 아래</button>' +
+        '<button class="layout-btn" data-layout="split">⬌ 원문 왼쪽 · 번역 오른쪽</button>' +
+      '</div>' +
+      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">세로 분할은 원문과 번역을 좌우로 나란히 보여줍니다. 한 묶음의 두 칸은 같은 높이에서 시작합니다. 화면이 좁으면(640px 이하) 자동으로 위아래 배치로 돌아갑니다.</div>' +
+    '</div>' +
     '<div class="grp"><div class="grp-ttl">원문 (인식 결과)</div>' +
       '<div class="row"><label>크기</label><div class="stepper"><button type="button" id="mcSrcSizeDec" class="stp">−</button><span class="val" id="mcSrcSizeV"></span><button type="button" id="mcSrcSizeInc" class="stp">+</button></div></div>' +
       '<div class="row"><label>굵기</label><div class="stepper"><button type="button" id="mcSrcWeightDec" class="stp">−</button><span class="val" id="mcSrcWeightV"></span><button type="button" id="mcSrcWeightInc" class="stp">+</button></div></div>' +
@@ -7129,6 +7173,18 @@ window.__syncPanelLayout = function() {
   panel.querySelectorAll('.theme-btn').forEach(b => {
     b.addEventListener('click', () => setTheme(b.dataset.theme));
   });
+
+  // ── 자막 배치 (v1.13.236): stack=원문 위·번역 아래(기본) / split=원문 왼쪽·번역 오른쪽 ──
+  function setLayout(mode) {
+    applyLayoutMode(mode);
+    panel.querySelectorAll('.layout-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.layout === getLayoutMode());
+    });
+  }
+  panel.querySelectorAll('.layout-btn').forEach(b => {
+    b.addEventListener('click', () => setLayout(b.dataset.layout));
+  });
+  setLayout(getLayoutMode());
 
   apply();
   refreshColorPickers();

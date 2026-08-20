@@ -1,5 +1,19 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.222 → v1.13.223) — 언어쌍 배지를 타이머 옆으로 + 헤더에 엔진 토글 (교수님 요청):
+  - [언어쌍 배지 이동] Play 버튼 왼쪽 절대배치(#langBadge) → 헤더 우측 타이머 바 안, 경과 시간 오른쪽.
+    상태 표시(레벨미터·경과시간·언어쌍·엔진)가 헤더 우측 한 줄에 모여 눈이 덜 흩어진다.
+    절대배치를 걷어내고 일반 흐름으로 바꿨다 — 이제 타이머 바가 그만큼 왼쪽으로 늘어난다.
+  - [엔진 토글] '속도 우선 / 품질 우선'을 배지 오른쪽에 알약형 세그먼트로 배치.
+    v1.13.220에서 설정 패널에 넣었던 드롭다운(#transEngine)은 제거했다 — 같은 설정을 두 곳에서
+    만지면 어긋난다. 헤더는 늘 보이므로 세션 시작 전에 바로 고를 수 있다.
+  - [통역 중 잠금] ENGINE은 세션 시작 시점에 확정되므로(파이프라인이 도중에 바뀌면 어긋남)
+    통역 중에는 토글을 잠근다(흐리게 + 클릭 시 안내). setRunningUI에서 상태를 동기화한다.
+    예전처럼 '다음 시작부터 적용' 안내만 띄우면, 화면의 선택과 실제 동작이 달라 혼란스럽다.
+  - [포인터] #timerBar는 자막 클릭을 가리지 않으려고 pointer-events:none인데, 토글만 auto로
+    되살렸다. 안 그러면 버튼이 눌리지 않는다.
+  - [좁은 화면] 640px 이하에서는 라벨을 '속도'/'품질'로 줄이고 글자·여백을 축소해
+    가운데 재생 버튼과 겹치지 않게 했다. 전체 문구는 title 툴팁에 남는다.
   변경점 (v1.13.220 → v1.13.222) — 상단 정지·일시정지 버튼을 보라 계열로 통일 (교수님 요청):
   - 문제: 시작 버튼은 앱 강조색(#4F46E5 인디고)인데 정지는 빨강(#DC2626), 일시정지는 호박(#F59E0B),
     재개는 초록(#059669)이라 헤더에서 셋이 따로 놀았다.
@@ -1792,9 +1806,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   }
   /* 재생+일시정지 한 줄 묶음 — 갤럭시 세로 클러스터 안에서도 두 버튼은 가로로 (v1.13.130) */
   #playRow { display: inline-flex; align-items: center; gap: 8px; }
-  /* 언어쌍 배지 — Play 왼쪽 바깥에 절대배치(클러스터 중앙 정렬을 흔들지 않음), 작게 확인용 (v1.13.204) */
+  /* 언어쌍 배지 — 타이머 바 안, 경과 시간 오른쪽 (v1.13.223).
+     예전에는 Play 버튼 왼쪽에 절대배치했는데, 헤더 우측에 상태 표시를 모으는 편이 눈이 덜 흩어진다. */
   #langBadge {
-    position: absolute; right: 100%; margin-right: 8px; top: 50%; transform: translateY(-50%);
     font-size: 10px; font-weight: 700; letter-spacing: 0.5px; white-space: nowrap;
     color: var(--t-muted, #7a8ba8);
   }
@@ -1814,6 +1828,23 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   #timerBar { position: absolute; right: 12px; bottom: 3px; display: flex; align-items: center; gap: 6px; z-index: 4; pointer-events: none; }   /* right:12px → 카운터 우측 끝을 설정 아이콘 글리프 우측에 정렬. 미터는 카운터 왼쪽. */
   #timerStack { display: inline-flex; flex-direction: row; align-items: baseline; gap: 1px;
     font-family: ui-rounded, "Segoe UI Variable Display", "Segoe UI", Pretendard, system-ui, sans-serif; }   /* 부드러운(라운드) 폰트 */
+  /* ── 번역 엔진 토글 (v1.13.223) — 타이머·언어쌍 배지 오른쪽 ──
+     #timerBar는 pointer-events:none(자막 클릭을 가리지 않으려고)이라 이 토글만 auto로 되살린다. */
+  #engineToggle {
+    display: inline-flex; align-items: center; pointer-events: auto;
+    border: 1px solid var(--t-border); border-radius: 999px;
+    background: var(--t-input-bg); padding: 2px;
+  }
+  #engineToggle button {
+    appearance: none; border: none; background: none; cursor: pointer;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.2px; white-space: nowrap;
+    color: var(--t-muted); padding: 3px 9px; border-radius: 999px; line-height: 1.3;
+  }
+  #engineToggle button.on { background: #4F46E5; color: #fff; }
+  #engineToggle button:not(.on):hover { color: var(--t-text); }
+  /* 통역 중 잠금 — 엔진은 세션 시작 시점에 확정되므로 도중 전환은 받지 않는다 */
+  #engineToggle.locked { opacity: 0.5; }
+  #engineToggle.locked button { cursor: not-allowed; }
   .tbox {
     background: none; box-shadow: none; border-radius: 0; padding: 0;
     color: var(--t-muted); font-family: inherit;
@@ -2460,6 +2491,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     #elapsed { font-size: 11px; letter-spacing: 0.5px; }
     #toggleBtn, #toggleBtn:not(.running) { width: 40px; height: 40px; }
     #pauseBtn { width: 40px; height: 40px; }
+    /* 좁은 화면: 엔진 토글 라벨을 '속도'/'품질'로 줄인다(전체 문구는 title 툴팁에 남음) */
+    #engineToggle button { font-size: 9px; padding: 3px 6px; }
+    #engineToggle button .eng-tail { display: none; }
     .icon-btn, #mcOptBtn, #glossaryBtn { width: 32px; height: 32px; }
     .icon-btn svg, #mcOptBtn svg, #glossaryBtn svg { width: 17px; height: 17px; }
     #topLogo img { height: 30px; }
@@ -2648,8 +2682,6 @@ if (!document.documentElement.classList.contains('bm-app')) {
   <div id="topLogo"><img src="logo.png" alt="Boothmate"><span class="logo-sub">online</span></div>
   <div id="headerActions">
     <div id="playCluster">
-      <!-- 언어쌍 배지: Play 왼쪽에 설정 언어·방향을 작게 표시 — K⇄E / K→E (v1.13.204) -->
-      <span id="langBadge" aria-label="설정된 언어쌍"></span>
       <!-- 재생+일시정지 한 줄(#playRow) — 갤럭시의 세로 배치(#playCluster column)에서도 두 버튼은 나란히 (v1.13.130) -->
       <div id="playRow">
         <button id="toggleBtn" title="시작 / 정지"><span id="toggleLabel">▶</span></button>
@@ -2677,6 +2709,13 @@ if (!document.documentElement.classList.contains('bm-app')) {
       <span class="tbox" id="tMM"><span class="tdig">00</span></span>
       <span class="tsep">:</span>
       <span class="tbox" id="tSS"><span class="tdig">00</span></span>
+    </div>
+    <!-- 언어쌍 배지 — 타이머 오른쪽 (v1.13.223, 이전엔 Play 버튼 왼쪽). K⇄E / K→E -->
+    <span id="langBadge" aria-label="설정된 언어쌍"></span>
+    <!-- 번역 엔진 토글 — 통역 중에는 잠긴다(엔진은 세션 시작 시점에 확정되므로) -->
+    <div id="engineToggle" role="group" aria-label="번역 엔진 선택">
+      <button type="button" data-eng="live" title="속도 우선 — 말하는 동안 실시간으로 번역합니다. 가장 빠릅니다.">속도<span class="eng-tail"> 우선</span></button>
+      <button type="button" data-eng="flash" title="품질 우선 — 문장이 맺힌 뒤 번역합니다. 조금 느리지만 문맥과 용어집이 정확히 반영됩니다.">품질<span class="eng-tail"> 우선</span></button>
     </div>
     <!-- 갤럭시 앱 전용: 남은 시간(경과 카운터 아래 줄, 빨강). flex-basis:100%로 줄바꿈 (v1.13.116) -->
     <span id="gxQuotaText">- 00:00:00</span>
@@ -2732,10 +2771,6 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
     <select id="dirMode"><option value="auto">🔄 양방향 자동</option><option value="ab"></option><option value="ba"></option></select>
   </label>
   <div id="dirModeHint" style="flex-basis:100%; width:100%; font-size:11px; color:var(--t-muted); margin:-2px 0 2px 2px; line-height:1.4;">언어를 자동 인식해 양방향으로 번역합니다.</div>
-  <label style="white-space:nowrap;" title="속도 우선: 말하는 동안 실시간으로 번역 · 품질 우선: 문장이 맺힌 뒤 번역(조금 느리지만 문맥·용어집 반영이 정확)">
-    <select id="transEngine"><option value="live">&#9889; 속도 우선</option><option value="flash">&#127919; 품질 우선</option></select>
-  </label>
-  <div id="engineHint" style="flex-basis:100%; width:100%; font-size:11px; color:var(--t-muted); margin:-2px 0 2px 2px; line-height:1.4;"></div>
   <select id="targetLang" style="display:none;"></select>
   <label style="white-space:nowrap;" title="번역 자막의 금액을 자동으로 환산해 괄호로 표시합니다 (예: $24억(₩약 3조…))"><input type="checkbox" id="currencyToggle" checked> $↔₩ 환율 환산</label>
   <label style="white-space:nowrap;" title="번역 자막의 면적 단위를 자동으로 환산해 괄호로 표시합니다 (예: 30평(99.2㎡), 100㎡(30.3평))"><input type="checkbox" id="unitToggle" checked> 📐 도량형 환산</label>
@@ -2774,7 +2809,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.222 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.223 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3009,6 +3044,8 @@ function setRunningUI(on) {
   // 일시정지 버튼: 통역 중에만 표시. 정지되면 숨기고 상태도 초기화 (v1.13.130)
   const pb = $('pauseBtn');
   if (pb) { pb.classList.toggle('show', on); if (!on) setPausedUI(false); }
+  // 엔진 토글 잠금 갱신 — 통역 중에는 전환 불가 (v1.13.223)
+  if (typeof renderEngineToggle === 'function') renderEngineToggle();
 }
 /* 일시정지 버튼 표시 상태 — 진행 중=⏸(호박색), 일시정지=▶(초록, 재개) (v1.13.130) */
 function setPausedUI(p) {
@@ -3642,7 +3679,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.222';
+const GX_DIAG_VER = '1.13.223';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5576,24 +5613,31 @@ async function qmRun(sent, target, onDelta) {
     await flashTranslate(sent, target, wrap);
   }
 }
-/* 엔진 선택 드롭다운 — 저장·안내문. 통역 중 바꾸면 다음 시작부터 적용된다(세션 중 교체는 위험). */
-(function initEngineSel() {
-  const sel = $('transEngine');
-  if (!sel) return;
-  sel.value = getEngine();
-  const hint = $('engineHint');
-  const render = function () {
-    if (!hint) return;
-    hint.textContent = (sel.value === 'flash')
-      ? '문장이 맺힌 뒤 번역합니다. 조금 느리지만 문맥과 용어집이 정확히 반영됩니다.'
-      : '말하는 동안 실시간으로 번역합니다. 가장 빠릅니다.';
+/* 엔진 토글(헤더 우측) — 선택을 저장하고 켜진 쪽을 표시한다.
+   통역 중에는 잠근다: ENGINE은 세션 시작 시점에 확정되므로 도중에 바꾸면 화면과 실제가 어긋난다. */
+function renderEngineToggle() {
+  const box = $('engineToggle');
+  if (!box) return;
+  const cur = getEngine();
+  for (const b of box.querySelectorAll('button')) b.classList.toggle('on', b.dataset.eng === cur);
+  const locked = (typeof running !== 'undefined') && running;
+  box.classList.toggle('locked', !!locked);
+  box.title = locked ? '통역 중에는 엔진을 바꿀 수 없습니다 — 정지 후 전환하세요' : '';
+}
+(function initEngineToggle() {
+  const box = $('engineToggle');
+  if (!box) return;
+  box.onclick = function (e) {
+    const b = e.target.closest('button[data-eng]');
+    if (!b) return;
+    if (typeof running !== 'undefined' && running) {
+      setStatus('통역 중에는 엔진을 바꿀 수 없습니다 — 정지 후 전환하세요', true);
+      return;
+    }
+    localStorage.setItem('trans_engine', b.dataset.eng === 'flash' ? 'flash' : 'live');
+    renderEngineToggle();
   };
-  sel.onchange = function () {
-    localStorage.setItem('trans_engine', sel.value === 'flash' ? 'flash' : 'live');
-    render();
-    if (running) setStatus('엔진 변경 — 다음 시작부터 적용됩니다', true);
-  };
-  render();
+  renderEngineToggle();
 })();
 
 /* 턴 종료(turnComplete) / 정지 시: 미완성 버퍼를 확정하고 현재 묶음 닫음 */

@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.247 → v1.13.248) — 언어쌍 배지를 눌러 방향 전환 (교수님 요청):
+  - 헤더의 K⇄E 배지를 누르면 방향이 순서대로 바뀐다: 양방향 자동 → A→B 단방향 → B→A 단방향 → 반복.
+    설정 패널을 열지 않고 통역 중에도 바로 바꿀 수 있다.
+  - 구현은 설정 패널의 방향 선택과 '같은 경로'를 탄다 — select 값을 바꾸고 change를 발생시킨다.
+    저장·타겟 언어·안내 문구·오버레이 알림·통역 중 재연결이 한 곳에서만 처리되므로
+    두 입구가 어긋날 일이 없다. (배지에서 따로 처리했다면 재연결을 빠뜨리기 쉬웠다.)
+  - 누를 수 있다는 걸 커서·호버 배경으로 보이게 하고, 키보드(Enter/Space)로도 되게 했다(role=button).
+  - 안내 툴팁에 '눌러서 방향 전환'을 넣었다.
   변경점 (v1.13.246 → v1.13.247) — 로고가 헤더 위쪽에 붙어 있던 것 수정 (교수님 보고):
   - v1.13.230에서 아이콘 줄과 타이머 줄의 간격을 벌리려고 #headerActions를 위로 붙였는데,
     #topLogo까지 같이 붙였다. 로고는 타이머 줄과 겹칠 일이 없어 위로 당길 이유가 없었고,
@@ -2041,6 +2049,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     color: var(--t-muted, #7a8ba8);
   }
   #langBadge:empty { display: none; }   /* 언어쌍 미설정(로그인 전)엔 flex gap만 남지 않게 */
+  /* 눌러서 방향을 바꿀 수 있다는 걸 보이게 (v1.13.248) */
+  #langBadge { cursor: pointer; padding: 2px 4px; border-radius: 6px; transition: background .15s, color .15s; }
+  #langBadge:hover { background: var(--t-input-bg); color: var(--t-text); }
   /* 일시정지 버튼 — 통역 중에만 표시(.show). 일시정지 상태(.paused)면 초록 재개(▶)로 변신 */
   #pauseBtn {
     display: none; align-items: center; justify-content: center;
@@ -3102,7 +3113,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.247 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.248 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3285,7 +3296,7 @@ function updateLangBadge() {
   el.title = '통역 언어: ' + langLabel(a) + ' ⇄ ' + langLabel(b) +
     (m === 'auto' ? ' (양방향 자동 — 들리는 언어를 감지해 반대쪽으로 번역)'
                   : ' (단방향 — 설정한 방향으로만 번역)') +
-    ' · 설정에서 바꿀 수 있습니다';
+    ' · 눌러서 방향 전환 (양방향 → 한쪽 방향 → 반대 방향)';
 }
 
 /* 언어 쌍 잠금(v1.10.0): 원문 텍스트가 쌍의 두 언어가 '아닌' 다른 언어인지 판별.
@@ -3473,6 +3484,28 @@ if ($('dirMode')) {
     if (running && !userStopped) connectWS();      // 통역 중이면 새 방향으로 재연결
   });
 }
+/* 헤더 언어쌍 배지를 눌러 방향을 순서대로 바꾼다 (v1.13.248, 교수님 요청):
+     양방향 자동 → A→B 단방향 → B→A 단방향 → 다시 양방향.
+   설정 패널의 방향 선택과 '같은 경로'를 타게 한다 — select 값을 바꾸고 change를 발생시킨다.
+   저장·타겟 언어·안내 문구·오버레이 알림·통역 중 재연결이 한 곳에서만 처리되므로,
+   두 입구가 서로 어긋날 일이 없다. */
+(function initLangBadgeCycle() {
+  const el = $('langBadge');
+  if (!el) return;
+  el.setAttribute('role', 'button');
+  el.setAttribute('tabindex', '0');
+  const cycle = function () {
+    const order = ['auto', 'ab', 'ba'];
+    const next = order[(order.indexOf(getDirMode()) + 1) % order.length];
+    const sel = $('dirMode');
+    if (sel) { sel.value = next; sel.dispatchEvent(new Event('change')); }
+    else { localStorage.setItem('dir_mode', next); updateLangBadge(); }   // 설정 패널이 없을 때 대비
+  };
+  el.addEventListener('click', cycle);
+  el.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); cycle(); }
+  });
+})();
 // 초기 동기화 (이벤트 발생 없이)
 { const t = defaultTargetForMode(); if ($('targetLang')) $('targetLang').value = t; }
 updateDirModeLabels();
@@ -3981,7 +4014,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.247';
+const GX_DIAG_VER = '1.13.248';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {

@@ -1,5 +1,16 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.252 → v1.13.253) — 번역 방식 이름을 '동시모드 / 순차모드'로 + 좁은 화면에서도 다 보이게 (교수님 요청):
+  - [이름] '속도 / 품질' → '동시모드 / 순차모드'. 통역사가 쓰는 낱말(동시통역·순차통역)이라
+    무엇이 달라지는지 설명 없이도 읽힌다. 값어치(빠름·정확함)가 아니라 방식을 가리키는 이름이다.
+  - [좁은 화면] 낱말이 두 글자에서 네 글자로 늘어 [경과][언어쌍][토글]을 한 줄에 두면 가운데
+    재생 버튼을 파고든다(375px에서 실측 46px 침범, 예전 두 글자에서도 이미 6px 침범했다).
+    낱말을 도로 줄이는 대신 640px 이하에서 토글만 아랫줄로 내렸다(#tbBreak). 늘어난 한 줄만큼
+    헤더를 74→94px(갤럭시는 남은 시간 줄이 하나 더 있어 102px)로 키워 위 아이콘 줄과 부딪히지 않게 했다.
+  - [언어쌍 메뉴] 같은 이유로 팝오버(#langMenu)도 좁은 화면에서 오른쪽이 4px 잘렸다 —
+    box-sizing이 없어 max-width:92vw에 안쪽 여백이 더해지고 있었다. border-box로 고쳤다.
+  - 줄바꿈 자리를 pseudo가 아니라 빈 <span>으로 둔 이유: ::before/::after는 flex 항목이 되지 못해
+    줄을 끊지 못한다. 알약(#engineToggle) 자체에 flex-basis:100%를 주면 알약 배경이 줄 전체로 늘어난다.
   변경점 (v1.13.251 → v1.13.252) — 어투 후처리 깜빡임 제거 (교수님 요청):
   - 스트리밍 중간(미완성) 자막에서 '…인지'의 '지'가 /지$/→죠 규칙에 걸려 잠깐 '…인죠'로
     떴다가 문장 완성 시 되돌아오던 깜빡임. postprocess.js normalizeKoreanEnding이
@@ -2080,6 +2091,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   #langMenu {
     position: fixed; z-index: 200; display: none;
     background: var(--t-panel-bg, #fff); border: 1px solid var(--t-border, #d5dbe6);
+    /* box-sizing이 없으면 max-width:92vw에 안쪽 여백 12+12과 테두리가 더해져 좁은 화면에서
+       오른쪽이 잘린다(375px에서 실측 371px → 4px 넘침). 여백까지 폭에 넣는다 (v1.13.253). */
+    box-sizing: border-box;
     border-radius: 12px; padding: 12px; min-width: 250px; max-width: 92vw;
     box-shadow: 0 10px 30px rgba(0,0,0,0.18);
   }
@@ -2128,6 +2142,7 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
      그런데 그러면 안에 있는 것들도 마우스를 못 받아 안내 툴팁이 안 뜬다(교수님 보고: 언어쌍 배지).
      빈 자리는 계속 통과시키되 '내용물'만 마우스를 받게 한다 (v1.13.246). */
   #timerBar > * { pointer-events: auto; }
+  #tbBreak { display: none; }   /* 넓은 화면에선 한 줄 — 줄바꿈 자리를 쓰지 않는다 (v1.13.253) */
   /* ── 번역 엔진 토글 (v1.13.223) — 타이머·언어쌍 배지 오른쪽 ── */
   #engineToggle {
     display: inline-flex; align-items: center; pointer-events: auto;
@@ -2844,11 +2859,20 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
        CSS만 쓰면 폭이 바뀌는 순간 항상 맞으므로 이벤트가 필요 없다. */
     /* 좁은 화면: 타이머 줄이 가운데 재생 버튼을 침범하지 않을 만큼만 조인다(375px에서 실측 -4px).
        미터는 버튼 아래로 내려갔으므로 데스크탑만큼 조일 필요는 없다. 라벨만 '속도'/'품질'로 줄인다. */
-    #timerBar { gap: 4px; right: 8px; }
+    #timerBar { gap: 3px 4px; right: 8px; flex-wrap: wrap; justify-content: flex-end; }
     .tbox { font-size: 11px; }
     .tsep { font-size: 11px; }
     #langBadge { font-size: 9px; }
     #engineToggle button { padding: 3px 6px; }
+    /* 좁은 화면: 모드 토글만 아랫줄로 (v1.13.253).
+       '동시모드/순차모드'는 낱말이 길어 [경과][언어쌍]과 한 줄에 두면 가운데 재생 버튼을
+       파고든다(375px에서 실측 46px 침범). 낱말을 줄이지 않고 줄을 나눠서 다 보이게 한다.
+       #tbBreak는 폭 100%짜리 빈 칸 — flex 줄을 여기서 끊는다(pseudo는 flex 항목이 못 된다).
+       늘어난 한 줄만큼(20px) 헤더를 키워 위쪽 아이콘 줄과 부딪히지 않게 한다. */
+    #appHeader { height: 94px; }
+    /* 갤럭시 앱은 타이머 줄에 '남은 시간'이 한 줄 더 있어(#gxQuotaText) 세 줄이 된다 → 8px 더. */
+    .bm-galaxy #appHeader { height: 102px; }
+    #tbBreak { display: block; flex-basis: 100%; height: 0; }
     .icon-btn, #mcOptBtn, #glossaryBtn { width: 32px; height: 32px; }
     .icon-btn svg, #mcOptBtn svg, #glossaryBtn svg { width: 17px; height: 17px; }
     #topLogo img { height: 30px; }
@@ -3072,10 +3096,12 @@ if (!document.documentElement.classList.contains('bm-app')) {
     </div>
     <!-- 언어쌍 배지 — 타이머 오른쪽 (v1.13.223, 이전엔 Play 버튼 왼쪽). K⇄E / K→E -->
     <span id="langBadge" aria-label="설정된 언어쌍"></span>
-    <!-- 번역 엔진 토글 — 통역 중에는 잠긴다(엔진은 세션 시작 시점에 확정되므로) -->
+    <!-- 좁은 화면에서 모드 토글을 아랫줄로 내리는 줄바꿈 자리 (v1.13.253). 넓은 화면에선 display:none. -->
+    <span id="tbBreak" aria-hidden="true"></span>
+    <!-- 번역 방식 토글 — 통역 중에는 잠긴다(방식은 세션 시작 시점에 확정되므로) -->
     <div id="engineToggle" role="group" aria-label="번역 엔진 선택">
-      <button type="button" data-eng="live" title="속도 우선 — 말하는 동안 실시간으로 번역합니다. 가장 빠릅니다.">속도</button>
-      <button type="button" data-eng="flash" title="품질 우선 — 문장이 맺힌 뒤 번역합니다. 조금 느리지만 문맥과 용어집이 정확히 반영됩니다.">품질</button>
+      <button type="button" data-eng="live" title="동시모드 — 말하는 동안 실시간으로 번역합니다(동시통역). 가장 빠릅니다.">동시모드</button>
+      <button type="button" data-eng="flash" title="순차모드 — 문장이 맺힌 뒤 번역합니다(순차통역). 조금 느리지만 문맥과 용어집이 정확히 반영됩니다.">순차모드</button>
     </div>
     <!-- 갤럭시 앱 전용: 남은 시간(경과 카운터 아래 줄, 빨강). flex-basis:100%로 줄바꿈 (v1.13.116) -->
     <span id="gxQuotaText">- 00:00:00</span>
@@ -3169,7 +3195,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.252 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.253 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4150,7 +4176,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.249';
+const GX_DIAG_VER = '1.13.253';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -6145,7 +6171,7 @@ function renderEngineToggle() {
   // 버튼 위에서는 각 버튼의 설명이 우선한다(안쪽 요소의 title이 이긴다).
   box.title = locked
     ? '통역 중에는 엔진을 바꿀 수 없습니다 — 정지 후 전환하세요'
-    : '번역 엔진 — 속도: 말하는 동안 실시간 번역 · 품질: 문장이 맺힌 뒤 번역(문맥·용어집 정확)';
+    : '번역 방식 — 동시모드: 말하는 동안 실시간 번역 · 순차모드: 문장이 맺힌 뒤 번역(문맥·용어집 정확)';
 }
 function initEngineToggle() {
   const box = $('engineToggle');

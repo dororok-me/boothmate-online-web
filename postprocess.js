@@ -110,6 +110,15 @@ function plainEndings(isFormal) {
     [/했음$/, isFormal?"했습니다":"했어요"],[/였음$/, isFormal?"였습니다":"였어요"],
   ];
 }
+// 합쇼체 서술·의문('…습니다/…습니까/…ㅂ니다/…ㅂ니까')인지 판별.
+// '니다/니까' 바로 앞 음절이 ㅂ 받침(습·갑·옵·입·십…)이면 합쇼체로 본다.
+function hasFormalEnding(s) {
+  const m = /([가-힣])(?:니다|니까)$/.exec(s);
+  if (!m) return false;
+  const code = m[1].charCodeAt(0) - 0xAC00;
+  if (code < 0 || code > 11171) return false;
+  return (code % 28) === 17;   // 받침 ㅂ
+}
 function normalizeSingleClause(text, speechLevel) {
   let result = text.trim();
   if (!result) return text;
@@ -117,6 +126,8 @@ function normalizeSingleClause(text, speechLevel) {
   const last = result.slice(-1);
   if (last==="."||last==="!"||last==="?") { trailingPunct = last; result = result.slice(0,-1); }
   const isFormal = (speechLevel==="formal"||speechLevel==="formal_mix");
+  // 이미 올바른 합쇼체 서술·의문이면 그대로 둔다 ('습니까'에 '요'가 붙어 '습니까요'가 되던 오류 방지)
+  if (hasFormalEnding(result)) return result + trailingPunct;
   if (speechLevel==="formal") {
     for (const [pat,rep] of POLITE_TO_FORMAL) { if (pat.test(result)) return result.replace(pat,rep)+trailingPunct; }
   }

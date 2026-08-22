@@ -1,5 +1,15 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.257 → v1.13.258) — 인식 중인 자막도 완료된 자막과 똑같은 진하기로 (교수님 요청):
+  - 증상: 인식·번역 중인 줄이 옅게 떴다가 확정되면 진해진다. 글자가 계속 바뀌는데 진하기까지
+    바뀌니 눈이 그때마다 다시 적응해야 해서 읽기 불편하다.
+  - 수정: pending 줄의 색·굵기·투명도 차이를 전부 없앴다. 원문은 --mc-src-color,
+    번역은 --mc-trans-color 그대로 — 설정 패널에서 고른 색이 인식 중에도 똑같이 적용된다.
+    용어집 형광펜도 완료 상태와 같은 색으로(라이트·다크 각각).
+  - 남긴 것: pending 줄은 여전히 눌러서 고칠 수 없다(글자가 곧 바뀌므로). 그건 색이 아니라
+    커서 모양으로만 알린다(.transline.pending .w { cursor: default }).
+  - 오버레이 창은 이미 인식 중에도 같은 진하기였다(v1.13.x) — 이제 본 화면이 거기에 맞춰졌다.
+
   변경점 (v1.13.256 → v1.13.257) — 동시모드도 진행 중에 문장별로 갈라지도록 (교수님 질문):
   - 물음: 정지하면 문장별로 예쁘게 갈라지는데, 라이브에선 왜 단락이 통째로 보이나.
   - 답: v1.13.256은 '창이 닫힐 때'만 끈을 맞추고, 열려 있는 동안은 통째로 둔 탓이다.
@@ -2651,7 +2661,6 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
   }
-  .transline.pending .gword { background: #E0E7FF; }
   /* 여러 단어 표제어("눈에 띄다") — 이어지는 조각의 안쪽 모서리·패딩을 없애 한 덩어리 형광펜으로 (v1.13.61)
      .w 토큰의 좌우 1px 패딩이 조각 사이 빈 틈으로 보여서, 이어지는 쪽 배경을 2px 늘리고
      같은 크기 음수 마진으로 되당겨 틈을 색으로 메움 — 글자 간격은 그대로 (v1.13.66) */
@@ -2660,9 +2669,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   /* 실시간 수정 기능 숨김 시: 단어가 클릭 가능한 것처럼 보이지 않게 */
   body.no-live-edit .transline .w { cursor: text; }
   body.no-live-edit .transline .w:hover { background: none; }
-  /* 인식 중인 임시 줄(아직 변하는 중, 수정 불가) — 흐릿하게 구분 */
-  .srcline.pending { color: #5a6b85; }
-  .transline.pending { color: #6b8299; font-weight: 400; opacity: 0.8; }
+  /* 인식 중인 임시 줄 — 보기는 완료된 줄과 똑같이 (v1.13.258, 교수님 요청).
+     색이 옅어졌다 진해지면 눈이 그때마다 다시 적응해야 해서 읽기가 불편하다.
+     '아직 수정할 수 없다'는 것만 커서로 알린다. */
   .transline.pending .w { cursor: default; }
   .transline.pending .w:hover { background: none; }
   .hint { font-size: 12px; color: #555; }
@@ -2724,9 +2733,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   .srcline { color: var(--mc-src-color); }
   .transline { color: var(--mc-trans-color); font-weight: var(--mc-trans-weight); }
   .transline .w:hover { background: var(--t-word-hover); }
-  /* 인식 중(임시) 줄 — 또렷하게 보이되 이탤릭으로 구분 */
-  .srcline.pending { color: var(--mc-src-color); opacity: 0.7; }
-  .transline.pending { color: var(--mc-trans-color); opacity: 0.65; font-weight: var(--mc-trans-weight); }
+  /* 인식 중(임시) 줄도 완료된 줄과 같은 색·굵기·진하기 (v1.13.258) */
+  .srcline.pending { color: var(--mc-src-color); opacity: 1; }
+  .transline.pending { color: var(--mc-trans-color); opacity: 1; font-weight: var(--mc-trans-weight); }
   .hint { color: var(--t-muted); }
   #mcPanel, #glossaryPanel { background: var(--t-panel-bg); border: 1px solid var(--t-border); color: var(--t-text); }
   #mcPanel .grp-ttl { color: var(--t-accent); }
@@ -2767,7 +2776,6 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   /* 다크 테마 용어집 형광펜 (v1.13.107): 연한 인디고 배경(#C7D2FE)에 밝은 자막 글자가 얹혀
      안 보이던 문제 → 오버레이와 같은 반투명 인디고 + 밝은 글자로 대비 확보 */
   body.theme-dark .transline .gword { background: rgba(129,140,248,0.42); color: #EEF2FF; }
-  body.theme-dark .transline.pending .gword { background: rgba(129,140,248,0.30); }
   /* 모바일: 헤더를 더 컴팩트하게(한 줄 유지), 자막 공간 최대 확보 (v1.7.0) */
   @media (max-width: 640px) {
     body { padding: 6px 10px; }
@@ -2887,9 +2895,9 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   .pair.offpair { display: none !important; }   /* 쌍 밖 언어 발화 숨김 */
   .srcline { color: var(--mc-src-color); font-weight: 500; line-height: 1.5; margin-bottom: var(--mc-src-gap); }
   .transline { line-height: 1.4; }
-  /* 번역 중(pending) 문장도 완료 문장과 동일한 색·굵기로 — 색 구별 없음 */
+  /* 인식·번역 중인 줄도 완료된 줄과 완전히 같게 (v1.13.258, 교수님 요청) */
   .transline.pending { color: var(--mc-trans-color) !important; opacity: 1 !important; font-weight: var(--mc-trans-weight) !important; }
-  .srcline.pending { opacity: 0.6; }
+  .srcline.pending { color: var(--mc-src-color) !important; opacity: 1 !important; }
 
   /* ── 하단 로그 ── */
   /* SVG가 flex 안에서 폭 0으로 압축되는 것 방지 → 아이콘이 항상 또렷하게 보이도록 */
@@ -3281,7 +3289,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.257 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.258 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4262,7 +4270,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.257';
+const GX_DIAG_VER = '1.13.258';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {

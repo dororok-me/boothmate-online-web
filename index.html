@@ -1,5 +1,32 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.255 → v1.13.256) — 동시모드: 번호 짝짓기를 버리고 '분량이 맞을 때 닫는 창'으로 (교수님 보고):
+  - v1.13.255로 한 계통은 잡았지만 반대 방향으로 밀렸다 — 이번엔 번역이 점점 뒤처졌다.
+    영어 한 문장의 번역이 한국어 두 문장으로 나오자, 남는 한 문장이 다음 줄로 밀리며 쌓였다.
+  - 근본 원인: 지금까지는 전부 '원문 n번째 ↔ 번역 n번째'라는 번호 짝짓기였다. 그런데 Live는
+    (①) 전사와 번역을 따로 보내 도착이 한 문장씩 어긋나기도 하고, (②) 한 문장을 둘로 쪼개거나
+    둘을 하나로 합쳐 옮기기도 한다. 둘 중 하나만 생겨도 번호는 한 칸 밀리고 되돌아오지 않는다.
+    v1.13.243도 v1.13.255도 같은 자리에서 밀렸다 — 방향만 반대였다.
+  - 바꾼 방식: 문장이 도착할 때 짝을 맞추려 하지 않고 '창(window)'을 둔다.
+      · 창은 원문과 번역을 모으며 열려 있고, 열려 있는 동안엔 한 묶음으로 그대로 보여 준다
+        (아직 반로 오는 중이니 짝을 주장하지 않는다). 자막은 예전처럼 즉시 보인다.
+      · 턴이 끝날 때 번역 분량이 원문과 맞으면(기대치의 0.75~1.35배) 창을 닫는다.
+        모자라면 번역을 더 기다리고, 넘치면 아직 안 온 원문을 더 기다린다 — 여기서 닫으면 밀린다.
+      · 닫는 순간은 양쪽이 같은 말을 담고 있는 유일한 순간이다. 그때 누적 길이 비율로 문장을
+        맞춰 끈는다(spAlignWindow). 쪼개진 번역은 한 줄에 모이고, 합쳐진 번역은 그 두 원문과 한 줄에 놀인다.
+      · 닫힌 창 안에서는 짝 없는 줄을 만들지 않는다(남는 문장은 마지막 줄에 붙인다) — 밀림이
+        다음 줄로 번져나가는 경로 자체가 없어진다.
+  - 비율 R(원문 한 글자 → 번역 몇 글자)은 통역하는 동안 창마다 재서 배운다. 처음엔 대략값
+    (라틴→CJK 0.55, 반대 1.8, 모르면 1.0)으로 시작한다. 창이 400자를 넘거나 10초 이상
+    열려 있으면 균형과 상관없이 닫는다(무한대로 불지 않게). 무음 1.2초 플러시도 그냥 닫는다.
+  - v1.13.255의 '꼬리 넘기기'(spCarryTail)는 걷어냈다 — 번호 짝짓기를 전제로 한 보완책이었고,
+    그 전제가 사라졌다.
+  - 확인(브라우저에서 실제 함수를 호출해 재현): ① 전사가 한 턴 늦는 경우(1차 보고 화면) → 전부 제자리,
+    ② 번역이 두 문장으로 쪼개진 경우(2차 보고 화면) → 더 이상 밀리지 않고 같은 줄에 모임(짧은 꼬리 한
+    조각이 옆 줄로 가는 일은 남는다), ③ 두 문장이 합쳐진 경우 → 두 원문과 한 줄, ④ 평범한 1:1 → 그대로.
+  - 남는 한계: Live가 정렬 정보를 주지 않는 한 문장 단위 정확한 대응은 불가능하다. 이제 오차는
+    창 안에 갇히고 다음 창에서 반드시 다시 맞는다. 정확한 대응이 필요하면 순차모드를 쓴다.
+
   변경점 (v1.13.254 → v1.13.255) — 동시모드에서 번역이 원문보다 한 줄 밀려 붙던 것 수정 (교수님 보고):
   - 증상: 원문 바로 밑에 그 원문의 번역이 아니라 '다음 문장의 번역'이 붙는다. 한 번 밀리면
     계속 밀려서 원문과 번역을 나란히 놓고 보기가 어렵다.
@@ -3235,7 +3262,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.255 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.256 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4216,7 +4243,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.255';
+const GX_DIAG_VER = '1.13.256';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -5724,7 +5751,7 @@ function scheduleIdleFlush() {
 let spRows = [];        // 이번 발화의 묶음들 (문장 하나 = 묶음 하나)
 let spOffpair = false;  // 쌍 밖 제3언어 → 더 그리지 않는다
 let spNoTrans = false;  // 단방향 반대 방향 발화 → 전사만, 번역 억제
-function spReset() { spRows = []; spOffpair = false; spNoTrans = false; }
+function spReset() { spRows = []; spOffpair = false; spNoTrans = false; spWinStart = 0; }
 
 function escHtml(x) {
   return String(x).replace(/[&<>"]/g, function (c) {
@@ -5756,7 +5783,8 @@ function spSetRow(row, srcText, transText, pending) {
       if (row.transLine) row.el.insertBefore(row.srcLine, row.transLine);
       else row.el.appendChild(row.srcLine);
     }
-    row.srcLine.innerHTML = escHtml(srcText);   // 전사문엔 무슨 글자든 온다 — HTML로 해석되면 안 됨
+    // 전사문엔 무슨 글자든 온다 — HTML로 해석되면 안 된다. 문장 사이(\n)만 줄바꿈으로.
+    row.srcLine.innerHTML = String(srcText).split('\n').map(escHtml).join('<br>');
   } else if (row.srcLine) { row.srcLine.remove(); row.srcLine = null; }
   if (transText != null) {
     if (!row.transLine) {
@@ -5766,73 +5794,144 @@ function spSetRow(row, srcText, transText, pending) {
       row.el.appendChild(row.transLine);
     }
     // 수정 중인 줄은 건드리지 않는다(사용자가 고치던 내용이 날아가면 안 됨)
-    if (row.transLine !== editingLineEl) row.transLine.innerHTML = tokenize(transText);
+    if (row.transLine !== editingLineEl) row.transLine.innerHTML = String(transText).split('\n').map(tokenize).join('<br>');
     row.transLine.classList.toggle('pending', !!pending);
   } else if (row.transLine && row.transLine !== editingLineEl) { row.transLine.remove(); row.transLine = null; }
 }
 /* 이번 발화를 통째로 다시 그린다 — 상태를 이어 붙이지 않으므로 어긋남이 누적되지 않는다 */
-function spRenderTurn() {
+/* ════════════════════════════════
+   동시모드 표시 (v1.13.256) — '번역이 따라온 다음에' 창을 닫고, 그때 문장을 맞춘다
+
+   앞서의 방식들은 모두 '원문 n번째 ↔ 번역 n번째'를 가정했다. 그런데 Live는
+     ① 전사와 번역을 따로 보내며 둘의 도착이 한 문장씩 어긋나기도 하고,
+     ② 한 문장을 둘로 쪼개거나 둘을 하나로 합쳐 번역하기도 한다.
+   둘 중 하나만 일어나도 번호 짝짓기는 한 칸 밀리고, 그 뒤로 계속 밀린 채 내려간다.
+   v1.13.243(번호)도, v1.13.255(꼬리 넘기기)도 같은 이유로 밀렸다 — 앞은 번역이 한 줄 앞서게,
+   뒤는 한 줄 뒤지게.
+
+   그래서 짝을 '문장이 도착할 때' 맞추려 하지 않는다. 대신 창(window)을 둔다.
+
+     • 창은 원문과 번역을 계속 받아 모으며 열려 있다. 열려 있는 동안에는 한 묶음으로
+       그대로 보여 준다(짝을 주장하지 않는다 — 아직 반로 오는 중이니까).
+     • 턴이 끝나고(turnComplete) 번역 분량이 원문을 따라잡았을 때 비로소 창을 닫는다.
+       따라오지 않았으면 창을 열어 둔 채 다음 턴을 받는다 — 이게 ①을 없앱다.
+     • 창을 닫는 순간은 양쪽이 같은 말을 담고 있는 유일한 순간이다. 그때는 문장 수가 달라도
+       누적 길이 비율로 끈을 맞출 수 있다(양쪽 총량이 서로 대응하므로). 이게 ②을 없앱다.
+       쪼개진 번역은 한 줄에 함께 놀이고, 합쳐진 번역은 그 두 원문과 한 줄에 놀인다.
+
+   닫힌 창 안에서는 짝 없는 줄을 만들지 않는다 — 남는 문장은 마지막 줄에 붙인다.
+   밀림이 다음 줄로 번져나가는 경로 자체가 없어진다.
+   ════════════════════════════════ */
+const SP_WIN_MAX_CHARS = 400;    // 창이 이만큼 커지면 균형이 안 맞아도 닫는다
+const SP_WIN_MAX_MS = 10000;     // 창이 이만큼 오래 열려 있어도 닫는다
+const SP_WIN_LOW = 0.75;         // 번역이 기대치의 이보다 적으면 → 번역을 더 기다린다
+const SP_WIN_HIGH = 1.35;        // 이보다 많으면 → 아직 안 온 원문의 번역까지 들고 있다, 원문을 더 기다린다
+let spWinStart = 0;              // 창을 열어 둔 시각 (0이면 빈 창)
+
+/* 원문 한 글자가 번역 몇 글자가 되는가(R) — 통역하는 동안 재서 쓴다.
+   창을 닫을 때마다 그 창의 총량을 표본으로 더한다(문장 단위보다 편차가 작다). */
+const spRatioAcc = {};
+function spRatioKey() {
+  try { return langPrefix(curTarget || ($('targetLang') && $('targetLang').value) || '') || '?'; }
+  catch (e) { return '?'; }
+}
+function spNoteRatio(srcChars, transChars) {
+  if (srcChars < 12 || transChars < 6) return;
+  const k = spRatioKey(); const a = spRatioAcc[k] || (spRatioAcc[k] = { s: 0, t: 0 });
+  a.s += srcChars; a.t += transChars;
+  if (a.s > 40000) { a.s *= 0.5; a.t *= 0.5; }   // 최근 쪽에 무게
+}
+/* 표본이 쌓이기 전에 쓸 대략값 — CJK는 라틴 문자보다 같은 뜻을 짧게 적는다 */
+function spDefaultRatio() {
+  try {
+    const pr = getPair();
+    const t = langPrefix(curTarget || '');
+    const src = (langPrefix(pr.a) === t) ? langPrefix(pr.b) : langPrefix(pr.a);
+    const cjk = function (x) { return x === 'ko' || x === 'ja' || x === 'zh'; };
+    if (!t || !src) return 1.0;                 // 언어를 모르면 1:1로 본다
+    if (cjk(t) && !cjk(src)) return 0.55;
+    if (!cjk(t) && cjk(src)) return 1.8;
+  } catch (e) {}
+  return 1.0;
+}
+function spRatio() {
+  const a = spRatioAcc[spRatioKey()];
+  if (!a || a.s < 300) return spDefaultRatio();
+  const r = a.t / a.s;
+  return (r > 0.15 && r < 6) ? r : spDefaultRatio();
+}
+function spChars(lines) { let n = 0; for (const x of lines) n += x.length; return n; }
+
+/* 창을 닫어도 되는가 — 번역이 원문을 따라왔으면 닫는다 */
+function spWindowReady(srcLines, trLines) {
+  if (spNoTrans || spOffpair) return true;                  // 번역이 아예 없는 창
+  const sc = spChars(srcLines), tc = spChars(trLines);
+  if (sc >= SP_WIN_MAX_CHARS || tc >= SP_WIN_MAX_CHARS) return true;       // 너무 길어졌다
+  if (spWinStart && Date.now() - spWinStart > SP_WIN_MAX_MS) return true;  // 너무 오래 기다렸다
+  if (!sc || !tc) return false;                             // 한쪽이 비었으면 아직
+  // 양쪽 분량이 서로 맞는 때에만 닫는다. 모자라도(번역이 늦음), 넘쳐도(아직 안 온 원문의
+  // 번역까지 들고 있음) 닫지 않는다 — 둘 다 여기서 닫으면 한 칸 밀린다.
+  const want = spRatio() * sc;
+  return tc >= want * SP_WIN_LOW && tc <= want * SP_WIN_HIGH;
+}
+
+/* 닫힐 때의 끈맞추기 — 양쪽이 같은 말을 담고 있으므로 누적 길이 비율로 끈는다.
+   문장 수가 달라도 된다: 뒤처진 쪽에 문장을 하나 더 붙여 둘을 나란히 맞춘다. */
+function spAlignWindow(srcLines, trLines) {
+  const n = srcLines.length, m = trLines.length, rows = [];
+  if (!n || !m) {
+    for (let i = 0; i < Math.max(n, m); i++) rows.push({ s: i < n ? srcLines[i] : null, t: i < m ? trLines[i] : null });
+    return rows;
+  }
+  const totS = spChars(srcLines), totT = spChars(trLines);
+  let i = 0, j = 0, cs = 0, ct = 0;
+  while (i < n && j < m) {
+    const gs = [srcLines[i]], gt = [trLines[j]];
+    cs += srcLines[i].length; ct += trLines[j].length; i++; j++;
+    for (let guard = 0; guard < 6; guard++) {
+      const ps = cs / totS, pt = ct / totT;      // 지금까지 쓴 비율
+      if (ps > pt + 0.12 && j < m) { ct += trLines[j].length; gt.push(trLines[j]); j++; }
+      else if (pt > ps + 0.12 && i < n) { cs += srcLines[i].length; gs.push(srcLines[i]); i++; }
+      else break;
+    }
+    rows.push({ s: gs.join(' '), t: gt.join(' ') });
+  }
+  const last = rows[rows.length - 1];            // 남은 문장은 마지막 줄에 붙인다(짝 없는 줄을 만들지 않는다)
+  while (i < n) { last.s = last.s + ' ' + srcLines[i]; i++; }
+  while (j < m) { last.t = last.t + ' ' + trLines[j]; j++; }
+  return rows;
+}
+
+/* 창을 다시 그린다. settled=true면 닫는 순간 — 문장끼리 맞춰 줄을 나눈다.
+   열려 있는 동안에는 한 묶음으로 보여 준다 — 아직 짝을 말할 근거가 없기 때문이다. */
+function spRenderTurn(settled) {
   if (spOffpair) return;
   const srcLines = blockLines(tidyNumbers(srcBuf).trim());
   const trLines = spNoTrans ? [] : blockLines(shownTrans(transBuf));
-  const n = Math.max(srcLines.length, trLines.length);
-  while (spRows.length < n) spNewRow();
-  for (let i = 0; i < n; i++) {
-    const lastTrans = (i === trLines.length - 1);
-    spSetRow(spRows[i],
-             i < srcLines.length ? srcLines[i] : null,
-             i < trLines.length ? trLines[i] : null,
-             lastTrans);
+  let rows;
+  if (!srcLines.length && !trLines.length) rows = [];
+  else if (settled) rows = spAlignWindow(srcLines, trLines);
+  else rows = [{ s: srcLines.length ? srcLines.join('\n') : null, t: trLines.length ? trLines.join('\n') : null }];
+  while (spRows.length < rows.length) spNewRow();
+  while (spRows.length > rows.length) {           // 묶음이 줄어들면 남는 건 지운다
+    const r = spRows[spRows.length - 1];
+    if (r.transLine && r.transLine === editingLineEl) break;   // 수정 중인 줄은 건드리지 않는다
+    if (r.el && r.el.parentNode) r.el.remove();
+    spRows.pop();
   }
+  for (let i = 0; i < rows.length && spRows[i]; i++) {
+    spSetRow(spRows[i], rows[i].s, rows[i].t, !settled && i === rows.length - 1);
+  }
+  curPair = spRows[spRows.length - 1] || curPair;
   trimLines(combinedEl, 'transline');
   pushMirror();
-}
-
-/* ── 짝 못 맞춘 꼬리를 다음 턴으로 넘기기 (v1.13.255) ──
-
-   Live는 원문 전사와 번역을 따로 보내고, 둘의 도착 시점이 한 문장쯤 어긋나는 일이 흔하다.
-   턴이 끝나는(turnComplete) 순간 한쪽만 와 있으면, 지금까지는 그 자리에서 버퍼를 비웠다.
-   그러면 짝 없이 남은 줄이 그대로 굳고, 다음 턴부터는 원문 k가 번역 k+1과 붙는다 —
-   한 번 밀리면 되돌아오지 않는다(교수님 보고: 번역이 한 줄 아래로 떨어져 보인다).
-
-   그래서 턴을 닫을 때 '짝이 맞은 앞부분'만 확정하고, 짝 못 맞춘 꼬리는 버퍼에 남겨
-   다음 턴으로 넘긴다. 늦게 오는 짝은 제 줄에 채워지므로 밀림이 생기지 않는다.
-
-   기다리는 규칙은 어느 쪽이 비었느냐에 따라 다르다 — 두 경우의 성질이 다르기 때문이다.
-     · 번역만 와 있고 원문이 없다 → 전사는 늦을 뿐 반드시 온다. 계속 기다린다.
-     · 원문만 와 있고 번역이 없다 → 모델이 두 문장을 한 문장으로 합쳐 버렸다면 짝은 영영 안 온다.
-       한 턴만 기다리고 그냥 확정한다 — 어긋남을 그 자리에 가두고 다음 문장부터 다시 맞춘다.
-       (두 턴을 기다려 봤더니 합쳐진 경우에 잘못 붙는 줄이 하나 더 늘었다 — 실측해서 한 턴으로 줄였다.)
-   꼬리가 2줄을 넘으면 어느 쪽이든 기다리지 않는다(그쯤이면 짝짓기 근거 자체가 약하다). */
-const SP_CARRY_MAX_ROWS = 2;    // 한 번에 넘길 수 있는 최대 묶음 수
-const SP_CARRY_MAX_TURNS = 1;   // '번역을 기다리는 원문'을 연속으로 넘길 수 있는 최대 턴 수
-let spCarrySrcTurns = 0;
-function spCarryTail(fromIdle) {
-  // 말이 1.2초 넘게 끊겨서 닫는 자리면 기다리지 않는다 — 안 온 짝은 이제 오지 않는다.
-  if (fromIdle || spOffpair || spNoTrans || !running) { spCarrySrcTurns = 0; return 0; }
-  const srcLines = blockLines(tidyNumbers(srcBuf).trim());
-  const trLines = blockLines(shownTrans(transBuf));
-  const paired = Math.min(srcLines.length, trLines.length);            // 짝이 맞은 앞부분
-  const tail = Math.max(srcLines.length, trLines.length) - paired;     // 짝 못 맞춘 꼬리
-  if (tail <= 0) { spCarrySrcTurns = 0; return 0; }                    // 다 맞았다 — 평소대로 확정
-  if (tail > SP_CARRY_MAX_ROWS) { spCarrySrcTurns = 0; return 0; }
-  if (srcLines.length > trLines.length) {                              // 번역을 기다리는 원문
-    if (spCarrySrcTurns >= SP_CARRY_MAX_TURNS) { spCarrySrcTurns = 0; return 0; }
-    spCarrySrcTurns++;
-  } else {                                                             // 원문을 기다리는 번역
-    spCarrySrcTurns = 0;
-  }
-  // 넘기는 번역은 후처리된 글로 다시 담는다 — 후처리는 멱등에 가까워 두 번 거쳐도 같은 결과다
-  // (recoverRaw가 쓰는 것과 같은 근사).
-  srcBuf = srcLines.slice(paired).join(' ');
-  transBuf = trLines.slice(paired).join(' ');
-  return Math.min(tail, spRows.length);
 }
 
 function appendSrc(t) {
   clearErr();   // 실제 자막이 들어오기 시작하면 이전 에러 메시지 제거
   noteSpeech(); // 무음 자동 정지 타이머 리셋 (실제 음성 인식 입력이 들어옴)
   const chunk = String(t || '').replace(/\n+/g, ' ');
+  if (!spWinStart) spWinStart = Date.now();   // 창을 여는 시각 (너무 오래 열려 있으면 그냥 닫는다)
   srcBuf += chunk;
   // 이번 턴 원문 누적 (로그 트리거어 표시용). 과도 성장 방지로 뒤 800자만 유지.
   turnSrcText += chunk;
@@ -5873,6 +5972,7 @@ function appendSrc(t) {
 }
 
 function appendTrans(t) {
+  if (!spWinStart) spWinStart = Date.now();
   transBuf += t;
   turnRawTrans += t;   // 반영 로그용: 치환 전 원시 번역 누적
   // 제3언어(숨김) 또는 단방향 반대 방향(전사만) → 번역은 표시하지 않는다
@@ -6308,25 +6408,24 @@ function finishSegment(fromIdle) {
     const det = detectLang(shownTrans(transBuf), srcLang, curTarget);
     if (det && langPrefix(det) === langPrefix(srcLang)) transBuf = "";
   }
-  spRenderTurn();                     // 마지막 상태로 한 번 더
-  const carried = spCarryTail(fromIdle);   // 짝 못 맞춘 꼬리는 다음 턴으로 (v1.13.255)
-  for (let i = 0; i < spRows.length - carried; i++) {   // 확정된 앞부분만 진행 표시 해제
-    const r = spRows[i];
+  // 번역이 원문을 아직 따라오지 못했으면 창을 닫지 않는다 (v1.13.256).
+  // 여기서 닫아 버리면 짝 없는 줄이 굳고, 다음 창부터 원문과 번역이 한 칸씩 어긋난다.
+  const ready = fromIdle || !running ||
+                spWindowReady(blockLines(tidyNumbers(srcBuf).trim()),
+                              spNoTrans ? [] : blockLines(shownTrans(transBuf)));
+  spRenderTurn(ready);
+  if (!ready) { scheduleIdleFlush(); return; }   // 창을 열어 둔 채 다음 턴을 받는다
+  for (const r of spRows) {           // 진행 표시 해제
     if (r.transLine) r.transLine.classList.remove('pending');
     if (r.srcLine) r.srcLine.classList.remove('pending');
   }
-  if (carried) {
-    // 넘긴 묶음은 살려 둔다 — 늦게 오는 짝이 '이 줄'에 채워져야 밀리지 않는다.
-    spRows = spRows.slice(spRows.length - carried);
-    spOffpair = false; spNoTrans = false;
-    curPair = spRows[spRows.length - 1] || null;
-    scheduleIdleFlush();   // 끝내 짝이 안 오면 잠시 뒤 스스로 확정되도록
-  } else {
-    srcBuf = "";
-    transBuf = "";
-    spReset();            // 다음 발화는 새 묶음부터 (어긋남이 발화를 넘어가지 않는다)
-    curPair = null;
-  }
+  // 닫은 창의 총량을 비율 R의 표본으로
+  spNoteRatio(spChars(blockLines(tidyNumbers(srcBuf).trim())),
+              spNoTrans ? 0 : spChars(blockLines(shownTrans(transBuf))));
+  srcBuf = "";
+  transBuf = "";
+  spReset();            // 다음 발화는 새 묶음부터
+  curPair = null;
   trimLines(combinedEl, 'srcline');
   pushMirror();
   turnLogged.clear();   // 턴 종료 → 다음 턴은 같은 치환도 다시 기록

@@ -138,6 +138,8 @@ function normalizeSingleClause(text, speechLevel) {
   for (const [pat,rep] of plainEndings(isFormal)) { if (pat.test(result)) return result.replace(pat,rep)+trailingPunct; }
   return result+trailingPunct;
 }
+// 미완성(스트리밍 중간) 조각인지: 문장부호(.!?。)로 끝나지 않으면 아직 완성 전으로 본다.
+function isCompleteClause(s) { return /[.!?。]\s*$/.test(s); }
 function normalizeKoreanEnding(text, speechLevel) {
   const trimmed = (text||"").trim();
   if (!trimmed) return text;
@@ -147,11 +149,17 @@ function normalizeKoreanEnding(text, speechLevel) {
     let out = "";
     for (let i=0;i<parts.length;i+=2) {
       const sentence = parts[i]; const sep = parts[i+1]||"";
-      if (sentence.trim()) { out += normalizeSingleClause(sentence.trim(),speechLevel)+sep.trimEnd(); if (sep) out += " "; }
+      if (sentence.trim()) {
+        const isLast = (i+2 >= parts.length);
+        // 마지막 조각이 미완성(문장부호 없음)이면 후처리 스킵 → '인지'가 잠깐 '인죠'로 뜨는 깜빡임 방지.
+        const s = (isLast && !isCompleteClause(sentence)) ? sentence.trim() : normalizeSingleClause(sentence.trim(), speechLevel);
+        out += s + sep.trimEnd(); if (sep) out += " ";
+      }
     }
     return out.trim();
   }
-  return normalizeSingleClause(trimmed,speechLevel);
+  // 단일 조각: 완성(문장부호로 끝)일 때만 후처리, 미완성이면 원문 그대로.
+  return isCompleteClause(trimmed) ? normalizeSingleClause(trimmed,speechLevel) : trimmed;
 }
 function stripCasualPronouns(text) {
   let result = text;

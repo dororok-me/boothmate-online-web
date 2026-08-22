@@ -1,5 +1,10 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.251 → v1.13.252) — 어투 후처리 깜빡임 제거 (교수님 요청):
+  - 스트리밍 중간(미완성) 자막에서 '…인지'의 '지'가 /지$/→죠 규칙에 걸려 잠깐 '…인죠'로
+    떴다가 문장 완성 시 되돌아오던 깜빡임. postprocess.js normalizeKoreanEnding이
+    '문장부호로 끝나지 않은 마지막 조각'은 후처리를 건너뛰도록 수정(완성 문장에만 어투 적용).
+    postprocess.js 캐시버스터 v1.13.251 → v1.13.252.
   변경점 (v1.13.250 → v1.13.251) — 입력 레벨미터 민감도 상향 (교수님 요청):
   - 상단 사운드 인풋 센서가 작은 소리에 점 1~2개만 켜져 입력 확인이 어렵던 문제.
     레벨 매핑을 선형(rms*3.4) → sqrt 곡선 + 게인 상향(Math.sqrt(max(0,rms-0.004)*7.5))으로 변경.
@@ -3164,7 +3169,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.251 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.252 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3181,7 +3186,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
   </div>
 </div>
 
-<script src="postprocess.js?v=1.13.251"></script>
+<script src="postprocess.js?v=1.13.252"></script>
 <script src="currency.js?v=1.10.8"></script>
 <script src="unitConvert.js"></script>
 <script src="audio.js"></script>

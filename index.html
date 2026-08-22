@@ -1,5 +1,13 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.253 → v1.13.254) — 통역 중에 모드를 누르면 왜 안 바뀌는지 말해 주기 (교수님 요청):
+  - 통역 중에는 번역 방식이 세션 시작 시점에 확정되어 바꿀 수 없는데, 눌러도 아무 일도
+    일어나지 않아 고장처럼 보였다. 안내는 이미 있었지만 setStatus로 갔고, 그 표시줄은
+    v1.6.1에서 사라져(statusEl = null) 어디에도 나오지 않았다.
+  - 누른 버튼 바로 아래에 '통역 중에는 번역 방식을 바꿀 수 없습니다 — 정지 후 변경 가능합니다'
+    쪽지를 2.6초 띄운다(#bmToast, showToast). 툴팁 문구도 같은 말로 통일.
+  - 쪽지는 다른 안내에도 쓸 수 있게 일반 함수로 뒀다 — 기준 요소만 넘기면 그 아래에 뜬다.
+
   변경점 (v1.13.252 → v1.13.253) — 번역 방식 이름을 '동시모드 / 순차모드'로 + 좁은 화면에서도 다 보이게 (교수님 요청):
   - [이름] '속도 / 품질' → '동시모드 / 순차모드'. 통역사가 쓰는 낱말(동시통역·순차통역)이라
     무엇이 달라지는지 설명 없이도 읽힌다. 값어치(빠름·정확함)가 아니라 방식을 가리키는 이름이다.
@@ -2087,6 +2095,19 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
   /* 눌러서 언어쌍·방향을 고르는 메뉴가 열린다 (v1.13.250) */
   #langBadge { cursor: pointer; padding: 2px 4px; border-radius: 6px; transition: background .15s, color .15s; }
   #langBadge:hover { background: var(--t-input-bg); color: var(--t-text); }
+  /* 잠깐 뜨는 안내 쪽지 (v1.13.254) — 누른 자리(기준 요소) 바로 아래에 뜨고 스스로 사라진다.
+     setStatus는 상태 표시줄이 v1.6.1에서 사라진 뒤로 아무 데도 나오지 않는다(statusEl = null).
+     그래서 '통역 중에는 못 바꾼다' 같은 안내가 눌러도 아무 반응 없는 것처럼 보였다(교수님 보고). */
+  #bmToast {
+    position: fixed; z-index: 400; box-sizing: border-box;
+    max-width: 92vw; padding: 7px 11px; border-radius: 9px;
+    background: var(--t-panel-bg, #fff); border: 1px solid var(--t-border, #d5dbe6);
+    color: var(--t-text, #0F172A); font-size: 11.5px; font-weight: 600; line-height: 1.35;
+    box-shadow: 0 8px 22px rgba(0,0,0,0.16);
+    opacity: 0; transform: translateY(-4px); pointer-events: none;
+    transition: opacity .16s, transform .16s;
+  }
+  #bmToast.on { opacity: 1; transform: none; }
   /* 언어쌍 선택 팝오버 (v1.13.250) — K⇄E 배지를 누르면 뜬다 */
   #langMenu {
     position: fixed; z-index: 200; display: none;
@@ -3195,7 +3216,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.253 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.254 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4176,7 +4197,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.253';
+const GX_DIAG_VER = '1.13.254';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -6170,8 +6191,31 @@ function renderEngineToggle() {
   // 버튼 사이 여백에 마우스를 올려도 안내가 뜨도록 감싼 상자에도 설명을 붙인다 (v1.13.246).
   // 버튼 위에서는 각 버튼의 설명이 우선한다(안쪽 요소의 title이 이긴다).
   box.title = locked
-    ? '통역 중에는 엔진을 바꿀 수 없습니다 — 정지 후 전환하세요'
+    ? '통역 중에는 번역 방식을 바꿀 수 없습니다 — 정지 후 변경 가능합니다'
     : '번역 방식 — 동시모드: 말하는 동안 실시간 번역 · 순차모드: 문장이 맺힌 뒤 번역(문맥·용어집 정확)';
+}
+/* 안내 쪽지 (v1.13.254) — 기준 요소 아래에 잠깐 띄우고 스스로 지운다.
+   화면 오른쪽으로 넘치면 언어쌍 메뉴와 같은 방식으로 안쪽으로 당긴다. */
+let bmToastTimer = null;
+function showToast(msg, anchor, ms) {
+  let el = document.getElementById('bmToast');
+  if (!el) { el = document.createElement('div'); el.id = 'bmToast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.textContent = msg;
+  el.classList.remove('on');
+  // 오른쪽 끝을 기준 요소에 맞추려면 쪽지 폭을 알아야 한다 — 글을 넣은 뒤 재서 자리를 잡는다.
+  const r = (anchor || document.getElementById('engineToggle') || document.body).getBoundingClientRect();
+  el.style.top = (r.bottom + 6) + 'px';
+  el.style.left = '0px';
+  const w = el.offsetWidth || 200;
+  let left = r.right - w;                                   // 기준 요소 오른쪽 끝에 맞춘다
+  if (left + w > window.innerWidth - 8) left = window.innerWidth - 8 - w;
+  if (left < 8) left = 8;
+  el.style.left = left + 'px';
+  // 바로 켠다 — rAF에 맡기면 창이 뒤에 있을 때 콜백이 미뤄져 쪽지가 아예 안 뜬다(실측).
+  // 위에서 offsetWidth를 읽어 배치가 이미 반영됐으므로, 여기서 켜도 전환(페이드)은 정상 동작한다.
+  el.classList.add('on');
+  if (bmToastTimer) clearTimeout(bmToastTimer);
+  bmToastTimer = setTimeout(() => { el.classList.remove('on'); bmToastTimer = null; }, ms || 2600);
 }
 function initEngineToggle() {
   const box = $('engineToggle');
@@ -6180,7 +6224,7 @@ function initEngineToggle() {
     const b = e.target.closest('button[data-eng]');
     if (!b) return;
     if (isInterpreting()) {
-      setStatus('통역 중에는 엔진을 바꿀 수 없습니다 — 정지 후 전환하세요', true);
+      showToast('통역 중에는 번역 방식을 바꿀 수 없습니다 — 정지 후 변경 가능합니다', box);   // 알약 전체를 기준으로 (버튼 기준이면 쪽지가 알약에 살짝 겹친다)
       return;
     }
     localStorage.setItem('trans_engine', b.dataset.eng === 'flash' ? 'flash' : 'live');

@@ -1,5 +1,18 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.262 → v1.13.263) — 구글 로그인 "400 오류: origin_mismatch" 수정 (실사용자 보고):
+  - 증상: 카톡 인앱 브라우저에서 링크로 들어온 사용자가 구글 로그인을 누르면 구글이
+    "액세스 차단됨: 승인 오류 … 400 오류: origin_mismatch"로 막았다.
+  - 원인: 페이지가 http://online.boothmate.co.kr 로 열렸다. 승인된 자바스크립트 출처에는
+    https://online.boothmate.co.kr 만 등록돼 있어 http 출처는 구글이 거부한다.
+    http로 열린 이유는 GitHub Pages의 'HTTPS 강제(https_enforced)'가 꺼져 있어서 —
+    http로 들어와도 https로 넘겨주지 않고 그대로 열렸다. 카톡은 맨 주소를 링크로 만들 때
+    http://를 붙이는 경우가 많아, 링크로 받은 사람은 전부 여기에 걸렸다.
+  - 수정 ①(서버): GitHub Pages 저장소 설정에서 https_enforced=true 로 켬 → http 접속은 https로 리다이렉트.
+  - 수정 ②(코드): <head> 최상단에 http면 https로 location.replace 하는 4줄 추가. CDN 캐시나
+    설정 변경에 좌우되지 않게 이중으로 막는다. localhost는 제외(개발용 승인 출처라서).
+  - 수정 ③: 인앱 브라우저 '브라우저 앱으로 열기'가 넘기는 주소도 https로 강제 —
+    http로 열린 페이지를 그대로 넘기면 외부 브라우저에서도 같은 오류가 났다.
   변경점 (v1.13.261 → v1.13.262) — 일반 사용자 가입 개방 (화이트리스트 해제, 교수님 보고):
   - 증상: 화이트리스트에 없는 사람이 구글 로그인을 하면 "이 계정(...)은 아직 사용 권한이 없습니다."로
     막혀 회원가입도, 무료 체험도, 사용권 구매도 할 수 없었다.
@@ -2071,6 +2084,19 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<!-- v1.13.263: http로 열리면 즉시 https로 전환.
+     카톡 등이 만든 http:// 링크로 들어오면 페이지 출처가 http가 되고, 구글 로그인이
+     "400 오류: origin_mismatch"로 막힌다(승인된 자바스크립트 출처에는 https만 등록돼 있음).
+     GitHub Pages의 'HTTPS 강제'도 켰지만, CDN 캐시·설정 변경에 좌우되지 않게 코드에도 둔다.
+     개발용 localhost는 제외(http://localhost:8123이 승인 출처로 등록돼 있음). -->
+<script>
+(function(){
+  var h = location.hostname;
+  if (location.protocol === 'http:' && h !== 'localhost' && h !== '127.0.0.1' && h !== '[::1]'){
+    location.replace('https://' + location.host + location.pathname + location.search + location.hash);
+  }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Boothmate Online</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg?v=194">
@@ -3133,7 +3159,8 @@ if (!document.documentElement.classList.contains('bm-app')) {
 
     var isKakao = /KAKAOTALK/i.test(ua);
     var isAndroid = /Android/i.test(ua);
-    var url = window.location.href;
+    /* v1.13.263: 외부 브라우저도 반드시 https로 열어야 구글 로그인이 된다(origin_mismatch 방지) */
+    var url = window.location.href.replace(/^http:\/\//, 'https://');
     var btn = document.getElementById('openExternalBtn');
     var hint = document.getElementById('openExternalHint');
     if (!btn) return;
@@ -3317,7 +3344,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.262 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.263 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4299,7 +4326,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.262';
+const GX_DIAG_VER = '1.13.263';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {

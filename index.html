@@ -1,5 +1,14 @@
 <!DOCTYPE html>
 <!--
+  변경점 (v1.13.261 → v1.13.262) — 일반 사용자 가입 개방 (화이트리스트 해제, 교수님 보고):
+  - 증상: 화이트리스트에 없는 사람이 구글 로그인을 하면 "이 계정(...)은 아직 사용 권한이 없습니다."로
+    막혀 회원가입도, 무료 체험도, 사용권 구매도 할 수 없었다.
+  - 원인: 출시 전 잠금용 ALLOWED_EMAILS(테스터 70여 명)가 아직 채워져 있어 목록 밖 계정은
+    completeLogin/restoreSession에서 전부 차단됐다.
+  - 수정: ALLOWED_EMAILS = [] 로 비움 → 구글 계정이면 누구나 가입. 사용량 제어는 그대로
+    Ent(신규 30분 무료 체험 + 구매 시간)가 맡는다. 되돌리려면 배열에 이메일을 다시 넣으면 됨.
+  - ⚠️ 코드만으로는 부족: 구글 OAuth 동의 화면이 'Testing'이면 GCP 테스트 사용자(최대 100명)만
+    로그인된다. GCP 콘솔에서 '프로덕션으로 게시'해야 일반 사용자가 실제로 가입할 수 있다.
   변경점 (v1.13.260 → v1.13.261) — 테스트 계정 1개 추가 + 시간 부여:
   - sonek.june@gmail.com → ALLOWED_EMAILS 등록 + TIME_GRANTS 1시간(grantId sonek-june-1h-20260804).
   변경점 (v1.13.259 → v1.13.260) — 용어집 표준표기가 '고백할'처럼 활용되면 로그·하이라이트가 빠지던 문제 (교수님 요청):
@@ -3308,7 +3317,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.261 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.262 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4290,7 +4299,7 @@ function gxLaunchRef() { return GX_LAUNCH_REF ? GX_LAUNCH_REF.slice(0, 60) : '(n
 /* 진단 메시지에 찍히는 앱 버전. 수정 시 푸터 표기와 함께 올릴 것 (v1.13.146).
    TWA가 페이지를 최대 10분 캐시하므로(GitHub Pages Cache-Control: max-age=600),
    테스터 화면이 어느 빌드에서 나온 것인지 이 값으로 확인한다. */
-const GX_DIAG_VER = '1.13.261';
+const GX_DIAG_VER = '1.13.262';
 async function gxDiagnose() {
   const out = ['v=' + GX_DIAG_VER, 'ref=' + gxLaunchRef(), 'TWA=' + (gxIsTWA() ? 'Y' : 'N')];
   try {
@@ -8678,13 +8687,15 @@ window.__syncPanelLayout = function() {
   const NAVER_CLIENT_ID = 'QiTPa5ktzYBkdAball8z';
   // 카카오 Redirect URI·네이버 Callback URL — 개발자 콘솔에 이 주소를 그대로 등록해야 함
   const SOCIAL_REDIRECT_URI = location.origin + '/';
-
-  // ── 출시 전 잠금 (PRE-LAUNCH LOCK) ──
-  // 허용 이메일 목록. 비어있으면 = 누구나 통과.
-  // ⚠️ 출시 전까지는 운영자(dororok)만 로그인 가능하게 잠가둠.
-  //    → 나만 중계서버에 도달 가능 → 내 Gemini 비용 안전.
-  // 출시할 때 이 배열을 비우면([]) 누구나 통과, 또는 일부만 받으려면 이메일 추가.
-  const ALLOWED_EMAILS = ['dororok@gmail.com', 'boothmatepro.review@gmail.com', 'sonyuhee820@gmail.com', 'seoultrans001@gmail.com', 'shinjiye173@gmail.com', 'park.wonny@gmail.com', 'katiekim7991@gmail.com', 'iyewon33@gmail.com', 'alicecha0114@gmail.com', 'heira.jung@gmail.com', 'topclasstrancc@gmail.com', 'itswonsun@gmail.com', 'janeyu0114@gmail.com', 'interpreterceci@gmail.com', 'min.interpreter@gmail.com', 'skch159@gmail.com', 'luckyeunji@gmail.com', 'myfate0429@gmail.com', 'sandra.jy.lim@gmail.com', 'luvange@gmail.com', 'jigojisn@gmail.com', 'sarahkim005@gmail.com', 'strangermisa10@gmail.com', 'twoamari@gmail.com', 'chloekim2014@gmail.com', 'jkang0604@gmail.com', 'syyou128@gmail.com', 'yujinsart@gmail.com', 'jessyessy.p@gmail.com', 'rcho0702@gmail.com', 'makingin@gmail.com', '91skwon@gmail.com', 'yoonsun125p@gmail.com', 'cktngus2339@gmail.com', 'sj.serena.im@gmail.com', 'gayeonkim0630@gmail.com', 'euijinjunesim@gmail.com', 'jinnyjeuu@gmail.com', 'moony8318@gmail.com', 'kimsuji0524@gmail.com', 'jaytheidealist@gmail.com', 'stellaseol0129@gmail.com', 'happylee.ssg@gmail.com', 'ty6891@gmail.com', 'beautyna88@gmail.com', 'shawnbae0099@gmail.com', 'kimyiyun1004@gmail.com', 'sorim126@gmail.com', 'hahaworld0216@gmail.com', 'choibk297@gmail.com', 'hyohyunc@gmail.com', 'hgold93@gmail.com', 'sumanlee3406@gmail.com', 'jongyeonkim3406@gmail.com', 'luzsohee@gmail.com', 'jinsil.choi1991@gmail.com', 'all4him@hanmail.net', 'dongyimon@gmail.com', 'herbalife2215@gmail.com', 'sangsook.ko@gmail.com', 'dkfmagu1622@gmail.com', 'yoojin.choi90@gmail.com', 'skymakingin@naver.com', 'ansgoems7@gmail.com', 'msmsufs23@gmail.com', 'yeonubfc@gmail.com', 'ghyos0930@gmail.com', 'toss-review@boothmate.online', 'surina928@gmail.com', 'interpreteryena@gmail.com', 'shinseoyeon.translator@gmail.com', 'sonek.june@gmail.com'];
+  // ── 로그인 개방 (v1.13.262) ──
+  // 허용 이메일 목록. 비어 있으면 = 누구나 구글 로그인으로 가입 가능.
+  // 개방 이유: 화이트리스트에 없는 일반 사용자가 가입 자체를 못 해 무료 체험도, 사용권 구매도
+  // 할 수 없었다. 이제 가입은 열고, 사용량은 Ent(무료 30분 + 구매 시간)로 제어한다.
+  // (이전 70여 명 테스터 목록은 git 히스토리 v1.13.261 참고 — 되돌리려면 거기서 복원)
+  // ⚠️ 다시 잠그려면 이 배열에 이메일을 넣으면 됨(비어 있지 않으면 목록 밖 계정은 차단).
+  // ⚠️ 코드만 열어서는 부족: 구글 OAuth 동의 화면이 'Testing'이면 GCP 테스트 사용자만 로그인된다.
+  //    GCP 콘솔 → API 및 서비스 → OAuth 동의 화면에서 '프로덕션으로 게시'해야 일반 사용자가 가입 가능.
+  const ALLOWED_EMAILS = [];
 
   const gate = document.getElementById('authGate');
   const bar = document.getElementById('authBar');   // v1.6.1: 설정 패널로 이동 → null일 수 있음(가드 처리)

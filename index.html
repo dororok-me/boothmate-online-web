@@ -3181,7 +3181,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
       /* iOS 등 자동 전환 불가 → 주소 복사 */
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(function(){
-          if (hint) hint.textContent = '주소가 복사됐습니다. Safari 등 브라우저에 붙여넣어 접속하세요.';
+          if (hint) hint.textContent = '주소가 복사됐습니다. 크롬 사용을 권장합니다.';
         }, function(){ if (hint) hint.textContent = url; });
       } else if (hint) {
         hint.textContent = url;

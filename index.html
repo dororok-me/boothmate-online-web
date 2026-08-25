@@ -3116,14 +3116,6 @@ if (!document.documentElement.classList.contains('bm-app')) {
     <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="#FFFFFF" d="M14.9 4v8.6L9.1 4H4v16h5.1v-8.6L14.9 20H20V4h-5.1z"/></svg>
     네이버로 로그인
   </button>
-  <!-- 카드사·PG 심사용 테스트 계정 로그인 (ID/PW) — 심사 규정상 소셜 로그인 불가라 필요 (v1.13.191).
-       진입 링크(#testLoginToggle)는 화면에서 제거. 폼과 처리 로직은 그대로 두어
-       심사 재요청 시 링크 한 줄만 되살리면 되게 한다. -->
-  <div id="testLoginForm" style="display:none; margin-top:10px; width:260px;">
-    <input id="testLoginId" type="text" placeholder="아이디" autocomplete="off" autocapitalize="none" style="width:100%; box-sizing:border-box; height:38px; padding:0 12px; border:1px solid #CBD5E1; border-radius:8px; font-size:14px; margin-bottom:6px;">
-    <input id="testLoginPw" type="password" placeholder="비밀번호" style="width:100%; box-sizing:border-box; height:38px; padding:0 12px; border:1px solid #CBD5E1; border-radius:8px; font-size:14px; margin-bottom:8px;">
-    <button id="testLoginBtn" type="button" style="width:100%; height:38px; background:#334155; color:#FFFFFF; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">로그인</button>
-  </div>
   <div id="authGateMsg" style="font-size:12px; color:#B45309; margin-top:16px; min-height:18px;"></div>
   <div id="inAppWarn" style="display:none; max-width:340px; margin-top:18px; padding:12px 14px; background:#FEF3C7; border:1px solid #F59E0B; border-radius:10px; font-size:13px; line-height:1.65; color:#92400E; text-align:center;">
     <b>카카오톡 등 인앱 브라우저에서는 구글 로그인이 되지 않습니다.</b><br>
@@ -8839,32 +8831,6 @@ window.__syncPanelLayout = function() {
     } catch(e){}
     return false;
   }
-
-  // ── 심사용 테스트 계정 (ID/PW) — 토스페이먼츠·카드사 심사역 전용 (v1.13.191) ──
-  // 카드사 심사는 소셜 로그인 테스트 계정을 인정하지 않아 ID/PW 방식이 필요.
-  // 소스에 노출되지만 무료 체험과 동일 권한만 가지므로 위험 없음. 심사 종료 후 제거 가능.
-  const TEST_LOGIN_ID = 'tossreview';
-  const TEST_LOGIN_PW = 'boothmate2026!';
-  const TEST_LOGIN_EMAIL = 'toss-review@boothmate.online';
-  const tlToggle = document.getElementById('testLoginToggle');
-  const tlForm = document.getElementById('testLoginForm');
-  if (tlToggle && tlForm) tlToggle.onclick = function(){
-    tlForm.style.display = tlForm.style.display === 'none' ? 'block' : 'none';
-    return false;
-  };
-  function tlSubmit(){
-    const id = (document.getElementById('testLoginId').value || '').trim().toLowerCase();
-    const pw = document.getElementById('testLoginPw').value || '';
-    if ((id === TEST_LOGIN_ID || id === TEST_LOGIN_EMAIL) && pw === TEST_LOGIN_PW){
-      completeLogin({ email: TEST_LOGIN_EMAIL, name: '심사용 테스트 계정', provider: 'test' });
-    } else {
-      showGate('아이디 또는 비밀번호가 올바르지 않습니다.');
-    }
-  }
-  const tlBtn = document.getElementById('testLoginBtn');
-  if (tlBtn) tlBtn.onclick = tlSubmit;
-  const tlPw = document.getElementById('testLoginPw');
-  if (tlPw) tlPw.onkeydown = function(e){ if (e.key === 'Enter') tlSubmit(); };
 
   // ── 카카오 로그인 (REST 방식, SDK 없음) ──
   // 버튼 클릭 → kauth 인가 페이지로 리다이렉트 (state는 CSRF 방지용, sessionStorage에 보관)

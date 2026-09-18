@@ -2837,7 +2837,10 @@ function tokenize(text) {
   const res = glossaryHlRegexes();
   // 문장 전체에서 매치 범위를 먼저 수집 — 공백 포함 표제어("눈에 띄다")·활용형도 하이라이트 (v1.13.56)
   const ranges = [];
-  for (const re of res) {
+  const hay = gHay(text);   // 탐침이 없는 표제어는 정규식을 돌리지 않는다 (v1.13.265)
+  for (const h of res) {
+    if (h.probe && hay.indexOf(h.probe) < 0) continue;
+    const re = h.re;
     re.lastIndex = 0;
     let m, guard = 0;
     while ((m = re.exec(text)) !== null) {
@@ -2885,41 +2888,10 @@ function hlSlice(word, start, merged) {
   out += escapeHtml(word.slice(i));
   return out;
 }
-/* 현재 출력 방향의 용어집 표준표기 → 매칭 정규식 목록(긴 표제어 우선). glossary+방향 캐시. */
-let _glossaryHlCache = { key: null, list: null };
+/* 현재 출력 방향의 용어집 표준표기 → 하이라이트 항목 [{re, probe}] (긴 표제어 우선). 실행 계획 캐시(v1.13.265). */
 function glossaryHlRegexes() {
   const outCode = curTarget || ($('targetLang') && $('targetLang').value) || '';
-  const raw = localStorage.getItem('glossary') || '[]';
-  const key = outCode + '|' + raw;
-  if (_glossaryHlCache.key === key) return _glossaryHlCache.list;
-  const { outP, otherP } = gDirKeys(outCode);
-  const terms = [];
-  for (const it of loadGlossary()) {
-    if (!it) continue;
-    let canon;
-    const col = gPick(it.nat, outP, otherP);
-    if (col) {
-      canon = col[0];
-    } else {
-      const aHead = splitAliases(it.a)[0] || it.a;
-      const bHead = splitAliases(it.b)[0] || it.b;
-      const n2 = {}; const ka = gKey(aHead), kb = gKey(bHead);
-      n2[ka] = [aHead]; if (n2[kb] === undefined) n2[kb] = []; if (n2[kb].indexOf(bHead) < 0) n2[kb].push(bHead);
-      const c = gPick(n2, outP, otherP); canon = c && c[0];
-    }
-    if (canon) terms.push(canon);   // 공백 포함 표제어("눈에 띄다")도 하이라이트 (v1.13.56, 범위 기반 tokenize)
-  }
-  terms.sort(function (a, b) { return b.length - a.length; });   // 긴 표제어 우선
-  const seen = {}, list = [];
-  for (const t of terms) {
-    const k = t.toLowerCase();
-    if (seen[k]) continue;
-    seen[k] = 1;
-    // 굴절형(screened/screening 등)도 형광펜 하이라이트되도록 감지용 정규식 사용 (v1.13.55)
-    try { list.push(flexRegexInfl(t)); } catch (e) { /* 잘못된 표제어는 건너뜀 */ }
-  }
-  _glossaryHlCache = { key: key, list: list };
-  return list;
+  return glossaryPlan(outCode).hl;
 }
 /* 원문 줄 하이라이트(v1.13.91~94)는 번역문·로그와 중복 표시로 헷갈린다는 교수님 의견으로
    제거(v1.13.95) — 하이라이트는 번역문만, 원문 감지는 반영 로그 좌측(scanSrcTrigger)이 담당. */
@@ -2939,6 +2911,117 @@ function loadGlossary() {
     for (const it of list) { if (it && (it.a !== undefined || it.b !== undefined)) it.nat = natFromEntry(it); }
     return list;
   } catch (e) { return []; }
+}
+/* ════════════════════════════════════════════
+   (v1.13.265) 용어집이 커져도 안 느려지게 — 데스크탑 BoothmateMulti v3.10·v3.11과 같은 구조
+   현장 보고: 용어 1,000개를 등록하니 앱이 동작하지 않았다(데스크탑은 300개에서 현저히 느려졌다).
+   원인은 둘이었다.
+   ① 프롬프트 — 매 문장(품질 모드)·세션(속도 모드) 지침에 용어집 **전체**가 실렸다. 1,000개면 4~5만 자.
+      그런데 실제 전사문에서 한 문장에 걸리는 용어는 평균 0.1개 — 실려 나가는 것의 99%가 그 문장과 무관했다.
+      → 품질 모드는 조각마다 걸리는 것만(최대 GLOSSARY_PER_CHUNK_MAX개) 싣는다. 요청 크기가 용어집 크기와
+        무관해진다. 속도 모드(Live)는 세션 지침 한 번뿐이라 조각별 자리가 없다 → 상한(GLOSSARY_LIVE_MAX)을 둔다.
+        후처리 치환·감지·하이라이트는 전량 그대로라 용어 일관성 자체는 안 줄어든다.
+   ② 후처리 — 자막이 한 글자 갱신될 때마다(한 턴에 수십 번) 치환·감지·하이라이트가 각각 localStorage를 다시
+      파싱하고 전 항목의 정규식을 새로 만들어 돌렸다. 1,000개면 갱신 한 번에 정규식 3,000개 컴파일+실행.
+      → 방향별 '실행 계획'(컴파일된 정규식)을 한 번 만들어 캐시하고, 항목마다 '탐침'(probe)을 둔다:
+        정규식이 맞으려면 본문에 반드시 들어 있어야 하는 글자열(소문자·공백 제거). 본문에 탐침이 없으면
+        정규식을 아예 안 돌린다. 모든 매칭 정규식(flexRegex·P·Infl·Src)은 '용어 글자가 순서대로(사이 공백 임의)
+        + 접미'꼴이라 이 조건이 항상 필요조건이다 — 결과는 전과 같고 일만 준다.
+   ════════════════════════════════════════════ */
+const GLOSSARY_PER_CHUNK_MAX = 20;   // 품질 모드: 한 문장 요청에 싣는 용어 상한(넘치면 긴 용어부터 — 길수록 구체적이고 모델이 스스로 못 맞힌다)
+const GLOSSARY_LIVE_MAX = 200;       // 속도 모드: 세션 지침에 싣는 용어 상한(같은 기준으로 긴 용어부터)
+/* 통역 중 hot path용 읽기 전용 스냅샷 — localStorage 문자열이 같으면 파싱을 되풀이하지 않는다.
+   편집 UI는 계속 loadGlossary()를 쓴다(반환 배열을 고쳐서 저장하므로). 여기서 받은 배열·항목은 고치지 말 것. */
+let _glossarySnap = { raw: null, list: [] };
+function glossarySnapshot() {
+  let raw = '[]';
+  try { raw = localStorage.getItem('glossary') || '[]'; } catch (e) {}
+  if (_glossarySnap.raw !== raw) _glossarySnap = { raw: raw, list: loadGlossary() };
+  return _glossarySnap;
+}
+function gHay(text) { return String(text || '').toLowerCase().replace(/\s+/g, ''); }
+/* 용어의 탐침 — 굴절·연음·복수 등 어떤 변형 정규식에도 공통인 필요조건 문자열.
+   한국어 '~하다'는 '하다'를, '~다' 기본형은 '다'를, 그 외 한국어는 마지막 글자(연음 표기로 받침이 옮겨갈 수 있음)를,
+   e로 끝나는 영어는 e(excluded/excluding에서 탈락)를 뗀다. 탐침이 짧아지는 쪽은 언제나 안전하다(후보가 늘 뿐). */
+function gProbe(term) {
+  const p = gHay(term);
+  if (/[가-힣]/.test(term)) {
+    if (/하다$/.test(term)) return p.slice(0, -2);
+    if (/다$/.test(term) && p.length >= 3) return p.slice(0, -1);
+    return p.length >= 2 ? p.slice(0, -1) : p;
+  }
+  return /e$/i.test(term) ? p.slice(0, -1) : p;
+}
+/* 방향(outCode)별 실행 계획 — 용어집 문자열·방향이 같으면 재사용(통역 중에는 사실상 한 번만 만든다).
+   repl: 출력쪽 별칭→표준표기 치환, annot: 표준표기 감지(로그)+AI 괄호 병기 제거, hl: 하이라이트,
+   prompt: 원문쪽 트리거어→표준표기 매핑(프롬프트). 각 항목의 판정 규칙은 종전 함수들과 동일하다. */
+let _gPlanCache = { key: null, plan: null };
+function glossaryPlan(outCode) {
+  const snap = glossarySnapshot();
+  const { outP, otherP } = gDirKeys(outCode);
+  const key = outP + '|' + otherP + '|' + snap.raw;
+  if (_gPlanCache.key === key) return _gPlanCache.plan;
+  const plan = { repl: [], annot: [], hl: [], prompt: [] };
+  const hlTerms = [];
+  for (const it of snap.list) {
+    if (!it) continue;
+    let nat = it.nat;
+    if (!nat) {   // nat 없는 항목 — a/b 표제어로 임시 구성 (종전 각 함수의 폴백과 동일)
+      const aHead = splitAliases(it.a)[0] || it.a;
+      const bHead = splitAliases(it.b)[0] || it.b;
+      nat = {}; const ka = gKey(aHead), kb = gKey(bHead);
+      nat[ka] = [aHead]; if (nat[kb] === undefined) nat[kb] = []; if (nat[kb].indexOf(bHead) < 0) nat[kb].push(bHead);
+    }
+    const canonCol = gPick(nat, outP, otherP), otherCol = gPick(nat, otherP, outP);
+    const canonical = canonCol && canonCol[0];
+    if (!canonical) continue;
+    const other = otherCol && otherCol[0];
+    const srcCol = (otherCol || []).filter(Boolean);
+    // ① 치환: 출력쪽 별칭 → 표준표기 (영어 별칭은 규칙 복수까지)
+    const canonEn = gKey(canonical) === 'en';
+    const aliases = [];
+    for (let i = 1; i < canonCol.length; i++) {
+      const alias = canonCol[i];
+      if (!alias || eqTerm(alias, canonical)) continue;
+      let re;
+      try { re = flexRegexP(alias); } catch (e) { continue; }
+      aliases.push({ alias: alias, aliasEn: gKey(alias) === 'en', re: re, probe: gProbe(alias) });
+    }
+    if (aliases.length) plan.repl.push({ canonical: canonical, canonEn: canonEn, srcCol: srcCol, aliases: aliases });
+    // ③ 하이라이트 표제어(긴 것 우선·중복 제거는 아래에서)
+    hlTerms.push(canonical);
+    // ② 감지(반영 로그) + AI가 스스로 붙인 "표준표기(반대언어)" 괄호 제거
+    if (other && !eqTerm(canonical, other)) {
+      try {
+        const re = flexRegexInfl(canonical);
+        const otherEsc = other.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const stripRe = new RegExp('(' + re.source + ')\\s*[\\(（]\\s*' + otherEsc + '(?:es|s)?\\s*[\\)）]', 'gi');
+        plan.annot.push({ canon: canonical, other: other, re: re, stripRe: stripRe, probe: gProbe(canonical),
+                          srcCol: srcCol.length ? srcCol : [other] });
+      } catch (e) { /* 잘못된 표제어는 건너뜀 */ }
+    }
+    // ④ 프롬프트: 원문쪽 표제어·별칭(트리거어) → 출력 표준표기
+    const pairs = [], probes = [];
+    let weight = 0;
+    for (const src of srcCol) {
+      if (!src || eqTerm(canonical, src)) continue;
+      pairs.push('"' + src + '" → "' + canonical + '"');
+      probes.push({ term: src, probe: gProbe(src) });
+      if (src.length > weight) weight = src.length;
+    }
+    if (pairs.length) plan.prompt.push({ pairs: pairs, probes: probes, weight: weight });
+  }
+  hlTerms.sort(function (a, b) { return b.length - a.length; });   // 긴 표제어 우선
+  const seen = {};
+  for (const t of hlTerms) {
+    const k = t.toLowerCase();
+    if (seen[k]) continue;
+    seen[k] = 1;
+    // 굴절형(screened/screening 등)도 형광펜 하이라이트되도록 감지용 정규식 사용 (v1.13.55)
+    try { plan.hl.push({ re: flexRegexInfl(t), probe: gProbe(t) }); } catch (e) { /* 잘못된 표제어는 건너뜀 */ }
+  }
+  _gPlanCache = { key: key, plan: plan };
+  return plan;
 }
 /* SheetJS(xlsx) 동적 로더 — 엑셀 입출력 시에만 CDN에서 1회 로드 */
 let __sheetjsLoading = false, __sheetjsCbs = [];
@@ -3274,32 +3357,46 @@ function flexRegexSrc(term) {
   // 원형(트리톤) 또는 연음형(트리토 + 뒤에 [나-닣] 계열 글자)
   return new RegExp(head + gap + '(?:' + lastEsc + '|' + alt.bare + '(?=' + alt.range + '))', 'g');
 }
-/* 프롬프트용 글로서리 지시문 — 괄호 주석 방식으로 전환하여 프롬프트 주입 사용 안 함 */
 /* 용어집 프롬프트 주입 — 현재 출력 언어 방향의 (트리거어 → 표준표기) 매핑을 systemInstruction에 실어
    AI가 처음부터 표준표기로 번역하도록 유도. 후처리는 빠져나온 변이형을 보강한다.
    v1.13.52: 원문쪽 별칭(예: patient의 participant·subject)도 트리거어로 포함 — 별칭이 들려도
-   대표 쌍(피험자)으로 번역. 지침도 "어근 유지 + 문법 굴절 허용"으로 완화(patients/took/gradually 대응). */
-function glossaryInstruction(targetCode) {
-  const { outP, otherP } = gDirKeys(targetCode);
-  const pairs = [];
-  for (const it of loadGlossary()) {
-    if (!it) continue;
-    let tgt, srcs;
-    const tcol = gPick(it.nat, outP, otherP);
-    if (tcol) {
-      tgt = tcol[0];
-      srcs = (gPick(it.nat, otherP, outP) || []).filter(Boolean);   // 표제어 + 원문쪽 별칭 전부 트리거어로
-    } else {
-      const aHead = splitAliases(it.a)[0] || it.a;
-      const bHead = splitAliases(it.b)[0] || it.b;
-      const n2 = {}; const ka = gKey(aHead), kb = gKey(bHead);
-      n2[ka] = [aHead]; if (n2[kb] === undefined) n2[kb] = []; if (n2[kb].indexOf(bHead) < 0) n2[kb].push(bHead);
-      const tc = gPick(n2, outP, otherP); tgt = tc && tc[0];
-      srcs = (gPick(n2, otherP, outP) || []).filter(Boolean);
+   대표 쌍(피험자)으로 번역. 지침도 "어근 유지 + 문법 굴절 허용"으로 완화(patients/took/gradually 대응).
+   v1.13.265: 용어집 전체를 싣지 않는다.
+     · text(이 문장)가 오면 — 품질 모드 — 그 문장에 실제로 나타나는 용어만(탐침 → 원문 감지 정규식 flexRegexSrc로
+       확인, 굴절·연음 포함), 최대 GLOSSARY_PER_CHUNK_MAX개. 요청 크기가 용어집 크기와 무관해진다.
+     · text가 없으면 — 속도 모드(Live) 세션 지침 — 조각별 자리가 없으므로 GLOSSARY_LIVE_MAX개 상한만 둔다.
+     넘칠 때는 긴 용어부터 남긴다: 길수록 구체적이고 모델이 스스로 맞히기 어려워 프롬프트에 넣는 값어치가 크다.
+     잘린 것도 후처리가 그대로 치환하므로(글자가 맞는 한) 잃는 것은 그 항목에 대한 AI의 유사 매칭뿐이다. */
+function glossaryInstruction(targetCode, text) {
+  const plan = glossaryPlan(targetCode);
+  let chosen;
+  if (typeof text === 'string') {
+    if (!text.trim()) return null;
+    const hay = gHay(text);
+    const picked = [];
+    for (const e of plan.prompt) {
+      let w = 0;
+      for (const p of e.probes) {
+        if (p.probe && hay.indexOf(p.probe) < 0) continue;
+        let r;
+        try { r = flexRegexSrc(p.term); } catch (err) { continue; }
+        r.lastIndex = 0;
+        if (r.test(text) && p.term.length > w) w = p.term.length;
+      }
+      if (w > 0) picked.push({ e: e, weight: w });
     }
-    if (!tgt) continue;
-    for (const src of srcs) if (src && !eqTerm(tgt, src)) pairs.push('"' + src + '" → "' + tgt + '"');
+    if (!picked.length) return null;
+    if (picked.length > GLOSSARY_PER_CHUNK_MAX) picked.sort(function (x, y) { return y.weight - x.weight; });
+    chosen = picked.slice(0, GLOSSARY_PER_CHUNK_MAX).map(function (p) { return p.e; });
+  } else {
+    chosen = plan.prompt;
+    if (chosen.length > GLOSSARY_LIVE_MAX) {
+      chosen = chosen.slice().sort(function (x, y) { return y.weight - x.weight; }).slice(0, GLOSSARY_LIVE_MAX);
+      console.log('[용어집] ' + plan.prompt.length + '개 중 ' + GLOSSARY_LIVE_MAX + '개만 세션 지침에 실음(긴 용어 우선) — 후처리 치환은 전량 적용');
+    }
   }
+  const pairs = [];
+  for (const e of chosen) for (const pr of e.pairs) pairs.push(pr);
   if (!pairs.length) return null;
   return 'Glossary (MANDATORY): the following term mappings OVERRIDE your default word choice. ' +
     'A left term counts as present even when inflected or conjugated — Korean particles and verb/adjective conjugations ' +
@@ -3485,25 +3582,20 @@ function synSplitByLang(a, b, words) {
 }
 /* 출력 언어(outCode)에 맞춰 별칭→표준표기 강제 치환. {text, corrections} 반환.
    v1.13.52: 영어 별칭은 규칙 복수(-s/-es)도 매치하고 표준표기에 접미사를 보존
-   (participants→patients — 복수가 단수로 깎이지 않게). 로그는 실제 매치된 별칭 기준. */
+   (participants→patients — 복수가 단수로 깎이지 않게). 로그는 실제 매치된 별칭 기준.
+   v1.13.265: 실행 계획(컴파일된 정규식) 캐시 + 탐침 — 본문에 별칭 글자열이 없으면 정규식을 안 돌린다. */
 function applyGlossaryReplace(text, outCode) {
-  const { outP, otherP } = gDirKeys(outCode);
+  const plan = glossaryPlan(outCode);
   let out = text;
   const corrections = [];
-  for (const it of loadGlossary()) {
-    if (!it) continue;
-    const col = gPick(it.nat, outP, otherP);
-    if (!col || !col.length) continue;
-    const canonical = col[0];
-    const canonEn = gKey(canonical) === 'en';   // 복수 접미사 보존은 영어(라틴)에만
-    // 원문쪽 트리거어 목록(표제어+별칭) — 로그 좌측에 '실제 말한 단어'를 찾기 위한 후보
-    const srcCol = (gPick(it.nat, otherP, outP) || []).filter(Boolean);
-    for (let i = 1; i < col.length; i++) {
-      const alias = col[i];
-      if (!alias || eqTerm(alias, canonical)) continue;
-      const aliasEn = gKey(alias) === 'en';
-      let re;
-      try { re = flexRegexP(alias); } catch (e) { continue; }   // 영어 별칭은 복수형까지 매치
+  if (!plan.repl.length) return { text: out, corrections: corrections };
+  let hay = gHay(out);
+  for (const ent of plan.repl) {
+    const canonical = ent.canonical, canonEn = ent.canonEn;
+    for (const al of ent.aliases) {
+      if (al.probe && hay.indexOf(al.probe) < 0) continue;
+      const alias = al.alias, aliasEn = al.aliasEn, re = al.re;
+      re.lastIndex = 0;
       let hit = false;
       out = out.replace(re, function (m, offset, str) {
         // 한국어 별칭 오탐 방지: 매치 바로 뒤가 조사/공백/문장부호/끝이 아니면(=동사 활용 등) 치환 스킵.
@@ -3516,35 +3608,22 @@ function applyGlossaryReplace(text, outCode) {
         const sfx = (canonEn && aliasEn && m.length > alias.length) ? m.slice(alias.length) : '';
         return canonical + sfx;
       });
-      if (hit) corrections.push({ from: alias, to: canonical, srcs: srcCol });
+      if (hit) { corrections.push({ from: alias, to: canonical, srcs: ent.srcCol }); hay = gHay(out); }
     }
   }
   return { text: out, corrections: corrections };
 }
 /* 용어집 표준표기 감지 → 반영 로그에 기록만 한다(괄호 병기 없음).
-   표시 단계(tokenize)에서 표준표기 단어를 로그와 같은 색(인디고)으로 하이라이트한다. */
+   표시 단계(tokenize)에서 표준표기 단어를 로그와 같은 색(인디고)으로 하이라이트한다.
+   v1.13.265: 실행 계획 캐시 + 탐침(applyGlossaryReplace와 동일). */
 function annotateGlossary(text, outCode) {
-  const { outP, otherP } = gDirKeys(outCode);
+  const plan = glossaryPlan(outCode);
   let out = text;
-  for (const it of loadGlossary()) {
-    if (!it) continue;
-    let canon, other;
-    const canonCol = gPick(it.nat, outP, otherP), otherCol = gPick(it.nat, otherP, outP);
-    if (canonCol || otherCol) {
-      canon = canonCol && canonCol[0];
-      other = otherCol && otherCol[0];
-    } else {
-      const aHead = splitAliases(it.a)[0] || it.a;
-      const bHead = splitAliases(it.b)[0] || it.b;
-      const n2 = {}; const ka = gKey(aHead), kb = gKey(bHead);
-      n2[ka] = [aHead]; if (n2[kb] === undefined) n2[kb] = []; if (n2[kb].indexOf(bHead) < 0) n2[kb].push(bHead);
-      const cc = gPick(n2, outP, otherP), oc = gPick(n2, otherP, outP);
-      canon = cc && cc[0]; other = oc && oc[0];
-    }
-    if (!canon || !other || eqTerm(canon, other)) continue;
-    let re;
-    // 영어 표준표기의 굴절형(screens/screened/screening/excluded 등)도 감지 — 로그 누락 방지 (v1.13.55)
-    try { re = flexRegexInfl(canon); } catch (e) { continue; }
+  if (!plan.annot.length) return out;
+  let hay = gHay(out);
+  for (const a of plan.annot) {
+    if (a.probe && hay.indexOf(a.probe) < 0) continue;
+    const canon = a.canon, other = a.other, re = a.re;
     // 표준표기가 출력에 등장하면(누가 병기했든) 로그 기록 — AI가 직접 괄호를 붙인 경우도 누락 안 함
     re.lastIndex = 0;
     const present = re.test(out);
@@ -3556,15 +3635,14 @@ function annotateGlossary(text, outCode) {
         turnLogged.add(k);
         // 로그 좌측 = 이번 턴 원문에서 '실제 말한' 등록어(표제어 또는 원문쪽 별칭, 굴절 포함).
         // 원문 전사가 아직 안 왔으면 표제어로 우선 기록 후 소급 갱신(pending, v1.13.53).
-        const srcCol = ((it.nat && gPick(it.nat, otherP, outP)) || [other]).filter(Boolean);
-        if (typeof reflogAddGlossary === 'function') reflogAddGlossary(other, canon, srcCol);
+        if (typeof reflogAddGlossary === 'function') reflogAddGlossary(other, canon, a.srcCol);
       }
     }
     // 괄호 병기는 하지 않는다(색 하이라이트로 대체). 단, AI(Gemini)가 스스로 붙인
     // "표준표기(반대언어)" 괄호가 있으면 제거 → 자막엔 표준표기만 남는다.
-    const otherEsc = other.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const stripRe = new RegExp('(' + re.source + ')\\s*[\\(（]\\s*' + otherEsc + '(?:es|s)?\\s*[\\)）]', 'gi');
-    out = out.replace(stripRe, '$1');
+    const before = out;
+    out = out.replace(a.stripRe, '$1');
+    if (out !== before) hay = gHay(out);
   }
   return out;
 }
@@ -4116,7 +4194,7 @@ function proDropRule(targetCode, targetName) {
 
 /* Flash에 보낼 시스템 프롬프트. 마지막에 이 앱 고유 지시(존댓말 설정·용어집)를 덧붙인다 —
    용어집이 여기 실리기 때문에 품질 모드는 통역 도중 추가한 용어도 바로 반영된다. */
-function flashSystemText(targetCode) {
+function flashSystemText(targetCode, sentence) {
   const targetName = langName(targetCode);
   let t =
     'You are a professional simultaneous interpreter. Translate the user sentence into ' + targetName + '.\n' +
@@ -4152,10 +4230,12 @@ function flashSystemText(targetCode) {
     '"아무도 하지 못한 일을 할 수 있는 발판이었습니다."';
   t += FIDELITY_RULE;
   t += proDropRule(targetCode, targetName);
-  // 이 앱 고유 지시 — 존댓말 설정 + 용어집(문장마다 최신본이 실린다)
+  // 이 앱 고유 지시 — 존댓말 설정 + 용어집. (v1.13.265) 용어집은 '이 문장에 걸리는 것만'(최대 GLOSSARY_PER_CHUNK_MAX개)
+  // — 전체를 실으면 1,000개에서 요청마다 4~5만 자가 나가 앱이 서 버린다. 변동부(용어)가 지침 맨 끝에 오므로
+  // 앞의 고정 규칙은 프롬프트 캐시가 맞을 수 있는 순서다.
   const extra = [
     (typeof speechInstruction === 'function') ? speechInstruction($('speechLevel') ? $('speechLevel').value : '', targetCode) : '',
-    (typeof glossaryInstruction === 'function') ? glossaryInstruction(targetCode) : ''
+    (typeof glossaryInstruction === 'function') ? glossaryInstruction(targetCode, String(sentence || '')) : ''
   ].filter(Boolean).join(' ');
   if (extra) t += '\n\nSTANDING INSTRUCTIONS (obey above all):\n' + extra;
   return t;
@@ -4188,7 +4268,7 @@ async function readSSEDeltas(body, onDelta) {
 
 /* 문장 하나를 Flash로 번역. 중계 모드는 서버 경유(키 비노출), 직접 모드는 본인 키로 Google 직접. */
 async function flashTranslate(sentence, targetCode, onDelta) {
-  const sys = flashSystemText(targetCode);
+  const sys = flashSystemText(targetCode, sentence);   // 용어집은 이 문장에 걸리는 것만 (v1.13.265)
   const history = qmHistory.slice(-6);
   const mode = (localStorage.getItem('conn_mode') || 'relay');
   if (mode === 'relay' && RELAY_SERVER_URL && RELAY_PASS_KEY) {
@@ -4946,7 +5026,7 @@ function connectWS() {
       }
     };
     const instr = speechInstruction($('speechLevel').value, TARGET_LANGUAGE);
-    const glos = glossaryInstruction(TARGET_LANGUAGE);
+    const glos = glossaryInstruction(TARGET_LANGUAGE);   // 세션 지침 — 상한 GLOSSARY_LIVE_MAX개(v1.13.265), 후처리는 전량
     // 언어쌍 통역 지시 — 이 세션은 TARGET_LANGUAGE로만 출력(방향은 클라이언트가 감지·전환)
     // 단방향 모드(v1.13.188)는 프롬프트 자체를 단방향 전용으로 교체: "A와 B 사이의 통역사"라는
     // 양방향 틀에 단방향 한 줄을 덧붙이면 지시가 모순되어 모델이 원문을 메아리치는 오류가 잦았음.

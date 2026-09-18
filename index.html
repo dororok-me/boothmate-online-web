@@ -1019,7 +1019,6 @@ if (!document.documentElement.classList.contains('bm-app')) {
 <div id="authGate" style="position:fixed; inset:0; z-index:9999; background:#FFFFFF; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px;">
   <img src="logo.png" alt="Boothmate" style="height:46px; width:auto; margin-bottom:22px;">
   <div id="gateTitle" style="font-size:26px; font-weight:700; color:#0F172A; margin-bottom:8px; letter-spacing:-0.3px;">Boothmate Online</div>
-  <div style="font-size:14px; color:#64748B; margin-bottom:12px;">실시간 통역 자막 · 시작하려면 로그인하세요</div>
   <!-- 무료 체험 안내 (v1.13.216). 문구의 '30분'은 로드 시 FREE_QUOTA_SECONDS에서 자동으로 채운다
        — 설정값만 바꾸고 이 문구를 못 고쳐 사실과 달라지는 일을 막기 위함. -->
   <div id="gateTrialNote" style="display:inline-block; font-size:13px; color:#4338CA; background:#EEF2FF; border:1px solid #E0E7FF; border-radius:999px; padding:6px 14px; margin-bottom:26px;">신규 가입 시 30분 무료 체험이 제공됩니다</div>
@@ -1035,15 +1034,6 @@ if (!document.documentElement.classList.contains('bm-app')) {
     <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path fill="#FFFFFF" d="M14.9 4v8.6L9.1 4H4v16h5.1v-8.6L14.9 20H20V4h-5.1z"/></svg>
     네이버로 로그인
   </button>
-  <!-- 카드사·PG 심사용 테스트 계정 로그인 (ID/PW) — 심사 규정상 소셜 로그인 불가라 필요 (v1.13.191) -->
-  <div style="margin-top:14px;">
-    <a href="#" id="testLoginToggle" style="font-size:12px; color:#94A3B8;">심사용 테스트 계정 로그인</a>
-  </div>
-  <div id="testLoginForm" style="display:none; margin-top:10px; width:260px;">
-    <input id="testLoginId" type="text" placeholder="아이디" autocomplete="off" autocapitalize="none" style="width:100%; box-sizing:border-box; height:38px; padding:0 12px; border:1px solid #CBD5E1; border-radius:8px; font-size:14px; margin-bottom:6px;">
-    <input id="testLoginPw" type="password" placeholder="비밀번호" style="width:100%; box-sizing:border-box; height:38px; padding:0 12px; border:1px solid #CBD5E1; border-radius:8px; font-size:14px; margin-bottom:8px;">
-    <button id="testLoginBtn" type="button" style="width:100%; height:38px; background:#334155; color:#FFFFFF; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer;">로그인</button>
-  </div>
   <div id="authGateMsg" style="font-size:12px; color:#B45309; margin-top:16px; min-height:18px;"></div>
   <div id="inAppWarn" style="display:none; max-width:340px; margin-top:18px; padding:12px 14px; background:#FEF3C7; border:1px solid #F59E0B; border-radius:10px; font-size:13px; line-height:1.65; color:#92400E; text-align:center;">
     <b>카카오톡 등 인앱 브라우저에서는 구글 로그인이 되지 않습니다.</b><br>
@@ -1099,7 +1089,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
       /* iOS 등 자동 전환 불가 → 주소 복사 */
       if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(url).then(function(){
-          if (hint) hint.textContent = '주소가 복사됐습니다. Safari 등 브라우저에 붙여넣어 접속하세요.';
+          if (hint) hint.textContent = '주소가 복사됐습니다. 크롬 사용을 권장합니다.';
         }, function(){ if (hint) hint.textContent = url; });
       } else if (hint) {
         hint.textContent = url;
@@ -1262,7 +1252,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.265 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.266 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4685,6 +4675,7 @@ const LevelMeter = (function(){
     let sum = 0;
     for (let i = 0; i < data.length; i++){ const v = (data[i] - 128) / 128; sum += v * v; }
     const rms = Math.sqrt(sum / data.length);
+    try { noteInputLevel(rms); } catch (e) {}   // 방향 전환 감시용 말소리 유무 기록 (v1.13.266)
     // sqrt 곡선 + 게인. 무음 게이트(0.008)로 주변 백색소음은 0개, 작은 말소리는 3~4개, 보통 6~7개.
     paint(Math.min(1, Math.sqrt(Math.max(0, rms - 0.008) * 6.5)));
     raf = requestAnimationFrame(frame);
@@ -4882,6 +4873,7 @@ async function start() {
   startAutoScroll();
   startElapsed();
   startSilenceWatch();  // 무음 자동 정지 감시 시작
+  probeFlipsNoText = 0; // 방향 감시 재시도 횟수 초기화 — 새 통역은 처음부터 (v1.13.266)
   window.__startCount = (window.__startCount || 0) + 1;
   console.log('[진단] start() 누적 호출 횟수 = ' + window.__startCount + ' (1보다 크면 시작이 자동 반복되는 것)');
   console.log('[start] 0) start() — connectWS 호출');
@@ -4910,6 +4902,67 @@ function maybeFlipDirection(srcText) {
   if (pairFlipTimer) clearTimeout(pairFlipTimer);
   pairFlipTimer = setTimeout(() => { if (running && !userStopped) connectWS(); }, 250);
 }
+
+/* ── 한쪽 언어가 통째로 안 들리던 문제 방지 — 말소리 기반 방향 전환 (v1.13.266) ──
+   증상: 양방향 자동(K⇄E)에서 영어가 전혀 인식되지 않는다. 한국어와 다른 언어는 인식된다.
+   원인: 방향 전환의 유일한 방아쇠가 maybeFlipDirection(sc.inputTranscription.text)인데,
+     live-translate 세션은 '지금 출력 언어와 같은 언어'로 들어온 발화의 inputTranscription을
+     내주지 않을 수 있다. 양방향 자동은 출력 언어가 기본 B(영어)로 시작하므로, 영어 발화는
+     전사 자체가 오지 않는다 → maybeFlipDirection이 영영 호출되지 않는다 → 영어는 계속
+     안 들린다(한국어·그 밖의 언어는 전사가 오므로 정상). 클라이언트에 이 상황을 벗어날
+     길이 전혀 없었다 — 전사가 와야만 방향이 바뀌는 구조였기 때문.
+   수정: 전사에만 기대지 않는다. 마이크 레벨미터가 이미 실시간 RMS를 계산하고 있으니,
+     "말소리는 계속 들어오는데 인식 결과가 한동안 없다"면 방향을 한 번 뒤집어 본다.
+     뒤집은 뒤 전사가 오면 그대로 통역이 이어지고, 그래도 안 오면 쿨다운 뒤 한 번 더 시도한다.
+   안전장치: 양방향 자동에서만 동작 / 말소리가 FLIP_PROBE_MS 이상 '이어질' 때만 /
+     전환 후 쿨다운 / 조용해지면 감시 상태 초기화 / 전사가 한 번도 안 오면 두 번까지만 시도
+     (양쪽 다 안 되는 상황이면 원인이 다른 데 있으므로 방향만 계속 깜빡이지 않게)
+     → 정상 상황에서는 절대 끼어들지 않는다. */
+const FLIP_PROBE_RMS = 0.02;            // 이 이상이면 말소리로 간주(미터 무음 게이트 0.008보다 위)
+const FLIP_PROBE_MS = 4000;             // 말소리가 이만큼 이어졌는데 전사가 없으면 방향 전환
+const FLIP_PROBE_GAP_MS = 700;          // 이만큼 조용하면 '발화가 끊겼다'로 보고 초기화
+const FLIP_PROBE_COOLDOWN_MS = 8000;    // 연속 전환(깜빡임) 방지
+let voiceSince = 0;                     // 현재 발화가 시작된 시각(0 = 발화 중 아님)
+let lastVoiceAt = 0;                    // 마지막으로 말소리 레벨이 잡힌 시각
+let lastInputTextAt = 0;                // 마지막 inputTranscription 수신 시각
+let lastProbeFlipAt = 0;                // 마지막 말소리 기반 전환 시각
+let probeFlipsNoText = 0;               // 전사가 한 번도 안 온 채로 연속 전환한 횟수
+const FLIP_PROBE_MAX_TRIES = 2;         // 쌍의 양쪽을 한 번씩 — 그 이상은 방향 문제가 아니다
+function noteInputLevel(rms) {          // LevelMeter.frame()에서 매 프레임 호출
+  const now = Date.now();
+  if (rms >= FLIP_PROBE_RMS) { if (!voiceSince) voiceSince = now; lastVoiceAt = now; }
+  else if (now - lastVoiceAt > FLIP_PROBE_GAP_MS) voiceSince = 0;
+}
+function noteSessionOpen() {            // 새 세션 — 첫 전사가 올 때까지 유예 (재시도 횟수는 유지)
+  lastInputTextAt = Date.now();
+  voiceSince = 0;
+}
+function noteInputText() {              // 전사가 오면 감시 초기화 — 인식이 살아 있다는 뜻
+  noteSessionOpen();
+  probeFlipsNoText = 0;                 // 인식이 돌아왔으니 재시도 횟수도 원위치
+}
+function probeFlipTick() {
+  if (!running || userStopped || paused) return;
+  if (getDirMode() !== 'auto') return;            // 단방향은 사용자가 정한 방향을 지킨다
+  const now = Date.now();
+  if (!voiceSince || now - voiceSince < FLIP_PROBE_MS) return;      // 말소리가 아직 짧다
+  if (now - lastInputTextAt < FLIP_PROBE_MS) return;                // 전사가 살아 있다
+  if (now - lastProbeFlipAt < FLIP_PROBE_COOLDOWN_MS) return;       // 방금 전환함
+  if (probeFlipsNoText >= FLIP_PROBE_MAX_TRIES) return;             // 양쪽 다 해봤다 — 방향 문제가 아니다
+  const { a, b } = getPair();
+  const next = (langPrefix(curTarget) === langPrefix(b)) ? a : b;   // 쌍의 반대쪽으로
+  if (!next || langPrefix(next) === langPrefix(curTarget)) return;  // 같은 언어 쌍이면 무의미
+  console.log('[방향 감시] 말소리는 있는데 인식 결과가 없음 — 출력 언어를 ' + next + '로 전환');
+  lastProbeFlipAt = now;
+  voiceSince = 0;
+  probeFlipsNoText++;
+  curTarget = next;
+  if ($('targetLang')) $('targetLang').value = next;
+  setStatus('언어 방향 전환 중…', true);
+  if (pairFlipTimer) clearTimeout(pairFlipTimer);
+  pairFlipTimer = setTimeout(() => { if (running && !userStopped) connectWS(); }, 250);
+}
+setInterval(probeFlipTick, 500);        // running이 아닐 땐 즉시 빠져나오므로 부담 없음
 
 /* ws 세션만 여는 함수 (마이크와 독립 — 재연결 시 이것만 다시 호출) */
 function connectWS() {
@@ -5021,6 +5074,7 @@ function connectWS() {
     if (combined) setupMessage.setup.systemInstruction = { parts: [{ text: combined }] };
     ws.send(JSON.stringify(setupMessage));
     reconnectAttempt = 0;   // 연결 성공 → 시도 횟수 리셋
+    noteSessionOpen();      // 새 세션엔 유예를 준다 — 첫 전사가 오기 전에 전환되지 않게 (v1.13.266)
     setStatus('통역 중 — 말해보세요', true);
     broadcast('config', { speech_level: $('speechLevel').value, target_lang: TARGET_LANGUAGE });
   };
@@ -5050,6 +5104,7 @@ function connectWS() {
     const sc = msg.serverContent;
     if (sc) {
       if (sc.inputTranscription && sc.inputTranscription.text) {
+        noteInputText();   // 전사가 오는 동안엔 말소리 기반 감시가 끼어들지 않게 (v1.13.266)
         maybeFlipDirection(sc.inputTranscription.text);
         // 품질 모드는 화면 표시까지 qmFeedSource가 맡는다 — 원문/번역을 문장 단위로 직접 짝지어야
         // 하므로, 버퍼를 추측으로 짝짓는 appendSrc 경로를 타면 안 된다 (v1.13.232).
@@ -6847,32 +6902,6 @@ window.__syncPanelLayout = function() {
     } catch(e){}
     return false;
   }
-
-  // ── 심사용 테스트 계정 (ID/PW) — 토스페이먼츠·카드사 심사역 전용 (v1.13.191) ──
-  // 카드사 심사는 소셜 로그인 테스트 계정을 인정하지 않아 ID/PW 방식이 필요.
-  // 소스에 노출되지만 무료 체험과 동일 권한만 가지므로 위험 없음. 심사 종료 후 제거 가능.
-  const TEST_LOGIN_ID = 'tossreview';
-  const TEST_LOGIN_PW = 'boothmate2026!';
-  const TEST_LOGIN_EMAIL = 'toss-review@boothmate.online';
-  const tlToggle = document.getElementById('testLoginToggle');
-  const tlForm = document.getElementById('testLoginForm');
-  if (tlToggle && tlForm) tlToggle.onclick = function(){
-    tlForm.style.display = tlForm.style.display === 'none' ? 'block' : 'none';
-    return false;
-  };
-  function tlSubmit(){
-    const id = (document.getElementById('testLoginId').value || '').trim().toLowerCase();
-    const pw = document.getElementById('testLoginPw').value || '';
-    if ((id === TEST_LOGIN_ID || id === TEST_LOGIN_EMAIL) && pw === TEST_LOGIN_PW){
-      completeLogin({ email: TEST_LOGIN_EMAIL, name: '심사용 테스트 계정', provider: 'test' });
-    } else {
-      showGate('아이디 또는 비밀번호가 올바르지 않습니다.');
-    }
-  }
-  const tlBtn = document.getElementById('testLoginBtn');
-  if (tlBtn) tlBtn.onclick = tlSubmit;
-  const tlPw = document.getElementById('testLoginPw');
-  if (tlPw) tlPw.onkeydown = function(e){ if (e.key === 'Enter') tlSubmit(); };
 
   // ── 카카오 로그인 (REST 방식, SDK 없음) ──
   // 버튼 클릭 → kauth 인가 페이지로 리다이렉트 (state는 CSRF 방지용, sessionStorage에 보관)

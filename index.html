@@ -1252,7 +1252,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.265 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.266 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -4675,7 +4675,7 @@ const LevelMeter = (function(){
     let sum = 0;
     for (let i = 0; i < data.length; i++){ const v = (data[i] - 128) / 128; sum += v * v; }
     const rms = Math.sqrt(sum / data.length);
-    try { noteInputLevel(rms); } catch (e) {}   // 방향 전환 감시용 말소리 유무 기록 (v1.13.265)
+    try { noteInputLevel(rms); } catch (e) {}   // 방향 전환 감시용 말소리 유무 기록 (v1.13.266)
     // sqrt 곡선 + 게인. 무음 게이트(0.008)로 주변 백색소음은 0개, 작은 말소리는 3~4개, 보통 6~7개.
     paint(Math.min(1, Math.sqrt(Math.max(0, rms - 0.008) * 6.5)));
     raf = requestAnimationFrame(frame);
@@ -4873,7 +4873,7 @@ async function start() {
   startAutoScroll();
   startElapsed();
   startSilenceWatch();  // 무음 자동 정지 감시 시작
-  probeFlipsNoText = 0; // 방향 감시 재시도 횟수 초기화 — 새 통역은 처음부터 (v1.13.265)
+  probeFlipsNoText = 0; // 방향 감시 재시도 횟수 초기화 — 새 통역은 처음부터 (v1.13.266)
   window.__startCount = (window.__startCount || 0) + 1;
   console.log('[진단] start() 누적 호출 횟수 = ' + window.__startCount + ' (1보다 크면 시작이 자동 반복되는 것)');
   console.log('[start] 0) start() — connectWS 호출');
@@ -4903,7 +4903,7 @@ function maybeFlipDirection(srcText) {
   pairFlipTimer = setTimeout(() => { if (running && !userStopped) connectWS(); }, 250);
 }
 
-/* ── 한쪽 언어가 통째로 안 들리던 문제 방지 — 말소리 기반 방향 전환 (v1.13.265) ──
+/* ── 한쪽 언어가 통째로 안 들리던 문제 방지 — 말소리 기반 방향 전환 (v1.13.266) ──
    증상: 양방향 자동(K⇄E)에서 영어가 전혀 인식되지 않는다. 한국어와 다른 언어는 인식된다.
    원인: 방향 전환의 유일한 방아쇠가 maybeFlipDirection(sc.inputTranscription.text)인데,
      live-translate 세션은 '지금 출력 언어와 같은 언어'로 들어온 발화의 inputTranscription을
@@ -5074,7 +5074,7 @@ function connectWS() {
     if (combined) setupMessage.setup.systemInstruction = { parts: [{ text: combined }] };
     ws.send(JSON.stringify(setupMessage));
     reconnectAttempt = 0;   // 연결 성공 → 시도 횟수 리셋
-    noteSessionOpen();      // 새 세션엔 유예를 준다 — 첫 전사가 오기 전에 전환되지 않게 (v1.13.265)
+    noteSessionOpen();      // 새 세션엔 유예를 준다 — 첫 전사가 오기 전에 전환되지 않게 (v1.13.266)
     setStatus('통역 중 — 말해보세요', true);
     broadcast('config', { speech_level: $('speechLevel').value, target_lang: TARGET_LANGUAGE });
   };
@@ -5104,7 +5104,7 @@ function connectWS() {
     const sc = msg.serverContent;
     if (sc) {
       if (sc.inputTranscription && sc.inputTranscription.text) {
-        noteInputText();   // 전사가 오는 동안엔 말소리 기반 감시가 끼어들지 않게 (v1.13.265)
+        noteInputText();   // 전사가 오는 동안엔 말소리 기반 감시가 끼어들지 않게 (v1.13.266)
         maybeFlipDirection(sc.inputTranscription.text);
         // 품질 모드는 화면 표시까지 qmFeedSource가 맡는다 — 원문/번역을 문장 단위로 직접 짝지어야
         // 하므로, 버퍼를 추측으로 짝짓는 appendSrc 경로를 타면 안 된다 (v1.13.232).

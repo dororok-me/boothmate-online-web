@@ -1252,7 +1252,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.266 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.267 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -1806,18 +1806,25 @@ function resumeElapsed() {
 try { localStorage.removeItem('mc_wrap_h'); } catch (e) {}
 
 /* ════════════════════════════════════════════
-   권한·등급 모듈 (Entitlements) — 단일 소스 (방식 A: localStorage)
+   권한·등급 모듈 (Entitlements) — 화면 표시용 캐시 (v1.13.267부터)
    ────────────────────────────────────────────
    정책(POLICY_SPEC §2·§5) 구현:
-     · 무료 체험: 30분(1800초), 1회만 (소진 후 재부여 없음 → trialUsed)
+     · 무료 체험: 30분(1800초), 계정당 1회 (소진 후 재부여 없음 → trialUsed)
      · 등급(grade): free_trial_active → free(만료) / 1h / 5h / 10h
      · canInterpret  = 잔여시간 > 0
-     · canUseGlossary= 체험중 || 5h·10h   (1h는 통역만)
-     · canExport     = 5h·10h
-   ⚠️ 지금은 localStorage라 정직한 사용자용. 출시 시 이 모듈 내부(load/save/
-      tick/addTime)만 Firebase(users/{uid})로 교체하면 바깥 코드는 그대로 동작.
+     · canUseGlossary / canExport = 전 등급 개방
+   ⚠️ 지갑의 주인은 이 모듈이 아니라 중계서버다 (v1.13.267).
+      이 localStorage 상태는 '서버 값의 사본 + 통역 중 매초 표시를 부드럽게 하기 위한 캐시'일
+      뿐이다. 잔액을 늘리는 경로는 결제(POST /credit·/toss·/play)와 운영자 도구(admin.js)뿐이고,
+      둘 다 서버에서 원자적으로 가산하며 원장(user_usage)에 영수증을 남긴다. 서버의 PUT /quota는
+      잔여시간을 '줄이는 방향으로만' 받으므로, 이 파일이 무슨 값을 올리든 잔액은 늘지 않는다.
+      → 이전 구조에서는 브라우저가 스스로 부여·체험을 만들어 서버에 덮어쓸 수 있었고, 그게
+        "기기만 바꾸면 시간이 다시 찬다"는 현장 신고의 원인이었다.
    ════════════════════════════════════════════ */
-const FREE_QUOTA_SECONDS = 30 * 60;   // 무료 체험 30분 = 1800초 (POLICY_SPEC §2 원안 복귀 — 기기당 30분, v1.13.113)
+/* 무료 체험 30분. 실제 발급은 서버가 계정의 첫 GET /quota에서 1회만 한다 (v1.13.267).
+   여기 값은 안내 문구 표시와, 서버 응답을 받기 전의 잠정 표시에만 쓰인다.
+   ※ 서버(server-beta.js)의 FREE_QUOTA_SECONDS와 같은 값으로 맞춰 둘 것. */
+const FREE_QUOTA_SECONDS = 30 * 60;
 
 /* 로그인 화면의 무료 체험 안내를 실제 설정값으로 채운다 (v1.13.216).
    문구를 하드코딩해 두면 FREE_QUOTA_SECONDS만 바꿨을 때 화면이 거짓말을 하게 된다.
@@ -1837,63 +1844,20 @@ const FREE_QUOTA_SECONDS = 30 * 60;   // 무료 체험 30분 = 1800초 (POLICY_S
 /* 시간 제한 완전 면제(무제한) 계정 — 5분 세션 제한 + 쿼터 모두 적용 안 함 */
 const UNLIMITED_EMAILS = ['dororok@gmail.com'];
 
-/* 특정 계정에 잔여시간 부여(1회 적용). 무제한이 아니라 정해진 시간만 지급.
-   사용자가 다음 접속(로드)할 때 브라우저 localStorage에 1회 반영되며,
-   grantId가 같으면 재적용 안 됨(중복 지급 방지). 같은 계정에 또 주려면 grantId를 바꾼다. */
-/* 이메일·grantId 해시 (평문 개인정보를 코드에 두지 않기 위함). FNV-1a 32bit. */
-function gh(s){ let h = 2166136261 >>> 0;
-  for (let i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
-  return h.toString(16).padStart(8, '0'); }
-
-const TIME_GRANTS = {  /* 키·grantId는 FNV-1a 해시 (평문 이메일 제거) */
-  'c90af7a7': { seconds: 20 * 3600, grantId: '9b88cb41' },
-  '119df39e': { seconds: 5 * 3600, grantId: '6ca2c36b' },
-  '17d06a2a': { seconds: 5 * 3600, grantId: 'd6fd06ef' },
-  '95e7d6a5': { seconds: 3 * 3600, grantId: '1bcdae94' },
-  '61663503': { seconds: 100 * 3600, grantId: '21279c88' },
-  '4a4241d3': { seconds: 3 * 3600, grantId: '32b4aa89' },
-  '030dd704': { seconds: 100 * 3600, grantId: '5d08c520' },
-  '21ecd886': { seconds: 8 * 3600, grantId: '6bfbfb10' },
-  'f0034589': { seconds: 3 * 3600, grantId: '273161f8' },
-  'f9b78efd': { seconds: 3 * 3600, grantId: 'e65f4406' },
-  '03ffdd89': { seconds: 14 * 3600, grantId: '4d4a7de8' },
-  '6fc1a3ba': { seconds: 3 * 3600, grantId: '833f402c' },
-  '2aba1eb4': { seconds: 3 * 3600, grantId: '955dfe53' },
-  '79b99b02': { seconds: 3 * 3600, grantId: 'b4ed22be' },
-  '1694681b': { seconds: 3 * 3600, grantId: 'e8dc9a79' },
-  '89320944': { seconds: 10 * 3600, grantId: '0727384b' },
-  'b51baa8e': { seconds: 3 * 3600, grantId: '2e0c4885' },
-  '988fd6b9': { seconds: 3 * 3600, grantId: '75b498d5' },
-  'd525e71c': { seconds: 3 * 3600, grantId: '24822960' },
-  'fe8e752d': { seconds: 3 * 3600, grantId: '07f3e261' },
-  'c948a74f': { seconds: 3 * 3600, grantId: '98e89ceb' },
-  '3c9434c6': { seconds: 2 * 3600, grantId: '775d697d' },
-  '45de370b': { seconds: 3 * 3600, grantId: '69e5cf87' },
-  'd36fb5bb': { seconds: 2 * 3600, grantId: 'c48fe39c' },
-  'f5f367ff': { seconds: 3 * 3600, grantId: 'f6e5f47b' },
-  '6043e1fe': { seconds: 3 * 3600, grantId: 'cd8cfae7' },
-  'f5fa90c2': { seconds: 1 * 3600, grantId: '22c35ab9' },
-  '340cf6a2': { seconds: 2 * 3600, grantId: '675c0369' }
-};
+/* 시간 부여는 더 이상 이 파일에 없다 (v1.13.267).
+   예전엔 TIME_GRANTS라는 표를 여기 두고 브라우저가 1회 적용했는데, "이미 받았다"는 기록이
+   기기 localStorage에만 남았다. 그래서 사용자가 기기·브라우저를 바꾸거나 저장소를 지우면
+   "난 아직 안 받았다"가 되어 부여 시간이 통째로 다시 들어갔고, 그 값이 서버까지 덮어썼다
+   (현장 신고: "시간이 자꾸 늘어나요"). 부여 표가 공개 저장소에 노출돼 있던 문제도 있었다.
+   → 이제 부여는 중계서버에서만 한다: Railway 콘솔에서 `node admin.js grant <이메일> <시간>`.
+     서버 지갑에 원자적으로 더해지고 원장(user_usage, kind='grant')에 영수증이 남는다.
+     브라우저에는 다시 적용할 대상 자체가 없으므로 이 버그는 재발할 수 없다. */
 
 const Ent = (function(){
   function curEmail(){ const u = window.__boothmateUser; return (u && u.email) ? u.email : 'anon'; }
   function isUnlimited(){ const u = window.__boothmateUser; return !!(u && u.email && UNLIMITED_EMAILS.indexOf(u.email) !== -1); }
   function key(){ return 'boothmate_ent_' + curEmail(); }
   function defaults(){ return { remainingSeconds: FREE_QUOTA_SECONDS, grade: 'free_trial_active', trialUsed: false }; }
-  /* 코드에 등록된 시간 부여를 1회 적용. 이미 적용된 grantId면 건너뜀. 변경 시 true 반환. */
-  function applyGrant(s){
-    const g = TIME_GRANTS[gh(curEmail())];
-    if (!g) return false;
-    /* 이미 적용됨: 신규(해시 저장) 또는 구버전(평문 grantId 저장) 둘 다 인정 */
-    if (s.appliedGrant === g.grantId) return false;
-    if (s.appliedGrant && gh(s.appliedGrant) === g.grantId) return false;
-    s.remainingSeconds = Math.max(0, Math.floor(g.seconds));
-    s.appliedGrant = g.grantId;
-    if (s.grade === 'free') s.grade = 'free_trial_active';   // 체험 만료였으면 다시 활성화
-    s.mt = Date.now();   // 클라우드 동기화용 변경 시각 (v1.13.114)
-    return true;
-  }
   function load(){
     try {
       const raw = localStorage.getItem(key());
@@ -1907,7 +1871,7 @@ const Ent = (function(){
         const oldQ = localStorage.getItem('boothmate_quota_' + curEmail());
         if (oldQ !== null) d.remainingSeconds = Math.max(0, parseInt(oldQ, 10) || 0);
       }
-      if (applyGrant(d) || isNew) save(d);
+      if (isNew) save(d);
       return d;
     } catch(e){ return defaults(); }
   }
@@ -1945,7 +1909,7 @@ const Ent = (function(){
     /* 클라우드(계정) 상태 채택 — 다른 기기에서 저장한 잔여시간으로 교체 (v1.13.114) */
     adoptCloud(data){
       if (isUnlimited() || !data || typeof data.remainingSeconds !== 'number') return;
-      save(Object.assign(defaults(), data));   // 다음 load()에서 TIME_GRANTS 미적용분은 자동 적용됨
+      save(Object.assign(defaults(), data));   // 서버 상태가 이 기기의 값을 대체한다 (v1.13.267)
     },
     /* 서버가 계산한 잔여시간만 채택 (v1.13.123) — usage 보고 응답·결제 적립 응답에 사용.
        서버는 다른 기기의 동시 사용분까지 합산해 차감하므로, 이 값이 항상 최신·정확. */
@@ -3180,8 +3144,9 @@ async function cloudQuotaPull() {
       __quotaPullDone = true;
       renderQuota();
       console.log('[시간 클라우드] 계정 잔여시간 내려받음: ' + fmtHMS(j.data.remainingSeconds || 0));
-      // 채택 직후 TIME_GRANTS가 새로 적용됐다면(로컬 mt가 더 새로워짐) 1회 업로드 (v1.13.123)
-      try { const fresh = Ent.state(); if (fresh.mt && fresh.mt > cloudMt) cloudQuotaPush(true); } catch (e) {}
+      /* (v1.13.267) 채택 직후 되올리던 업로드 제거 — 이건 브라우저가 방금 스스로 적용한
+         부여 시간을 서버에 반영하려던 코드였다. 부여가 서버로 옮겨간 지금은 올릴 것이 없고,
+         오히려 "방금 내려받은 값을 다시 올리는" 왕복만 남는다. */
     } else {
       // 클라우드가 비어 있거나(첫 업로드) 로컬이 더 최신 → 업로드
       __quotaPullDone = true;

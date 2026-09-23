@@ -1252,7 +1252,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.267 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.268 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -1384,32 +1384,65 @@ function updateDirModeHint() {
   const src = (m === 'ab') ? a : b, dst = (m === 'ab') ? b : a;
   hint.textContent = langLabel(src) + ' 음성만 ' + langLabel(dst) + '(으)로 번역합니다. 반대 방향은 번역하지 않습니다.';
 }
-/* 입력 텍스트가 쌍(a,b) 중 어느 언어인지 스크립트 기반 간이 감지. 불확실하면 null */
+/* ── 입력 언어 감지 (v1.13.268에서 전면 수정) ──
+   쌍(a,b) 중 어느 언어인지 글자 수로 판정한다. 불확실하면 null(판단 보류).
+
+   ▸ 왜 고쳤나 — 현장 보고: "한영 양방향에서 UN 같은 영어 단어가 나오니까 한영을
+     혼란스러워 하고 전환이 잘 안 된다."
+     옛 판정은 '그 문자가 하나라도 있나'(정규식 test)만 봤다. 그래서 전사 조각이
+     "UN" 하나로 끊겨 오면 한글이 0자라 영어로 단정했다. 전사는 델타로 조각조각
+     들어오므로(appendSrc의 srcBuf += chunk), 한국어 연설 중 약어 한 마디마다
+     방향이 뒤집히고 그때마다 세션이 재접속됐다. 사용자 눈에는 "자꾸 헷갈린다"로 보인다.
+
+   ▸ 세 가지를 바꿨다.
+     ① 있나/없나가 아니라 글자 수를 센다 — "UN 총회에서"는 한글 5자 대 라틴 2자다.
+     ② 약어(대문자 2~5자)는 라틴 집계에서 뺀다. UN·OECD·AI·GDP처럼 한국어 발화에
+        그대로 섞여 들어오는 말들이다. 진짜 영어 발화의 전사는 대소문자가 섞이므로
+        약어만으로 이뤄지는 일이 없어 손해가 없다.
+     ③ 증거가 적거나(DETECT_MIN_CHARS 미만) 양쪽이 비슷하면 null을 돌려 판단을 미룬다.
+        틀린 방향으로 뒤집는 것보다 한 조각 더 기다리는 편이 낫다. */
+const DETECT_MIN_CHARS = 4;   // 우세한 쪽이 이만큼은 돼야 판정한다
+const DETECT_MARGIN = 2;      // 우세한 쪽이 상대의 이 배수 이상이어야 확정
+
+/* 스크립트별 글자 수. 라틴은 약어를 뺀 뒤 센다. */
+function scriptCounts(text) {
+  const t = String(text || '').replace(/\b[A-Z]{2,5}\b/g, ' ');
+  const c = { ko: 0, ja: 0, zh: 0, ar: 0, he: 0, hi: 0, th: 0, cyr: 0, el: 0, latin: 0 };
+  for (const ch of t) {
+    if (/[가-힣]/.test(ch)) c.ko++;
+    else if (/[぀-ヿ]/.test(ch)) c.ja++;
+    else if (/[一-鿿]/.test(ch)) c.zh++;
+    else if (/[؀-ۿ]/.test(ch)) c.ar++;
+    else if (/[֐-׿]/.test(ch)) c.he++;
+    else if (/[ऀ-ॿ]/.test(ch)) c.hi++;
+    else if (/[฀-๿]/.test(ch)) c.th++;
+    else if (/[Ѐ-ӿ]/.test(ch)) c.cyr++;
+    else if (/[Ͱ-Ͽ]/.test(ch)) c.el++;
+    else if (/[A-Za-z]/.test(ch)) c.latin++;
+  }
+  return c;
+}
+
 function detectLang(text, a, b) {
-  const t = text || '';
-  const has = {
-    ko: /[가-힣]/.test(t), ja: /[぀-ヿ]/.test(t), zh: /[一-鿿]/.test(t),
-    ar: /[؀-ۿ]/.test(t), he: /[֐-׿]/.test(t), hi: /[ऀ-ॿ]/.test(t),
-    th: /[฀-๿]/.test(t), cyr: /[Ѐ-ӿ]/.test(t), el: /[Ͱ-Ͽ]/.test(t),
-    latin: /[A-Za-z]/.test(t)
-  };
+  const c = scriptCounts(text);
   const score = (code) => {
     const p = langPrefix(code);
-    if (p === 'ko') return has.ko ? 2 : 0;
-    if (p === 'ja') return has.ja ? 2 : (has.zh ? 1 : 0);
-    if (p === 'zh') return (has.zh && !has.ja) ? 2 : 0;
-    if (p === 'ar' || p === 'fa' || p === 'ur') return has.ar ? 2 : 0;
-    if (p === 'he') return has.he ? 2 : 0;
-    if (p === 'hi' || p === 'bn' || p === 'ta' || p === 'te') return has.hi ? 2 : 0;
-    if (p === 'th') return has.th ? 2 : 0;
-    if (p === 'ru' || p === 'uk' || p === 'bg' || p === 'sr') return has.cyr ? 2 : 0;
-    if (p === 'el') return has.el ? 2 : 0;
-    return has.latin ? 1 : 0;   // 라틴 계열(영어 등)
+    if (p === 'ko') return c.ko;
+    if (p === 'ja') return c.ja ? c.ja + c.zh : c.zh * 0.5;   // 가나가 없으면 한자만으론 약한 근거
+    if (p === 'zh') return c.ja ? 0 : c.zh;                   // 가나가 있으면 일본어 쪽
+    if (p === 'ar' || p === 'fa' || p === 'ur') return c.ar;
+    if (p === 'he') return c.he;
+    if (p === 'hi' || p === 'bn' || p === 'ta' || p === 'te') return c.hi;
+    if (p === 'th') return c.th;
+    if (p === 'ru' || p === 'uk' || p === 'bg' || p === 'sr') return c.cyr;
+    if (p === 'el') return c.el;
+    return c.latin;   // 라틴 계열(영어 등)
   };
   const sa = score(a), sb = score(b);
-  if (sa > sb) return a;
-  if (sb > sa) return b;
-  return null;
+  if (Math.max(sa, sb) < DETECT_MIN_CHARS) return null;   // 증거 부족 — 다음 조각을 기다린다
+  if (sa >= sb * DETECT_MARGIN) return a;
+  if (sb >= sa * DETECT_MARGIN) return b;
+  return null;   // 양쪽이 비슷하다 — 섣불리 뒤집지 않는다
 }
 
 /* 원문 줄 텍스트 설정 — srcLine.textContent 직접 대입 대신 이 함수 사용(원문 줄 4곳 일원화).
@@ -4839,6 +4872,7 @@ async function start() {
   startElapsed();
   startSilenceWatch();  // 무음 자동 정지 감시 시작
   probeFlipsNoText = 0; // 방향 감시 재시도 횟수 초기화 — 새 통역은 처음부터 (v1.13.266)
+  dirWinReset(); lastDirFlipAt = 0;   // 방향 판정 창도 초기화 (v1.13.268)
   window.__startCount = (window.__startCount || 0) + 1;
   console.log('[진단] start() 누적 호출 횟수 = ' + window.__startCount + ' (1보다 크면 시작이 자동 반복되는 것)');
   console.log('[start] 0) start() — connectWS 호출');
@@ -4852,15 +4886,35 @@ async function start() {
 /* 입력 언어를 감지해 번역 방향을 자동 전환.
    현재 출력 언어(curTarget)와 같은 언어가 입력으로 들어오면(= 반대편 화자가 말하기 시작)
    출력 언어를 반대로 뒤집고 짧은 디바운스 후 세션을 재연결한다. */
+/* 방향 판정용 최근 전사 창 (v1.13.268).
+   전사는 델타로 조각조각 들어온다(appendSrc의 srcBuf += chunk). 조각 하나만 보고 방향을
+   뒤집으면 한국어 연설 중간의 영어 한 마디에도 세션이 재접속되고, 다음 조각에서 다시
+   되돌아간다. 그래서 최근 DIR_WINDOW_MS 동안의 전사를 이어 붙여 그 전체로 판정한다.
+   "그래서 sustainable development goals가"처럼 영어구가 길게 섞인 경우도, 창에 함께 담긴
+   앞뒤 한국어가 더 많으므로 한국어로 남는다. */
+let dirWin = [];                       // [{t: 받은 시각, s: 전사 조각}]
+const DIR_WINDOW_MS = 6000;            // 이 시간 안의 전사만 판정에 쓴다
+const DIR_FLIP_COOLDOWN_MS = 5000;     // 전환 직후 재전환 금지 — 깜빡임 방지
+let lastDirFlipAt = 0;
+
+function dirWinReset() { dirWin = []; }   // 새 통역·새 세션·전환 직후
+
 function maybeFlipDirection(srcText) {
   if (!running || userStopped) return;
   if (getDirMode() !== 'auto') return;   // 단방향 모드: 방향 자동 전환 안 함
+  const now = Date.now();
+  if (srcText) dirWin.push({ t: now, s: String(srcText) });
+  while (dirWin.length && now - dirWin[0].t > DIR_WINDOW_MS) dirWin.shift();
+  if (now - lastDirFlipAt < DIR_FLIP_COOLDOWN_MS) return;   // 방금 전환함 — 잠시 지켜본다
   const { a, b } = getPair();
-  const det = detectLang(srcText, a, b);
+  const det = detectLang(dirWin.map((x) => x.s).join(' '), a, b);
   if (!det) return;
   // 감지된 입력 언어의 반대가 와야 할 출력 언어
   const desired = (langPrefix(det) === langPrefix(a)) ? b : a;
   if (langPrefix(desired) === langPrefix(curTarget)) return;   // 이미 올바른 방향
+  lastDirFlipAt = now;
+  lastProbeFlipAt = now;   // 말소리 기반 감시도 쉬게 한다 — 두 감시가 서로 뒤집지 않게 (v1.13.268)
+  dirWinReset();   // 옛 언어의 흔적으로 곧바로 되돌아가지 않게 창을 비운다
   curTarget = desired;
   if ($('targetLang')) $('targetLang').value = desired;
   setStatus('언어 방향 전환 중…', true);
@@ -4898,7 +4952,8 @@ function noteInputLevel(rms) {          // LevelMeter.frame()에서 매 프레�
   if (rms >= FLIP_PROBE_RMS) { if (!voiceSince) voiceSince = now; lastVoiceAt = now; }
   else if (now - lastVoiceAt > FLIP_PROBE_GAP_MS) voiceSince = 0;
 }
-function noteSessionOpen() {            // 새 세션 — 첫 전사가 올 때까지 유예 (재시도 횟수는 유지)
+function noteSessionOpen() {   // 새 세션 — 첫 전사가 올 때까지 유예 (재시도 횟수는 유지)
+  dirWinReset();   // 옛 언어의 전사가 방향 판정에 남지 않게 (v1.13.268)
   lastInputTextAt = Date.now();
   voiceSince = 0;
 }
@@ -4921,6 +4976,8 @@ function probeFlipTick() {
   lastProbeFlipAt = now;
   voiceSince = 0;
   probeFlipsNoText++;
+  lastDirFlipAt = now;   // 전사 기반 판정과 쿨다운을 공유 — 두 감시가 서로 뒤집지 않게 (v1.13.268)
+  dirWinReset();
   curTarget = next;
   if ($('targetLang')) $('targetLang').value = next;
   setStatus('언어 방향 전환 중…', true);

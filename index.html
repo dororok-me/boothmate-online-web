@@ -1252,7 +1252,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.268 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.269 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3516,7 +3516,11 @@ async function aiTranslateTerm(term, targetCode) {
   const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
   if (!res.ok) throw new Error('gemini ' + res.status);
   const data = await res.json();
-  return clean1((data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0].text) || '');
+  // (v1.13.269) parts를 전부 이어붙이되 thought 파트는 뺀다. [0]만 쓰면 모델이 여러 조각으로
+  // 나눠 낼 때 뒷부분이 잘리고, 0번이 thought면 사고 요약이 용어 번역으로 들어간다.
+  const pts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
+  return clean1(pts.filter(function (pt) { return pt && typeof pt.text === 'string' && pt.thought !== true; })
+                   .map(function (pt) { return pt.text; }).join(''));
 }
 /* 용어쌍의 자연 번역어를 양쪽 언어로 학습해 entry.nat에 채움 (현재 언어쌍 기준) */
 function splitAliases(s) {
@@ -4258,7 +4262,9 @@ async function readSSEDeltas(body, onDelta) {
       try {
         const j = JSON.parse(payload);
         const parts = (j.candidates && j.candidates[0] && j.candidates[0].content && j.candidates[0].content.parts) || [];
-        for (const pt of parts) if (pt && pt.text) onDelta(pt.text);
+        // thought 파트는 버린다 (v1.13.269). 사고 요약은 번역문이 아니다 — 이걸 흘려보내면
+        // 자막 앞에 'thought …'가 그대로 붙는다(사용자 신고). parts에 thought:true로 표시돼 온다.
+        for (const pt of parts) if (pt && pt.text && pt.thought !== true) onDelta(pt.text);
       } catch (e) { /* 조각난 JSON — SSE는 줄 단위 완결이라 무시해도 안전 */ }
     }
   }
@@ -4298,7 +4304,7 @@ async function flashTranslate(sentence, targetCode, onDelta) {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: sys }] }, contents: contents,
-      generationConfig: { thinkingConfig: { thinkingLevel: 'minimal' }, maxOutputTokens: 2048 }
+      generationConfig: { thinkingConfig: { thinkingLevel: 'minimal', includeThoughts: false }, maxOutputTokens: 2048 }
     })
   });
   if (!res.ok || !res.body) throw new Error('gemini ' + res.status);

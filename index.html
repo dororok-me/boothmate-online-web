@@ -1252,7 +1252,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.269 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.270 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3911,6 +3911,11 @@ function spSetRow(row, srcText, transText, pending) {
    닫힌 창 안에서는 짝 없는 줄을 만들지 않는다 — 남는 문장은 마지막 줄에 붙인다.
    밀림이 다음 줄로 번져나가는 경로 자체가 없어진다.
    ════════════════════════════════ */
+/* 억지로 닫을 때 번역을 아직 못 받은 원문 꼬리를 다음 창으로 넘긴다 (v1.13.270).
+   횟수로 막지 않는다 — 번역이 일정하게 늦는 건 정상이고, 그동안은 계속 넘기는 게 맞다.
+   넘길 분량으로 막는다: 번역이 정말로 끊기면 꼬리가 계속 불어나 이 상한에 걸리고,
+   그때 포기하고 닫는다. 지연이 일정하면 꼬리 크기도 일정해 영원히 올바르게 짝지어진다. */
+const SP_CARRY_MAX_CHARS = 600;  // 넘길 원문이 이보다 길면 번역이 끊긴 것 — 포기하고 닫는다
 const SP_WIN_MAX_CHARS = 1200;   // 안전장치: 창이 이만큼 커지면 균형이 안 맞아도 닫는다
 const SP_WIN_MAX_MS = 30000;     // 안전장치: 이만큼 오래 열려 있어도 닫는다
 const SP_WIN_LOW = 0.75;         // 번역이 기대치의 이보다 적으면 → 번역을 더 기다린다
@@ -4555,18 +4560,50 @@ function finishSegment(fromIdle) {
   const aggOK = !!_sc && !!_tc && _tc >= _w * 0.45 && _tc <= _w * 2.2;
   // 분량이 맞을 때만 총량 기준으로 다시 끈는다 — 안전장치로 억지로 닫는 자리에서
   // 총량 기준을 쓰면 따라오지도 않은 번역을 원문 전체에 늘려 붙이는 꾴이 된다.
-  spRenderTurn(balanced || (quiet && aggOK));
+  const settled = balanced || (quiet && aggOK);
+  spRenderTurn(settled);
+
+  /* ── 번역을 못 받은 꼬리는 확정하지 않고 다음 창으로 넘긴다 (v1.13.270) ──
+     현장 보고: "한국어 전사가 영어와 분리돼" — 자막이 한 칸씩 밀려 끝까지 이어졌다.
+     원인: 여기서 창을 억지로 닫으면(무음 1.2초 또는 창 과대) 아직 도착하지 않은 번역이
+     갈 곳을 잃는다. 그 번역은 잠시 뒤 '다음 창'에 도착해 다음 창의 원문과 짝지어진다.
+     한 번 밀리면 되돌릴 계기가 없어 그 뒤로 계속 한 칸씩 밀린다.
+     (v1.13.256이 !forced일 때만 막아 둔 바로 그 상황이다 — forced 경로가 뚫려 있었다.)
+     고치는 법: 짝이 맞은 앞부분만 확정하고, 짝 없는 원문 꼬리는 화면에서 떼어 srcBuf로
+     되돌린다. 다음 창에서 다시 그려지고, 늦게 온 번역은 제 원문과 짝지어진다.
+     품질 모드는 문장마다 줄을 직접 들고 있어(qmMakePair) 이 문제가 원래 없다. */
+  let carrySrc = '';
+  if (!settled && !spNoTrans && !spOffpair) {
+    const rows = spAlignLive(_sl, _tl);
+    let k = rows.length;
+    while (k > 0 && rows[k - 1] && rows[k - 1].t == null && rows[k - 1].s != null) k--;
+    const tail = rows.slice(k).map(function (r) { return r.s; }).filter(Boolean);
+    if (tail.length && spChars(tail) <= SP_CARRY_MAX_CHARS) {
+      carrySrc = tail.join(' ');
+      for (let i = spRows.length - 1; i >= k; i--) {   // 확정하지 않을 줄은 떼어 낸다
+        const r = spRows[i];
+        if (r && r.transLine && r.transLine === editingLineEl) continue;   // 수정 중인 줄은 건드리지 않는다
+        if (r && r.el && r.el.parentNode) r.el.remove();
+      }
+    }
+  }
   for (const r of spRows) {           // 진행 표시 해제
     if (r.transLine) r.transLine.classList.remove('pending');
     if (r.srcLine) r.srcLine.classList.remove('pending');
   }
-  // 닫은 창의 총량을 비율 R의 표본으로
-  spNoteRatio(spChars(blockLines(tidyNumbers(srcBuf).trim())),
-              spNoTrans ? 0 : spChars(blockLines(shownTrans(transBuf))));
-  srcBuf = "";
+  // 닫은 창의 총량을 비율 R의 표본으로. 꼬리를 넘긴 창은 표본에서 뺀다 —
+  // 원문 일부가 다음 창으로 가 버려 이 창의 총량 비율이 실제보다 커 보인다.
+  if (!carrySrc) {
+    spNoteRatio(spChars(blockLines(tidyNumbers(srcBuf).trim())),
+                spNoTrans ? 0 : spChars(blockLines(shownTrans(transBuf))));
+  }
+  srcBuf = carrySrc;
   transBuf = "";
   spReset();            // 다음 발화는 새 묶음부터
   curPair = null;
+  // 이월한 원문은 곧바로 다시 그린다 (v1.13.270). 안 그리면 방금 화면에서 뗀 줄이
+  // 다음 입력이 올 때까지 사라진 채로 있다 — 말이 멎은 자리에선 그게 몇 초씩 간다.
+  if (srcBuf) spRenderTurn(false);
   trimLines(combinedEl, 'srcline');
   pushMirror();
   turnLogged.clear();   // 턴 종료 → 다음 턴은 같은 치환도 다시 기록

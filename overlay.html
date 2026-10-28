@@ -66,6 +66,8 @@
     word-break: break-word;
   }
   .transline.pending { opacity: 1; }
+  /* 출처 표시(v1.13.271) — 메인 화면의 .bm-mark가 미러 HTML로 그대로 온다. 메인과 같은 모양. */
+  .transline .bm-mark { opacity: 0.75; font-size: 0.72em; font-weight: 400; margin-left: 0.5em; white-space: nowrap; }
   /* 용어집 표준표기 하이라이트 — 형광펜처럼 단어를 색으로 감쌈(어두운 배경용 반투명 인디고).
      원문 줄 하이라이트는 번역문과 중복 표시로 헷갈려 제거 — 번역문만 (v1.13.95) */
   .transline .gword {

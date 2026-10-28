@@ -622,6 +622,8 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
     word-break: normal; overflow-wrap: normal;
     transition: opacity 0.4s;
   }
+  /* 출처 표시(v1.13.271) — 확정된 번역 줄 끝에 불규칙한 간격(3~4문장)으로 붙는다. 오버레이에도 같은 CSS. */
+  .transline .bm-mark { opacity: 0.75; font-size: 0.72em; font-weight: 400; margin-left: 0.5em; white-space: nowrap; letter-spacing: 0.01em; }
   /* 클릭 가능한 단어 토큰 (수정 기능) */
   .transline .w { cursor: pointer; border-radius: 3px; padding: 0 1px; }
   .transline .w:hover { background: rgba(125,211,252,0.22); }
@@ -1252,7 +1254,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.270 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.13.271 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -3847,6 +3849,30 @@ function escHtml(x) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
   });
 }
+/* ── 출처 표시 (v1.13.271) ──
+   컨퍼런스 자막 송출 등 용도 밖 사용이 보고되어, 확정된 번역 줄 끝에 "(subtitles powered by Boothmate)"를
+   붙인다. 간격은 불규칙하다 — 표시할 때마다 다음 간격을 3 또는 4문장 중 무작위로 뽑는다.
+   규칙적이면 어디가 지워질지 미리 알 수 있어서다. 문장 수는 줄의 텍스트를 splitToSentences로 센다
+   (속도 모드는 한 줄에 문장이 둘 이상 묶일 수 있다). 미러(pushMirror)가 innerHTML·textContent를 그대로
+   복사하므로 오버레이·네이티브 오버레이에도 같이 나간다. 한 줄에는 한 번만 붙인다(data-bmMark). */
+const BM_MARK_TEXT = '(subtitles powered by Boothmate)';
+let bmMarkSeen = 0;                                   // 표시 이후 지나간 문장 수
+let bmMarkNext = 3 + Math.floor(Math.random() * 2);   // 다음 표시까지 필요한 문장 수 (3 또는 4)
+function bmMarkLine(el) {
+  if (!el || !el.isConnected || el.dataset.bmMark) return;
+  const text = (el.textContent || '').trim();
+  if (!text) return;
+  el.dataset.bmMark = '1';
+  const sp = splitToSentences(text);
+  bmMarkSeen += sp.done.length + (sp.rest ? 1 : 0);
+  if (bmMarkSeen < bmMarkNext) return;
+  bmMarkSeen = 0;
+  bmMarkNext = 3 + Math.floor(Math.random() * 2);
+  const m = document.createElement('span');
+  m.className = 'bm-mark';
+  m.textContent = BM_MARK_TEXT;
+  el.appendChild(m);
+}
 /* 텍스트를 문장 목록으로 (아직 안 맺힌 마지막 조각도 한 줄로 포함) */
 function blockLines(text) {
   const sp = splitToSentences(String(text || ''));
@@ -4448,6 +4474,7 @@ function qmPump() {
     .then(function () {
       item.pair.transLine.classList.remove('pending');
       if (acc.trim()) {
+        bmMarkLine(item.pair.transLine);   // 출처 표시(v1.13.271)
         qmHistory.push({ source: item.sent, translation: acc.trim() });
         if (qmHistory.length > 8) qmHistory = qmHistory.slice(-8);
       }
@@ -4588,7 +4615,7 @@ function finishSegment(fromIdle) {
     }
   }
   for (const r of spRows) {           // 진행 표시 해제
-    if (r.transLine) r.transLine.classList.remove('pending');
+    if (r.transLine) { r.transLine.classList.remove('pending'); if (!spNoTrans) bmMarkLine(r.transLine); }   // 출처 표시(v1.13.271) — 화면에 남는 확정 줄에만(떼어 낸 꼬리는 isConnected가 아님)
     if (r.srcLine) r.srcLine.classList.remove('pending');
   }
   // 닫은 창의 총량을 비율 R의 표본으로. 꼬리를 넘긴 창은 표본에서 뺀다 —

@@ -50,7 +50,6 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
 </script>
 <style>.bm-app .logo-sub{display:none !important;}
 /* 앱에서는 연결방식·API키·티켓 메뉴 숨김 (앱은 중계서버 자동연결, 유저가 만질 필요 없음) */
-.bm-app #grpConn, .bm-app #grpDirect, .bm-app #grpRelay{display:none !important;}
 /* 앱에서는 오버레이(별도 자막창) 버튼 숨김 — 웹브라우저 전용 기능 */
 .bm-app #openOverlayBtn{display:none !important;}
 /* 앱에서는 사업자정보 상세 숨김 (약관·개인정보처리방침 링크는 유지) */
@@ -975,8 +974,8 @@ if (!document.documentElement.classList.contains('bm-app')) {
       mc_theme:1, mc_src_color:1, mc_trans_color:1, mc_src_size:1, mc_trans_size:1,
       mc_src_weight:1, mc_trans_weight:1, mc_wrap_h:1, speech_level:1, lang_pair:1,
       mic_device_id:1, sys_audio_mode:1, input_mode:1, reflog_visible:1, reflog_collapsed:1,
-      sessions:1, glossary:1, glossary_sets:1, glossary_cloud_ts:1, conn_mode:1, gemini_api_key:1, auto_stop_min:1,
-      relay_url:1, relay_ticket:1, bm_native_overlay:1, dir_mode:1, trans_engine:1, mc_layout:1
+      sessions:1, glossary:1, glossary_sets:1, glossary_cloud_ts:1, auto_stop_min:1,
+      bm_native_overlay:1, dir_mode:1, trans_engine:1, mc_layout:1
     };
     var email = null;
     try { var u = JSON.parse(localStorage.getItem('boothmate_user') || 'null'); email = (u && u.email) ? u.email : null; } catch(e){}
@@ -1254,7 +1253,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.13.271 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.14.0 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -1284,10 +1283,25 @@ const $ = (id) => document.getElementById(id);
    비어두면("") 설정의 입력란 값을 사용(베타 운영자 본인 테스트용). */
 const RELAY_SERVER_URL = 'wss://boothmateonline-production.up.railway.app';
 
-/* ★ 베타 통과키 (server-beta.js의 PASS_KEY와 일치해야 함) ★
-   값이 있으면 중계 연결 시 ?pass=<통과키>로 붙음(베타: 티켓 대신 통과키).
-   비어두면 기존 티켓 방식(?ticket=)을 사용(정식 server.js v2.0.0용). */
-const RELAY_PASS_KEY = 'boothmate2026secure';
+/* ── 서버 세션 (v1.14.0) — 통과키를 대체한다 ──
+   구글 로그인이 준 ID 토큰을 중계 서버(POST /auth/google)가 검증하고 30일짜리 세션 토큰을 발급한다.
+   이후 서버에 가는 모든 요청(통역 WS·번역·용어집·잔여시간·결제)은 이 토큰으로 인증한다.
+   예전엔 공용 통과키가 이 코드에 박혀 있어, 소스를 복제하면 누구나 남의 비용으로 서버를 쓸 수 있었다.
+   토큰은 이 브라우저에만 저장되고(bm_session), 서버가 401을 돌려주면 지우고 로그인 화면으로 보낸다. */
+function bmSession() { try { return localStorage.getItem('bm_session') || ''; } catch (e) { return ''; } }
+function bmSessionExpired() {
+  try { localStorage.removeItem('bm_session'); } catch (e) {}
+  if (typeof window.__bmShowGate === 'function') window.__bmShowGate('로그인이 만료되었습니다. 다시 로그인해 주세요.');
+}
+/* 로그인 토큰을 서버에 보내 세션 토큰을 받아 저장한다. path: '/auth/google' | '/auth/apple' */
+async function bmServerLogin(path, body) {
+  const base = String(RELAY_SERVER_URL || '').replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
+  const res = await fetch(base + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const j = await res.json().catch(function () { return {}; });
+  if (!res.ok || !j.token) throw new Error(j.error || ('server ' + res.status));
+  try { localStorage.setItem('bm_session', j.token); } catch (e) {}
+  return j;
+}
 
 /* ── 지원 언어 목록 (Gemini Live Translate 70+ 중 주요 언어) ──
    [코드(BCP-47), 자국어 표기, 영어명]. 음성/텍스트 번역 양쪽이 공유. */
@@ -2181,10 +2195,10 @@ async function tossConfirmPending() {
     const r = __tossReturn;
     if (!r || !r.paymentKey || !r.orderId) return;
     const email = cloudEmail();
-    if (!email || !cloudHttpBase() || !RELAY_PASS_KEY) return;   // 다음 로그인 때 다시 시도
+    if (!email || !cloudHttpBase() || !bmSession()) return;   // 다음 로그인 때 다시 시도
     const res = await fetch(cloudHttpBase() + '/toss/confirm', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bmSession() },
       body: JSON.stringify({
         user: email, paymentKey: r.paymentKey, orderId: r.orderId, amount: r.amount,
         device: (navigator.userAgent || '').slice(0, 80), platform: 'web'
@@ -2353,7 +2367,7 @@ async function bmBuy(sku) {
     try {
       const r = await fetch(cloudHttpBase() + '/credit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bmSession() },
         body: JSON.stringify({ user: cloudEmail(), seconds: item.seconds, grade: item.grade, device: 'Google Play', platform: 'galaxy',
                                purchaseToken: token || '', productId: sku,
                                orderId: (response.details && (response.details.orderId || response.details.orderID)) || '' })
@@ -3071,7 +3085,7 @@ function cloudStat(text) {
 let __cloudPushTimer = null;
 function cloudPushGlossary(immediate) {
   const email = cloudEmail();
-  if (!email || !cloudHttpBase() || !RELAY_PASS_KEY) return;
+  if (!email || !cloudHttpBase() || !bmSession()) return;
   if (__cloudPushTimer) clearTimeout(__cloudPushTimer);
   const doSend = function () {
     __cloudPushTimer = null;
@@ -3088,7 +3102,7 @@ function cloudPushGlossary(immediate) {
     fetch(cloudHttpBase() + '/glossary', {
       method: 'PUT',
       keepalive: payload.length < 60000,   // 탭 닫는 중에도 전송 시도 (60KB 한도 내에서만)
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bmSession() },
       body: payload
     }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
@@ -3100,11 +3114,12 @@ function cloudPushGlossary(immediate) {
 }
 async function cloudPullGlossary() {
   const email = cloudEmail();
-  if (!email || !cloudHttpBase() || !RELAY_PASS_KEY) return;
+  if (!email || !cloudHttpBase() || !bmSession()) return;
   try {
     const res = await fetch(cloudHttpBase() + '/glossary?user=' + encodeURIComponent(email), {
-      headers: { 'Authorization': 'Bearer ' + RELAY_PASS_KEY }
+      headers: { 'Authorization': 'Bearer ' + bmSession() }
     });
+    if (res.status === 401) { bmSessionExpired(); return; }
     if (!res.ok) { console.log('[용어집 클라우드] 서버 응답 ' + res.status + ' — 로컬 전용'); return; }
     const j = await res.json();
     const localTs = parseInt(localStorage.getItem('glossary_cloud_ts') || '0', 10);
@@ -3140,7 +3155,7 @@ function quotaVerifying(){
 }
 function cloudQuotaPush(immediate) {
   const email = cloudEmail();
-  if (!email || !cloudHttpBase() || !RELAY_PASS_KEY) return;
+  if (!email || !cloudHttpBase() || !bmSession()) return;
   // Ent가 실제 계정 키로 동작 중일 때만 — 로그인 복원 전(anon 상태)의 push 방지 (v1.13.114)
   if (!window.__boothmateUser || !window.__boothmateUser.email) return;
   if (!__quotaPullDone) return;   // 초기 pull 전 푸시 금지
@@ -3152,7 +3167,7 @@ function cloudQuotaPush(immediate) {
     fetch(cloudHttpBase() + '/quota', {
       method: 'PUT',
       keepalive: true,   // 탭 닫는 중에도 전송 (상태 JSON은 수백 바이트)
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bmSession() },
       body: payload
     }).catch(function () {});
   };
@@ -3162,14 +3177,15 @@ function cloudQuotaPush(immediate) {
 }
 async function cloudQuotaPull() {
   const email = cloudEmail();
-  if (!email || !cloudHttpBase() || !RELAY_PASS_KEY || Ent.isUnlimited()) { __quotaPullDone = true; return; }
+  if (!email || !cloudHttpBase() || !bmSession() || Ent.isUnlimited()) { __quotaPullDone = true; return; }
   if (!window.__boothmateUser || !window.__boothmateUser.email) { __quotaPullDone = true; return; }   // showApp 이후에만
   // 응답이 끝내 안 와도(fetch 무한 대기 등) 6초 뒤 잠금 해제 — 서버 장애 때 유료 사용자가 갇히지 않게 (v1.13.206)
   setTimeout(function () { if (!__quotaPullDone) { __quotaPullDone = true; renderQuota(); } }, 6000);
   try {
     const res = await fetch(cloudHttpBase() + '/quota?user=' + encodeURIComponent(email), {
-      headers: { 'Authorization': 'Bearer ' + RELAY_PASS_KEY }
+      headers: { 'Authorization': 'Bearer ' + bmSession() }
     });
+    if (res.status === 401) { __quotaPullDone = true; bmSessionExpired(); return; }
     if (!res.ok) { console.log('[시간 클라우드] 서버 응답 ' + res.status + ' — 로컬 전용'); __quotaPullDone = true; return; }
     const j = await res.json();
     const localMt = Ent.state().mt || 0;
@@ -3215,12 +3231,12 @@ async function cloudQuotaPull() {
     if (!sess) return;
     if (used <= 0) { if (final) sess = null; return; }
     var email = cloudEmail();
-    if (!email || !cloudHttpBase() || !RELAY_PASS_KEY) { if (final) { sess = null; used = 0; } return; }
+    if (!email || !cloudHttpBase() || !bmSession()) { if (final) { sess = null; used = 0; } return; }
     var delta = used; used = 0;
     var mySess = sess;
     fetch(cloudHttpBase() + '/usage', {
       method: 'POST', keepalive: true,
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bmSession() },
       body: JSON.stringify({ user: email, sessionId: mySess.id, device: mySess.device, platform: mySess.platform,
         seconds: delta, startedAt: mySess.start, endedAt: Date.now(), deduct: !Ent.isUnlimited() })
     }).then(function(r){ return r.ok ? r.json() : null; })
@@ -3494,35 +3510,19 @@ function eqTerm(a, b) {
   const n = function(s){ return String(s||'').toLowerCase().replace(/\s+/g, ''); };
   return n(a) === n(b);
 }
-/* 단일 용어를 AI로 번역(등록 시 1회). relay 모드는 /translate, 직접 모드는 Gemini */
+/* 단일 용어를 AI로 번역(등록 시 1회) — 중계 서버 /translate. (v1.14.0: 직접 연결 경로 제거) */
 async function aiTranslateTerm(term, targetCode) {
   const clean1 = function(s){ return String(s || '').split('\n')[0].replace(/^["'\s]+|["'\s.]+$/g, '').trim(); };
-  const mode = (localStorage.getItem('conn_mode') || 'relay');
-  if (mode === 'relay' && RELAY_SERVER_URL && RELAY_PASS_KEY) {
-    const baseHttp = RELAY_SERVER_URL.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
-    const res = await fetch(baseHttp + '/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
-      body: JSON.stringify({ text: term, targetLang: langName(targetCode),
-        platform: document.documentElement.classList.contains('bm-galaxy') ? 'galaxy' : undefined })
-    });
-    if (!res.ok) throw new Error('relay ' + res.status);
-    const data = await res.json();
-    return clean1(data.result || '');
-  }
-  const apiKey = ($('apiKey') && $('apiKey').value.trim()) || localStorage.getItem('gemini_api_key') || '';
-  if (!apiKey) throw new Error('no-key');
-  const prompt = 'Translate the single term "' + term + '" into ' + langName(targetCode) +
-                 '. Output ONLY the translated term itself, no explanation, no quotes, no punctuation.';
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=' + apiKey;
-  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-  if (!res.ok) throw new Error('gemini ' + res.status);
+  const res = await fetch(cloudHttpBase() + '/translate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bmSession() },
+    body: JSON.stringify({ text: term, targetLang: langName(targetCode),
+      platform: document.documentElement.classList.contains('bm-galaxy') ? 'galaxy' : undefined })
+  });
+  if (res.status === 401) { bmSessionExpired(); throw new Error('login required'); }
+  if (!res.ok) throw new Error('relay ' + res.status);
   const data = await res.json();
-  // (v1.13.269) parts를 전부 이어붙이되 thought 파트는 뺀다. [0]만 쓰면 모델이 여러 조각으로
-  // 나눠 낼 때 뒷부분이 잘리고, 0번이 thought면 사고 요약이 용어 번역으로 들어간다.
-  const pts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
-  return clean1(pts.filter(function (pt) { return pt && typeof pt.text === 'string' && pt.thought !== true; })
-                   .map(function (pt) { return pt.text; }).join(''));
+  return clean1(data.result || '');
 }
 /* 용어쌍의 자연 번역어를 양쪽 언어로 학습해 entry.nat에 채움 (현재 언어쌍 기준) */
 function splitAliases(s) {
@@ -4301,44 +4301,21 @@ async function readSSEDeltas(body, onDelta) {
   }
 }
 
-/* 문장 하나를 Flash로 번역. 중계 모드는 서버 경유(키 비노출), 직접 모드는 본인 키로 Google 직접. */
+/* 문장 하나를 Flash로 번역 — 중계 서버 /translate (스트리밍). (v1.14.0: 직접 연결 경로 제거) */
 async function flashTranslate(sentence, targetCode, onDelta) {
   const sys = flashSystemText(targetCode, sentence);   // 용어집은 이 문장에 걸리는 것만 (v1.13.265)
   const history = qmHistory.slice(-6);
-  const mode = (localStorage.getItem('conn_mode') || 'relay');
-  if (mode === 'relay' && RELAY_SERVER_URL && RELAY_PASS_KEY) {
-    const baseHttp = RELAY_SERVER_URL.replace(/^wss:/, 'https:').replace(/^ws:/, 'http:').replace(/\/+$/, '');
-    const res = await fetch(baseHttp + '/translate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + RELAY_PASS_KEY },
-      body: JSON.stringify({
-        text: sentence, targetLang: langName(targetCode), systemInstruction: sys,
-        history: history, model: FLASH_MODEL, stream: true,
-        platform: document.documentElement.classList.contains('bm-galaxy') ? 'galaxy' : undefined
-      })
-    });
-    if (!res.ok || !res.body) throw new Error('relay ' + res.status);
-    await readSSEDeltas(res.body, onDelta);
-    return;
-  }
-  const apiKey = ($('apiKey') && $('apiKey').value.trim()) || localStorage.getItem('gemini_api_key') || '';
-  if (!apiKey) throw new Error('no-key');
-  const contents = [];
-  for (const h of history) {
-    contents.push({ role: 'user', parts: [{ text: h.source }] });
-    contents.push({ role: 'model', parts: [{ text: h.translation }] });
-  }
-  contents.push({ role: 'user', parts: [{ text: sentence }] });
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + FLASH_MODEL +
-              ':streamGenerateContent?alt=sse&key=' + apiKey;
-  const res = await fetch(url, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
+  const res = await fetch(cloudHttpBase() + '/translate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + bmSession() },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: sys }] }, contents: contents,
-      generationConfig: { thinkingConfig: { thinkingLevel: 'minimal', includeThoughts: false }, maxOutputTokens: 2048 }
+      text: sentence, targetLang: langName(targetCode), systemInstruction: sys,
+      history: history, model: FLASH_MODEL, stream: true,
+      platform: document.documentElement.classList.contains('bm-galaxy') ? 'galaxy' : undefined
     })
   });
-  if (!res.ok || !res.body) throw new Error('gemini ' + res.status);
+  if (res.status === 401) { bmSessionExpired(); throw new Error('login required'); }
+  if (!res.ok || !res.body) throw new Error('relay ' + res.status);
   await readSSEDeltas(res.body, onDelta);
 }
 
@@ -4880,20 +4857,8 @@ let reconnectTimer = null;      // 재연결 대기 타이머
 let reconnectAttempt = 0;       // 연속 재연결 시도 횟수
 
 async function start() {
-  const mode = (localStorage.getItem('conn_mode') || 'relay');
-  if (mode === 'relay') {
-    const url = (RELAY_SERVER_URL || ($('relayUrl') && $('relayUrl').value.trim()) || localStorage.getItem('relay_url') || '');
-    if (!url) { alert('중계 서버 주소가 설정되지 않았습니다. 관리자에게 문의하세요.'); return; }
-    if (!RELAY_PASS_KEY) {
-      // 정식(티켓) 모드일 때만 티켓 확인. 베타(통과키) 모드는 통과키가 코드에 박혀 있어 생략.
-      const ticket = ($('relayTicket') && $('relayTicket').value.trim()) || localStorage.getItem('relay_ticket') || '';
-      if (!ticket) { alert('입장 티켓을 입력하세요. (설정 → 중계 서버)'); return; }
-    }
-  } else {
-    const apiKey = $('apiKey').value.trim();
-    if (!apiKey) { alert('API 키를 입력하세요.'); return; }
-    localStorage.setItem('gemini_api_key', apiKey);
-  }
+  // (v1.14.0) 서버 세션이 없으면 통역을 시작할 수 없다 — 로그인 화면으로
+  if (!bmSession()) { bmSessionExpired(); return; }
   if (running) return;
   // 계정 잔여시간을 아직 못 받았고 이 기기가 새 상태면 잠깐 대기 (v1.13.206)
   // — 다른 기기에서 체험을 소진한 계정이 새 기기의 기본 30분으로 시작하는 것을 막는다.
@@ -5079,31 +5044,11 @@ function connectWS() {
   }
   const TARGET_LANGUAGE = curTarget;
   if ($('targetLang')) $('targetLang').value = TARGET_LANGUAGE;   // 후처리/텍스트번역 호환용 동기화
-  const mode = (localStorage.getItem('conn_mode') || 'relay');
-  let wsUrl;
-  if (mode === 'relay') {
-    // 중계 서버로 연결 (키는 서버에 있음)
-    // 고정 주소(RELAY_SERVER_URL)가 있으면 그것을, 없으면 설정 입력란 값을 사용
-    let base = (RELAY_SERVER_URL || localStorage.getItem('relay_url') || '').trim();
-    // http(s)로 입력했으면 ws(s)로 보정
-    base = base.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
-    if (!/^wss?:\/\//.test(base)) base = 'wss://' + base;   // 스킴 없으면 wss:// 붙임
-    base = base.replace(/\/+$/, '');                         // 끝 슬래시 제거
-    if (RELAY_PASS_KEY) {
-      // 베타: 통과키 방식 (server-beta.js)
-      wsUrl = base + '/?pass=' + encodeURIComponent(RELAY_PASS_KEY);
-    } else {
-      // 정식: 티켓 방식 (server.js v2.0.0)
-      const ticket = (localStorage.getItem('relay_ticket') || '').trim();
-      wsUrl = base + '/?ticket=' + encodeURIComponent(ticket);
-    }
-    // 갤럭시 앱: 서버(v3.3.0)가 갤럭시 전용 API 키로 과금 분리하도록 표시 (v1.13.112)
-    if (document.documentElement.classList.contains('bm-galaxy')) wsUrl += '&platform=galaxy';
-  } else {
-    // 직접 연결 (본인 API 키)
-    const apiKey = $('apiKey').value.trim();
-    wsUrl = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=" + apiKey;
-  }
+  // 중계 서버로 연결 (Gemini 키는 서버에만 있다). 인증은 서버 세션 토큰 (v1.14.0 — 통과키·티켓·직접 연결 제거)
+  let wsUrl = String(RELAY_SERVER_URL).replace(/^https:/, 'wss:').replace(/^http:/, 'ws:').replace(/\/+$/, '') +
+              '/?pass=' + encodeURIComponent(bmSession());
+  // 갤럭시 앱: 서버(v3.3.0)가 갤럭시 전용 API 키로 과금 분리하도록 표시 (v1.13.112)
+  if (document.documentElement.classList.contains('bm-galaxy')) wsUrl += '&platform=galaxy';
   ws = new WebSocket(wsUrl);
   ws.onopen = () => {
     const setupMessage = {
@@ -5217,11 +5162,11 @@ function connectWS() {
       setStatus('정지됨', false);
       return;
     }
-    // 중계 서버 전용 코드: 티켓 무효(4001) / 시간 소진(4002)
+    // 중계 서버 전용 코드: 인증 실패(4001·4003) / 시간 소진(4002)
     if (e.code === 4001) {
-      setStatus('티켓 오류', false);
-      showErr('입장 티켓이 유효하지 않거나 만료되었습니다. 새 티켓을 발급받아 주세요.');
+      setStatus('인증 오류', false);
       running = false; setRunningUI(false); stopElapsed();
+      bmSessionExpired();
       return;
     }
     if (e.code === 4002) {
@@ -5231,9 +5176,10 @@ function connectWS() {
       return;
     }
     if (e.code === 4003) {
+      // (v1.14.0) 세션 토큰이 만료됐거나 서버가 재시작돼 세션이 풀렸다 → 다시 로그인
       setStatus('인증 오류', false);
-      showErr('접속 인증에 실패했습니다. 로그인 상태를 확인하거나 관리자에게 문의하세요.');
       running = false; setRunningUI(false); stopElapsed();
+      bmSessionExpired();
       return;
     }
     // 세션 만료(GoAway)는 정상적인 재연결 대상 — 먼저 걸러냄
@@ -5243,7 +5189,7 @@ function connectWS() {
     if (!isSessionExpiry &&
         (e.code === 1008 || (e.reason && /key|auth|permission|quota|billing|invalid|forbidden/i.test(reasonStr)))) {
       setStatus('연결 거부됨 — API 키/권한 확인', false);
-      showErr('연결이 거부되었습니다 (code ' + e.code + '). 직접 연결이면 API 키를, 중계 연결이면 서버 상태를 확인하세요. 사유: ' + (e.reason || '없음'));
+      showErr('연결이 거부되었습니다 (code ' + e.code + '). 잠시 후 다시 시도하거나 관리자에게 문의하세요. 사유: ' + (e.reason || '없음'));
       running = false; setRunningUI(false); stopElapsed();
       return;
     }
@@ -5652,30 +5598,9 @@ window.__syncPanelLayout = function() {
       '<div id="usageList" style="display:none; margin-top:8px; max-height:220px; overflow-y:auto; font-size:12px; line-height:1.7; font-variant-numeric:tabular-nums;"></div>' +
       '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">기기별 통역 사용·구매 내역입니다 (최근 50건).</div>' +
     '</div>' +
-    '<div class="grp" id="grpConn"><div class="grp-ttl">🔌 연결 방식</div>' +
-      '<div class="row" style="max-width:none;">' +
-        '<select id="connMode" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--t-border); background:var(--t-input-bg); color:var(--t-text); font-size:13px;">' +
-          '<option value="direct">직접 연결 (내 API 키 사용)</option>' +
-          '<option value="relay">중계 서버 (회원/베타 — 티켓 사용)</option>' +
-        '</select>' +
-      '</div>' +
-      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">직접 연결은 본인 테스트용, 중계 서버는 회원용입니다.</div>' +
-    '</div>' +
-    '<div class="grp" id="grpDirect"><div class="grp-ttl">🔑 Gemini API 키 (직접 연결용)</div>' +
-      '<div class="row" style="max-width:none;">' +
-        '<input type="password" id="apiKey" placeholder="Gemini API 키를 붙여넣으세요" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--t-border); background:var(--t-input-bg); color:var(--t-text); font-size:13px;">' +
-      '</div>' +
-      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">키는 이 브라우저에만 저장되며 외부로 전송되지 않습니다.</div>' +
-    '</div>' +
-    '<div class="grp" id="grpRelay" style="display:none;"><div class="grp-ttl">🎫 통역 시작 티켓</div>' +
-      '<div class="row" id="relayUrlRow" style="max-width:none; margin-bottom:6px;">' +
-        '<input type="text" id="relayUrl" placeholder="중계 서버 주소 (운영자용)" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--t-border); background:var(--t-input-bg); color:var(--t-text); font-size:13px;">' +
-      '</div>' +
-      '<div class="row" style="max-width:none;">' +
-        '<input type="text" id="relayTicket" placeholder="발급받은 티켓을 붙여넣으세요" style="flex:1; padding:9px 12px; border-radius:8px; border:1px solid var(--t-border); background:var(--t-input-bg); color:var(--t-text); font-size:13px;">' +
-      '</div>' +
-      '<div style="color:var(--t-muted); font-size:11px; margin-top:6px;">발급받은 티켓을 입력하면 바로 통역이 시작됩니다. 남은 시간이 차감됩니다.</div>' +
-    '</div>' +
+    // (v1.14.0) '🔌 연결 방식'·'🔑 Gemini API 키'·'🎫 통역 시작 티켓' 묶음 제거 — 정식 출시.
+    //   직접 연결(본인 키)은 운영자 테스트용이었고, 티켓은 옛 server.js 방식으로 지금은 쓰지 않는다.
+    //   연결은 항상 중계 서버, 인증은 로그인 세션이다.
     '<div class="grp"><div class="grp-ttl">⚙ 테마 (스킨)</div>' +
       '<div class="row" style="max-width:none; gap:8px; flex-wrap:wrap;">' +
         '<button class="theme-btn" data-theme="theme-light">☀️ 라이트</button>' +
@@ -5751,8 +5676,9 @@ window.__syncPanelLayout = function() {
       const email = cloudEmail();
       if (!email) throw new Error(en ? 'login required' : '로그인이 필요합니다');
       const res = await fetch(cloudHttpBase() + '/usage?user=' + encodeURIComponent(email), {
-        headers: { 'Authorization': 'Bearer ' + RELAY_PASS_KEY }
+        headers: { 'Authorization': 'Bearer ' + bmSession() }
       });
+      if (res.status === 401) { bmSessionExpired(); throw new Error(en ? 'login required' : '로그인이 만료되었습니다'); }
       if (!res.ok) throw new Error('server ' + res.status);
       const j = await res.json();
       const rows = (j.sessions || []).slice(0, 50);
@@ -5822,34 +5748,7 @@ window.__syncPanelLayout = function() {
       if (typeof applyReflogVisible === 'function') applyReflogVisible(tg.checked);
     });
   })();
-  // API 키 복원/저장 (입력란이 이 패널 안에 있으므로 여기서 바인딩)
-  const savedKey = localStorage.getItem('gemini_api_key');
-  if (savedKey) $('apiKey').value = savedKey;
-  $('apiKey').addEventListener('change', () => { localStorage.setItem('gemini_api_key', $('apiKey').value.trim()); });
-  $('apiKey').addEventListener('input', () => { localStorage.setItem('gemini_api_key', $('apiKey').value.trim()); });
-
-  // 연결 방식(직접/중계) + 중계 서버 주소 + 티켓 복원/저장/토글
-  function applyConnMode() {
-    const mode = $('connMode').value;
-    $('grpDirect').style.display = (mode === 'relay') ? 'none' : '';
-    $('grpRelay').style.display  = (mode === 'relay') ? '' : 'none';
-    localStorage.setItem('conn_mode', mode);
-  }
-  if (localStorage.getItem('conn_mode')) $('connMode').value = localStorage.getItem('conn_mode');
-  else $('connMode').value = 'relay';   // 기본값: 중계 서버
-  $('connMode').addEventListener('change', applyConnMode);
-  applyConnMode();
-  // 중계 서버 주소
-  // 중계 서버 주소: 고정 주소(RELAY_SERVER_URL)가 있으면 입력란을 숨김(회원은 안 봄)
-  if (RELAY_SERVER_URL) {
-    if ($('relayUrlRow')) $('relayUrlRow').style.display = 'none';
-  } else {
-    if (localStorage.getItem('relay_url')) $('relayUrl').value = localStorage.getItem('relay_url');
-    $('relayUrl').addEventListener('input', () => localStorage.setItem('relay_url', $('relayUrl').value.trim()));
-  }
-  // 티켓
-  if (localStorage.getItem('relay_ticket')) $('relayTicket').value = localStorage.getItem('relay_ticket');
-  $('relayTicket').addEventListener('input', () => localStorage.setItem('relay_ticket', $('relayTicket').value.trim()));
+  // (v1.14.0) 연결 방식·API 키·중계 주소·티켓 입력란 제거 — 바인딩도 함께 없앴다.
 
   // 폰트 크기 기본값 (테마와 무관) — 첫 실행 시 원문·번역 모두 18px (v1.13.90, 교수님 요청)
   const D = { mc_src_size:'18', mc_trans_size:'18', mc_src_weight:'400', mc_trans_weight:'700', mc_src_gap:'8', mc_block_gap:'28' };
@@ -6918,14 +6817,26 @@ window.__syncPanelLayout = function() {
     window.__boothmateUser = null;
     if (message) msgEl.textContent = message;
   }
+  window.__bmShowGate = showGate;   // 세션 만료(401·WS 4003) 시 바깥 코드가 로그인 화면을 띄운다 (v1.14.0)
 
   // ── iOS 앱 네이티브 로그인 브리지 ──
   // 앱(웹뷰)에서는 구글 OAuth가 막히므로, 네이티브(Sign in with Apple)가 사용자 정보를 넘겨 이 함수를 호출한다.
   // 일반 웹 브라우저에서는 호출되지 않으므로 영향 없음(안 쓰이는 전역 함수 1개).
+  // (v1.14.0) 서버 세션이 필요하다: 네이티브가 user.identityToken(애플 로그인 토큰)을 함께 넘기면
+  // 서버(/auth/apple)가 검증해 세션을 발급한다. 토큰 없이 이메일만 넘기는 옛 앱은 통역을 시작할 수 없다.
   window.__boothmateNativeLogin = function(user){
     if (!user || !user.email) return;
     try { localStorage.setItem('boothmate_user', JSON.stringify(user)); } catch(e){}
-    showApp(user);
+    if (user.identityToken) {
+      showGate('로그인 확인 중…');
+      bmServerLogin('/auth/apple', { identityToken: user.identityToken })
+        .then(function(){ showApp(user); })
+        .catch(function(e){ showGate('서버 로그인에 실패했습니다: ' + ((e && e.message) || e)); });
+    } else if (bmSession()) {
+      showApp(user);
+    } else {
+      showGate('앱을 최신 버전으로 업데이트해 주세요. (로그인 방식이 바뀌었습니다)');
+    }
   };
 
   // 공급자 공통 마무리: 화이트리스트 검사 → 세션 저장 → (필요 시) 계정 네임스페이스 reload
@@ -6939,6 +6850,11 @@ window.__syncPanelLayout = function() {
       showGate('이 계정(' + user.email + ')은 아직 사용 권한이 없습니다.');
       return;
     }
+    // (v1.14.0) 서버 세션이 없으면 로그인으로 치지 않는다 — 구글 ID 토큰을 서버가 검증한 뒤여야 한다
+    if (!bmSession()){
+      showGate('서버 로그인이 완료되지 않았습니다. 다시 시도해 주세요.');
+      return;
+    }
     // 로그인 유지 (새로고침해도 유지)
     try { localStorage.setItem('boothmate_user', JSON.stringify(user)); } catch(e){}
     // 설정 계정별 분리: 이 이메일 네임스페이스로 설정을 다시 로드하려면 새로고침 1회 필요
@@ -6947,15 +6863,19 @@ window.__syncPanelLayout = function() {
     showApp(user);
   }
 
-  // 구글이 로그인 성공 시 호출하는 콜백
+  // 구글이 로그인 성공 시 호출하는 콜백 — (v1.14.0) ID 토큰을 서버가 검증하고 세션을 발급한 뒤에 들어간다
   window.__onGoogleCredential = function(response){
-    completeLogin(decodeJwt(response.credential));
+    const user = decodeJwt(response.credential);
+    showGate('로그인 확인 중…');
+    bmServerLogin('/auth/google', { idToken: response.credential })
+      .then(function(){ completeLogin(user); })
+      .catch(function(e){ showGate('서버 로그인에 실패했습니다: ' + ((e && e.message) || e) + ' — 잠시 후 다시 시도해 주세요.'); });
   };
 
   // 로그아웃 (버튼은 설정 패널 '👤 계정' 그룹 안)
   const logoutBtn = document.getElementById('authLogoutBtn');
   if (logoutBtn) logoutBtn.onclick = function(){
-    try { localStorage.removeItem('boothmate_user'); } catch(e){}
+    try { localStorage.removeItem('boothmate_user'); localStorage.removeItem('bm_session'); } catch(e){}
     if (window.google && google.accounts && google.accounts.id){
       google.accounts.id.disableAutoSelect();
     }
@@ -6985,6 +6905,8 @@ window.__syncPanelLayout = function() {
       if (saved){
         const user = JSON.parse(saved);
         if (user && user.email){
+          // (v1.14.0) 서버 세션 토큰이 없으면(통과키 시절 로그인·로그아웃·만료) 다시 로그인해야 한다
+          if (!bmSession()){ showGate('로그인 방식이 바뀌었습니다. 다시 로그인해 주세요.'); return true; }
           if (ALLOWED_EMAILS.length === 0 || ALLOWED_EMAILS.indexOf(user.email) !== -1){
             showApp(user);
             return true;

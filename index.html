@@ -50,15 +50,12 @@ if (document.documentElement.classList.contains('bm-app') && navigator.mediaDevi
 </script>
 <style>.bm-app .logo-sub{display:none !important;}
 /* 앱에서는 연결방식·API키·티켓 메뉴 숨김 (앱은 중계서버 자동연결, 유저가 만질 필요 없음) */
-/* 앱에서는 오버레이(별도 자막창) 버튼 숨김 — 웹브라우저 전용 기능 */
-.bm-app #openOverlayBtn{display:none !important;}
 /* 앱에서는 사업자정보 상세 숨김 (약관·개인정보처리방침 링크는 유지) */
 .bm-app #bizInfoToggle, .bm-app #bizInfoDetail{display:none !important;}
 /* 갤럭시(Android TWA) 앱 모드 — Play스토어 버전 (v1.13.111). bm-app과 달리 구글 GSI 로그인은 유지. */
 .bm-galaxy .logo-sub{display:none !important;}            /* 로고 아래 'online' 표기 */
 .bm-galaxy #appFooter{display:none !important;}           /* 하단 푸터 전체 */
 .bm-galaxy #soundBox{display:none !important;}            /* 사운드 설정(입력 선택) — 마이크 자동 고정 */
-.bm-galaxy #openOverlayBtn{display:none !important;}      /* 오버레이 자막창 — 데스크톱 전용 */
 /* 갤럭시 전용 구매 UI — 웹에서는 숨김 (v1.13.112 / v1.13.116 재배치) */
 /* 잔여 시간: 경과 카운터(위) 바로 아래 줄에 '- HH:MM:SS'(빨강). 위 경과와 같은 크기·글꼴·
    정렬로 맞춰 두 줄이 나란히 병렬로 보이게 함 (v1.13.120). */
@@ -975,7 +972,7 @@ if (!document.documentElement.classList.contains('bm-app')) {
       mc_src_weight:1, mc_trans_weight:1, mc_wrap_h:1, speech_level:1, lang_pair:1,
       mic_device_id:1, sys_audio_mode:1, input_mode:1, reflog_visible:1, reflog_collapsed:1,
       sessions:1, glossary:1, glossary_sets:1, glossary_cloud_ts:1, auto_stop_min:1,
-      bm_native_overlay:1, dir_mode:1, trans_engine:1, mc_layout:1
+      dir_mode:1, trans_engine:1, mc_layout:1
     };
     var email = null;
     try { var u = JSON.parse(localStorage.getItem('boothmate_user') || 'null'); email = (u && u.email) ? u.email : null; } catch(e){}
@@ -1138,7 +1135,6 @@ if (!document.documentElement.classList.contains('bm-app')) {
       </span>
     </div>
     <button id="resetSubBtn" class="icon-btn" title="자막 리셋 (화면 자막 전체 지우기)"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg></button>
-    <button id="openOverlayBtn" class="icon-btn" title="오버레이"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4"></path></svg></button>
     <button id="glossaryBtn" class="icon-btn" title="용어집"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.2C10.4 5 7.8 4.5 4 4.5V18c3.8 0 6.4.5 8 1.8 1.6-1.3 4.2-1.8 8-1.8V4.5c-3.8 0-6.4.5-8 1.7z"></path><path d="M12 6.2V19.8"></path></svg></button>
     <button id="mcOptBtn" class="icon-btn" title="설정"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(12 12) scale(0.82) translate(-12 -12)" stroke-width="2.07"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></g></svg></button>
     <button id="gxBuyBtn" class="icon-btn" title="사용권 구매 (시간 추가)" aria-label="사용권 구매"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="14" r="7.5"></circle><path d="M10 10v4l2.5 1.5"></path><path d="M19 3v5M16.5 5.5h5"></path></svg></button>
@@ -1253,7 +1249,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.14.0 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.14.1 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -1262,7 +1258,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
   <div id="editBox">
     <div class="ttl">번역 수정 — 클릭한 단어가 선택되어 있습니다</div>
     <textarea id="editArea" spellcheck="false"></textarea>
-    <div id="editHint">Enter = 저장 · Shift+Enter = 줄바꿈 · Esc = 취소 · 저장 시 오버레이에도 즉시 반영됩니다</div>
+    <div id="editHint">Enter = 저장 · Shift+Enter = 줄바꿈 · Esc = 취소</div>
     <div id="editBtns">
       <button class="cancel" id="editCancel">취소</button>
       <button class="ok" id="editOk">저장</button>
@@ -1565,58 +1561,16 @@ setRunningUI(false);
 function showErr(t) { errEl.textContent = t; }
 function clearErr() { errEl.textContent = ''; }
 
-/* ── 오버레이로 자막 방송하는 채널 ── */
-const bc = new BroadcastChannel('boothmate_sub');
-function broadcast(type, payload) { bc.postMessage({ type, ...payload }); }
-
-/* ── Boothmate WebSocket 연결 (LiveTranslate 네이티브 오버레이) ──
-   ws://localhost:8765 에 연결, {"type":"trans"|"src"|"reset","text":"..."} 전송
-   ※ 기본 비활성화: dororok 본인 맥의 LiveTranslate 연동 전용. 일반 배포본/회원 PC에는
-     localhost:8765 서버가 없어 연결 실패가 반복됨 → 기본 OFF.
-     본인 맥에서 쓰려면 콘솔에서 localStorage.setItem('bm_native_overlay','1') 후 새로고침. */
-let bmWs = null;
-let bmReconnectTimer = null;
-const BM_NATIVE_ENABLED = (localStorage.getItem('bm_native_overlay') === '1');
-
-function bmConnect() {
-  if (!BM_NATIVE_ENABLED) return;   // 기본 OFF — 연결 시도 안 함
-  if (bmWs && (bmWs.readyState === WebSocket.OPEN || bmWs.readyState === WebSocket.CONNECTING)) return;
-  try {
-    bmWs = new WebSocket('ws://localhost:8765');
-    bmWs.onopen  = () => { console.log('[Boothmate WS] 연결됨'); if (bmReconnectTimer) { clearTimeout(bmReconnectTimer); bmReconnectTimer = null; } };
-    bmWs.onclose = () => { bmWs = null; bmReconnectTimer = setTimeout(bmConnect, 30000); };
-    bmWs.onerror = () => { /* onclose가 이어서 처리 */ };
-  } catch (e) { bmReconnectTimer = setTimeout(bmConnect, 30000); }
-}
-function bmSend(type, text) {
-  if (!BM_NATIVE_ENABLED) return;
-  if (!bmWs || bmWs.readyState !== WebSocket.OPEN) return;
-  bmWs.send(JSON.stringify({ type: type, text: text }));
-}
-function bmReset() { if (BM_NATIVE_ENABLED) bmSend('reset', ''); }
-// 앱 로드 시 연결 시도 (활성화된 경우만)
-bmConnect();
-
-/* 미러 전송: 메인 화면의 원문/번역 줄을 그대로 오버레이에 보냄.
-   오버레이는 재조립 없이 이 줄들을 그대로 표시 → 불일치/중복/깜빡임 없음 */
-function pushMirror() {
-  const srcLines = Array.from(combinedEl.querySelectorAll('.pair:not(.offpair) .srcline')).map(el => ({
-    text: el.textContent, pending: el.classList.contains('pending')
-  }));
-  const transLines = Array.from(combinedEl.querySelectorAll('.pair:not(.offpair) .transline')).map(el => ({
-    text: el.textContent, html: el.innerHTML, pending: el.classList.contains('pending')
-  }));
-  broadcast('mirror', { srcLines, transLines });
-  // Boothmate 네이티브 오버레이에도 전송 (연결돼 있을 때만)
-  srcLines.forEach(l => { if (!l.pending) bmSend('src', l.text); });
-  transLines.forEach(l => { if (!l.pending) bmSend('trans', l.text); });
-}
+/* (v1.14.1) 오버레이 자막창 제거 — BroadcastChannel 미러(pushMirror)·네이티브 오버레이 브리지(ws://localhost:8765)
+   를 함께 걷어냈다. 미러는 오버레이 창이 열려 있든 말든 자막이 한 글자 갱신될 때마다 화면의 모든 줄을
+   querySelectorAll로 모아 innerHTML까지 직렬화해 방송하고 있었다 — 통역 중 가장 자주 도는 경로에서
+   가장 무거운 일이었다. 오버레이는 청중 송출(용도 밖 사용)의 통로이기도 했다. */
 
 /* ── 설정 저장 (v0.8.0과 동일) ── */
 /* API 키 복원/저장은 설정 패널 생성 후 initMcPanel 내부에서 처리 (입력란이 패널 안에 있음) */
 const savedLevel = localStorage.getItem('speech_level');
 if (savedLevel) $('speechLevel').value = savedLevel;
-$('speechLevel').addEventListener('change', () => { localStorage.setItem('speech_level', $('speechLevel').value); broadcast('config', { speech_level: $('speechLevel').value }); });
+$('speechLevel').addEventListener('change', () => { localStorage.setItem('speech_level', $('speechLevel').value); });
 // 숨김 targetLang(호환용) 채우기 — 동적 출력 언어를 담는 용도
 fillTargetLangOptions();
 
@@ -1653,7 +1607,6 @@ function onPairChange() {
   updateTargetLangHint();
   updateDirModeHint();
   updateLangBadge();                               // 헤더 언어쌍 배지 갱신 (v1.13.204)
-  broadcast('config', { target_lang: t });
   if (running && !userStopped) connectWS();        // 통역 중이면 새 쌍으로 재연결
 }
 $('langA').addEventListener('change', onPairChange);
@@ -1668,7 +1621,6 @@ if ($('dirMode')) {
     if ($('targetLang')) $('targetLang').value = t;
     updateDirModeHint();
     updateLangBadge();                             // 헤더 언어쌍 배지 갱신 (v1.13.204)
-    broadcast('config', { target_lang: t });
     if (running && !userStopped) connectWS();      // 통역 중이면 새 방향으로 재연결
   });
 }
@@ -2510,41 +2462,10 @@ applyInputMode();
 /* ── 기능 표시 토글 (v1.10.2) ──
    사람들이 잘 안 쓰는 기능의 '진입점'만 숨김. 코드/동작은 그대로 보존.
    나중에 되살리려면 해당 값을 true 로만 바꾸면 됩니다. */
-const FEATURE_OVERLAY = true;      // 헤더의 '오버레이' 버튼
 const FEATURE_LIVE_EDIT = false;   // 자막 단어 클릭 → 실시간 수정
 if (!FEATURE_LIVE_EDIT) document.body.classList.add('no-live-edit');
 
-/* ── 오버레이 창 열기 ──
-   1순위: Document Picture-in-Picture(Chrome/Edge 116+) — 주소창·메뉴바·탭·"공유 중" 배너가
-          전혀 없는 '항상 위' 작은 창. 자막만 깔끔하게. overlay.html을 iframe으로 띄워
-          기존 BroadcastChannel 동기화 로직을 그대로 재사용.
-   2순위: 미지원 브라우저 → 기존 popup(window.open). (popup은 브라우저가 주소창을 강제할 수 있음) */
-let _overlayPip = null;
-async function openOverlay() {
-  // 이미 떠 있으면 다시 안 열고 포커스만
-  if (_overlayPip && !_overlayPip.closed) { try { _overlayPip.focus(); } catch (e) {} return; }
-  if ('documentPictureInPicture' in window) {
-    try {
-      const pip = await documentPictureInPicture.requestWindow({ width: 900, height: 220 });
-      _overlayPip = pip;
-      pip.document.documentElement.style.cssText = 'margin:0;padding:0;height:100%;';
-      pip.document.body.style.cssText = 'margin:0;padding:0;height:100%;background:transparent;overflow:hidden;';
-      const ifr = pip.document.createElement('iframe');
-      ifr.src = 'overlay.html';
-      ifr.style.cssText = 'border:0;width:100%;height:100%;display:block;';
-      pip.document.body.appendChild(ifr);
-      pip.addEventListener('pagehide', () => { _overlayPip = null; });
-      return;
-    } catch (e) {
-      // 사용자가 PiP를 취소했거나 환경이 막혀 있으면 popup으로 폴백
-    }
-  }
-  window.open('overlay.html', 'boothmate_overlay',
-    'width=900,height=220,resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no');
-}
-$('openOverlayBtn').onclick = openOverlay;
-// 오버레이 버튼 숨김(기능 보존, 진입점만 숨김)
-if (!FEATURE_OVERLAY && $('openOverlayBtn')) $('openOverlayBtn').style.display = 'none';
+// (v1.14.1) 오버레이 창 열기(openOverlay)·버튼 제거
 
 /* 자막 완전 리셋 — 중지/재시작 없이 화면 자막·버퍼·오버레이를 모두 비움.
    통역은 계속 진행되며 다음 문장부터 새로 쌓임. 오클릭 방지로 내용이 있을 때만 확인. */
@@ -2813,8 +2734,6 @@ function resetSubtitles() {
   curPair = null;
   if (typeof spReset === 'function') spReset();   // 속도 모드 행 상태도 초기화 (DOM을 비웠으므로)
   if (typeof qmReset === 'function') qmReset();   // 품질 모드 큐·꼬리도 초기화
-  bmReset();   // 네이티브 오버레이도 리셋
-  if (typeof pushMirror === 'function') pushMirror();
   if (window.__syncPanelLayout) window.__syncPanelLayout();   // 자막 비워짐 → 패널 열린 상태면 빈 박스 숨김
 }
 
@@ -3853,8 +3772,7 @@ function escHtml(x) {
    컨퍼런스 자막 송출 등 용도 밖 사용이 보고되어, 확정된 번역 줄 끝에 "(subtitles powered by Boothmate)"를
    붙인다. 간격은 불규칙하다 — 표시할 때마다 다음 간격을 3 또는 4문장 중 무작위로 뽑는다.
    규칙적이면 어디가 지워질지 미리 알 수 있어서다. 문장 수는 줄의 텍스트를 splitToSentences로 센다
-   (속도 모드는 한 줄에 문장이 둘 이상 묶일 수 있다). 미러(pushMirror)가 innerHTML·textContent를 그대로
-   복사하므로 오버레이·네이티브 오버레이에도 같이 나간다. 한 줄에는 한 번만 붙인다(data-bmMark). */
+   (속도 모드는 한 줄에 문장이 둘 이상 묶일 수 있다). 한 줄에는 한 번만 붙인다(data-bmMark). */
 const BM_MARK_TEXT = '(subtitles powered by Boothmate)';
 let bmMarkSeen = 0;                                   // 표시 이후 지나간 문장 수
 let bmMarkNext = 3 + Math.floor(Math.random() * 2);   // 다음 표시까지 필요한 문장 수 (3 또는 4)
@@ -4083,7 +4001,6 @@ function spRenderTurn(settled) {
   }
   curPair = spRows[spRows.length - 1] || curPair;
   trimLines(combinedEl, 'transline');
-  pushMirror();
 }
 
 function appendSrc(t) {
@@ -4105,7 +4022,7 @@ function appendSrc(t) {
     const pr = getPair();
     if (isForeignToPair(srcBuf, pr.a, pr.b)) spOffpair = true;
   }
-  if (spOffpair) { pushMirror(); return; }
+  if (spOffpair) return;
 
   // 단방향(v1.13.234): 타겟 언어 발화(= 반대 방향)는 번역만 억제하고 전사는 남긴다.
   if (getDirMode() !== 'auto') {
@@ -4406,7 +4323,6 @@ function qmFeedSource(t) {
   for (const sent of sp.done) qmEnqueue(sent);
   qmSetTail(qmSrcPending);
   trimLines(combinedEl, 'srcline');
-  pushMirror();
 }
 function qmEnqueue(sentence) {
   const sent = String(sentence || '').trim();
@@ -4446,7 +4362,6 @@ function qmPump() {
     // 후처리(용어집 치환·환율·도량형)는 shownTrans가, 하이라이트는 tokenize가 담당 — 속도 모드와 동일
     item.pair.transLine.innerHTML = tokenize(shownTrans(acc));
     trimLines(combinedEl, 'transline');
-    pushMirror();
   })
     .then(function () {
       item.pair.transLine.classList.remove('pending');
@@ -4462,7 +4377,7 @@ function qmPump() {
       // 번역이 끝내 안 온 문장은 빈 줄을 남기지 않고 원문만 보여준다
       if (item.pair.transLine.parentNode) item.pair.transLine.parentNode.removeChild(item.pair.transLine);
     })
-    .then(function () { qmBusy = false; pushMirror(); qmPump(); });
+    .then(function () { qmBusy = false; qmPump(); });
 }
 /* 1회 재시도. 단, 이미 화면에 조각이 나간 뒤라면 재시도가 중복 출력이 되므로 하지 않는다. */
 async function qmRun(sent, target, onDelta) {
@@ -4609,7 +4524,6 @@ function finishSegment(fromIdle) {
   // 다음 입력이 올 때까지 사라진 채로 있다 — 말이 멎은 자리에선 그게 몇 초씩 간다.
   if (srcBuf) spRenderTurn(false);
   trimLines(combinedEl, 'srcline');
-  pushMirror();
   turnLogged.clear();   // 턴 종료 → 다음 턴은 같은 치환도 다시 기록
   turnRawTrans = "";
   // 이 턴 원문으로 마지막 소급 갱신 시도 후 pending 만료 (다음 턴 원문이 잘못 매칭되지 않게)
@@ -4647,7 +4561,6 @@ function saveEditor() {
   const newText = $('editArea').value;
   editingLineEl.innerHTML = tokenize(newText);
   closeEditor();
-  pushMirror();
 }
 $('editOk').onclick = saveEditor;
 $('editCancel').onclick = closeEditor;
@@ -5113,7 +5026,6 @@ function connectWS() {
     reconnectAttempt = 0;   // 연결 성공 → 시도 횟수 리셋
     noteSessionOpen();      // 새 세션엔 유예를 준다 — 첫 전사가 오기 전에 전환되지 않게 (v1.13.266)
     setStatus('통역 중 — 말해보세요', true);
-    broadcast('config', { speech_level: $('speechLevel').value, target_lang: TARGET_LANGUAGE });
   };
   ws.onmessage = async (event) => {
     let text = (event.data instanceof Blob) ? await event.data.text() : event.data;

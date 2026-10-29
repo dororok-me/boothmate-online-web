@@ -25,7 +25,6 @@
     '시작': 'Start',
     '정지': 'Stop',
     '시작 / 정지': 'Start / Stop',
-    '오버레이': 'Overlay',
     '용어집': 'Glossary',
     '설정': 'Settings',
     '✕ 닫기': '✕ Close',
@@ -153,7 +152,7 @@
     '자막은 통역 중 30초마다·정지 시 자동 저장(최대 50개). 내보내기는 현재 화면 자막을 txt로, 전체 삭제는 저장된 자막을 모두 지웁니다. 항목 위에 마우스를 올리거나 제목 줄을 누르면 첫 5줄이 미리 보이고, 열린 내용 창을 누르면 닫힙니다. 전체 내용은 내보내기로 확인합니다.': 'Subtitles are auto-saved every 30s while interpreting and on stop (up to 50). Export saves the current on-screen subtitles as txt; Delete all removes every saved subtitle. Hover over an item or tap its title row to preview the first 5 lines; tap the opened preview to close it. Use Export to see the full content.',
     '별칭은 각 용어와 같은 언어의 변이형입니다.': 'Aliases are variants in the same language as each term.',
     '양방향 자동: 들어온 말의 언어를 감지해 반대 언어로 자동 번역 · 단방향: 선택한 방향으로만 번역 (강연 등 한 사람만 말할 때 방향 오전환 방지)': 'Auto (bidirectional): detects the incoming language and translates to the other · One-way: translates only in the chosen direction (prevents wrong direction switches when only one person speaks, e.g. a lecture)',
-    'Enter = 저장 · Shift+Enter = 줄바꿈 · Esc = 취소 · 저장 시 오버레이에도 즉시 반영됩니다': 'Enter = Save · Shift+Enter = New line · Esc = Cancel · Saving is reflected in the overlay instantly',
+    'Enter = 저장 · Shift+Enter = 줄바꿈 · Esc = 취소': 'Enter = Save · Shift+Enter = New line · Esc = Cancel',
     '번역 수정 — 클릭한 단어가 선택되어 있습니다': 'Edit translation — the clicked word is selected',
 
     // 상태 배지/텍스트

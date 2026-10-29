@@ -30,7 +30,7 @@
 - **중계 서버 모드**: `RELAY_SERVER_URL = wss://boothmateonline-production.up.railway.app`, 베타 통과키 `RELAY_PASS_KEY = boothmate2026secure` (server-beta.js v3.0.0과 짝). **티켓 방식(`?ticket=`)도 코드에 있음** → 결제 연동 시 전환 예정.
 - **용어집(글로서리)**: 양방향, 프롬프트 주입 + 후처리 치환 + 수동 변이형 3중. localStorage 저장. CSV/TXT/Excel 입출력.
 - **환율·도량형 환산**: `currency.js`. 자막 금액에 괄호로 환산값 병기.
-- **오버레이/OBS 모드**: `overlay.html`, BroadcastChannel 수신. `?obs`로 투명 합성.
+- ~~오버레이/OBS 모드~~: v1.14.1에서 제거 (자막 갱신마다 전체 줄을 방송하던 비용 + 청중 송출 통로).
 - **세션 자동 저장**: 정지/새 시작 시 원문+번역 localStorage 저장(최대 50세션).
 
 > ⚠️ **핵심 한계**: 현재 쿼터·등급 통제가 **브라우저 localStorage**라서 시크릿창/다른 브라우저/저장값 삭제로 리셋 가능(정직한 사용자용). **진짜 통제는 이 명세서의 Firebase 서버 기반(방식 B)으로 전환**해야 함. 비용 폭주 1차 방어는 GCP 동시세션 5개 제한.

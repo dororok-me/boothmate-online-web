@@ -1249,7 +1249,7 @@ if (document.documentElement.classList.contains('bm-galaxy')) {
 
 
 <footer id="appFooter" style="flex:0 0 auto; text-align:center; padding:3px 0 2px; font-size:10px; color:var(--t-muted); opacity:0.7; line-height:1.5;">
-  Boothmate Online v1.14.1 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
+  Boothmate Online v1.14.2 · <a href="terms.html" target="_blank" rel="noopener" style="color:inherit;">이용약관</a> · <a href="privacy.html" target="_blank" rel="noopener" style="color:inherit;">개인정보처리방침</a> · <a href="#" id="bizInfoToggle" style="color:inherit;" onclick="var b=document.getElementById('bizInfoDetail');var on=b.style.display==='none';b.style.display=on?'':'none';this.textContent=on?'사업자정보 ▴':'사업자정보 ▾';return false;">사업자정보 ▾</a><br>
   <span id="bizInfoDetail" style="font-size:9px; opacity:0.85; display:none;">상호: 부스메이트(Boothmate) · 대표: 이성득 · 사업자등록번호: 804-04-00278 · 통신판매업신고: 2026-부산해운대-0752 · 부산광역시 해운대구 마린시티2로 33, 104동 9층 901호,902호(우동, 해운대두산위브더제니스) · Tel 051-703-6006 · dororok@gmail.com</span>
 </footer>
 
@@ -2681,14 +2681,47 @@ function loadSessions() {
   try { return JSON.parse(localStorage.getItem('sessions') || '[]'); }
   catch (e) { return []; }
 }
-function saveSessions(list) {
-  // 최대 MAX_SESSIONS개만 유지 (오래된 것부터 제거)
+/* 저장 성공 여부를 돌려준다 (v1.14.2).
+   ▸ 왜 고쳤나 — 현장 보고: "내보내기를 하면 미리 보기에 있는 것만 나온다(모바일)".
+     종전에는 용량이 넘치면 오래된 절반을 한 번에 버리고 한 번만 재시도했고, 그래도 실패하면
+     catch (e2) {} 로 조용히 포기했다. 그 조용한 포기가 증상의 정체다: 자동 저장이 그 시점에
+     멈추므로 localStorage에는 그 전 자동 저장분(짧은 스냅샷)이 그대로 남는다. 미리 보기도
+     내보내기도 같은 항목을 읽으니 둘 다 앞부분만 보여 주고, 사용자는 녹취가 통째로 있는 줄
+     알다가 행사가 끝난 뒤에야 잘린 걸 발견한다.
+     localStorage 한도는 기기·브라우저마다 다르다(모바일이 데스크톱보다 작다) — 같은 통역을
+     기기만 바꿔 했을 때 결과가 달랐다는 보고와 들어맞는다.
+   ▸ 고친 방식 — 지금 저장하려는 세션(keepName)은 지키고, 오래된 것부터 '하나씩' 버리며
+     들어갈 때까지 다시 시도한다. 그래도 안 되면 false를 돌려 호출자가 사용자에게 알린다.
+     조용히 실패하지 않는 것이 핵심이다. */
+function saveSessions(list, keepName) {
   while (list.length > MAX_SESSIONS) list.shift();
-  try { localStorage.setItem('sessions', JSON.stringify(list)); }
-  catch (e) {
-    // 용량 초과 시 오래된 절반 버리고 재시도
-    while (list.length > Math.floor(MAX_SESSIONS/2)) list.shift();
-    try { localStorage.setItem('sessions', JSON.stringify(list)); } catch (e2) {}
+  const put = function () {
+    try { localStorage.setItem('sessions', JSON.stringify(list)); return true; }
+    catch (e) { return false; }
+  };
+  if (put()) return true;
+  // 오래된 것부터 한 개씩 버리며 재시도 — 지금 세션은 마지막까지 남긴다
+  for (let guard = 0; guard < MAX_SESSIONS + 1 && list.length > 1; guard++) {
+    let victim = -1;
+    for (let i = 0; i < list.length; i++) { if (!keepName || list[i].name !== keepName) { victim = i; break; } }
+    if (victim < 0) break;
+    list.splice(victim, 1);
+    if (put()) return true;
+  }
+  return put();
+}
+/* 저장이 끝내 안 됐을 때 사용자에게 알린다 (v1.14.2).
+   통역 중엔 상태줄로 한 번만(매 30초 경고는 방해), 정지 시엔 한 번 더 분명하게 알린다.
+   자동 저장이 멈춘 것을 모르고 끝내면, 내보내기 때 앞부분만 나오는 걸 그때서야 알게 된다. */
+let sessSaveWarned = false;
+function sessSaveFailed(sub) {
+  const n = (sub && sub.src ? sub.src.length : 0) + (sub && sub.trans ? sub.trans.length : 0);
+  console.log('[자막 저장 실패] 브라우저 저장 공간이 가득 참 — 자막 ' + n + '줄');
+  if (sessSaveWarned) return;
+  sessSaveWarned = true;
+  if (typeof showErr === 'function') {
+    showErr('저장 공간이 가득 차 자막 자동 저장이 멈췄습니다. 지금 \'자막 내보내기\'로 파일을 받아 두세요. ' +
+            '설정의 저장된 자막에서 옛 기록을 지우면 다시 저장됩니다.');
   }
 }
 /* 진행 중 세션의 고정 이름 — 실시간 저장이 매번 새 항목을 만들지 않고 같은 항목을 갱신하도록 */
@@ -2709,19 +2742,30 @@ function autoSaveSession() {
   const entry = { ts: Date.now(), name: name, src: sub.src, trans: sub.trans };
   const idx = list.findIndex(function(s){ return s.name === name; });
   if (idx >= 0) list[idx] = entry; else list.push(entry);
-  saveSessions(list);
+  if (!saveSessions(list, name)) sessSaveFailed(sub);   // 조용히 넘어가지 않는다 (v1.14.2)
 }
 /* 실시간 자동 저장 — 통역 중 30초마다 현재 세션을 localStorage에 갱신, 탭 종료 시에도 저장 (자막 유실 방지) */
 setInterval(function(){ if (typeof running !== 'undefined' && running) autoSaveSession(); }, 30000);
 window.addEventListener('beforeunload', function(){ if (typeof running !== 'undefined' && running) autoSaveSession(); });
 /* 텍스트를 파일로 다운로드 */
+/* 텍스트 파일 내려받기 (v1.14.2에서 모바일 대응 보강).
+   종전 코드는 a를 문서에 붙이지 않고 click() 직후 곧바로 revokeObjectURL을 불렀다.
+   데스크톱에서는 내려받기가 동기적으로 시작돼 문제가 없지만, 모바일 브라우저는
+   클릭 처리와 실제 내려받기 사이에 한 박자가 있어 그 사이 URL이 회수되면 파일이
+   비거나 중간에 끊긴다. 문서에 붙이지 않은 a를 무시하는 브라우저도 있다.
+   → 문서에 붙였다가 떼고, 회수는 넉넉히 미룬다. */
 function downloadText(content, filename) {
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = filename;
+  a.href = url; a.download = filename; a.rel = 'noopener';
+  a.style.display = 'none';
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(function () {
+    if (a.parentNode) a.parentNode.removeChild(a);
+    URL.revokeObjectURL(url);   // 내려받기가 시작되고 나서 회수한다
+  }, 60000);
 }
 /* 화면 자막 리셋 (원문/번역 영역 비우기 + 버퍼 초기화 + 오버레이 미러 갱신) */
 function resetSubtitles() {
